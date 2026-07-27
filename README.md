@@ -1,55 +1,91 @@
 # Oszczednosci
 
-Monorepo z backendem Spring Boot i frontendem React SPA. Produkcyjnie aplikacja
-dziala z jednego wykonywalnego pliku JAR: Spring Boot serwuje pliki statyczne
-zbudowane przez Vite.
+Oszczednosci is a monorepo for a savings and investment tracking application. It currently combines a Spring Boot backend with a React single-page application (SPA). In production, the frontend is built by Vite and served by Spring Boot from one executable JAR.
 
-## Struktura
+## What the project currently has
+
+- **Spring Boot backend** in `backend/`, using Java 21 and Maven.
+- **React frontend** in `frontend/`, using Vite, React, and React Router.
+- **Single-JAR production packaging**: the backend Maven build installs Node/npm, builds the frontend, copies the Vite output into Spring Boot static resources, and packages everything into one JAR.
+- **SPA routing support**: Spring forwards non-API, extensionless browser requests to `index.html`, so direct links and page refreshes work for client-side routes.
+- **Persistence layer** with Spring Data JPA, Flyway migrations, and an H2 runtime database.
+- **Investment entry domain** with API support for listing investment types, creating entries, listing entries, filtering by type, and deleting entries.
+- **Seed data migrations** for initial investment/bond entries.
+
+## Supported features
+
+### Frontend
+
+- Home page at `/`.
+- About page at `/about`.
+- Client-side fallback page for unknown routes.
+- Backend connectivity example that fetches `/api/hello`.
+- Development server with Vite at `http://localhost:5173`.
+- Development proxy for `/api` requests to the backend at `http://localhost:8080`.
+
+### Backend API
+
+The backend exposes these routes under `/api`:
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/hello` | Returns a sample greeting and timestamp. |
+| `GET` | `/api/status` | Returns basic service health/status information. |
+| `GET` | `/api/investment-types` | Returns the supported investment type enum values. |
+| `GET` | `/api/investments` | Lists investment entries. Accepts an optional `type` query parameter. |
+| `POST` | `/api/investments` | Creates an investment entry from a validated JSON request body. |
+| `DELETE` | `/api/investments/{id}` | Deletes an investment entry by UUID. |
+
+## Project structure
 
 ```text
 .
 ├── backend
-│   ├── src/main/java
-│   ├── src/main/resources/static
-│   └── pom.xml
+│   ├── src/main/java                    # Spring Boot source code
+│   ├── src/main/resources/db/migration  # Flyway database migrations
+│   ├── src/main/resources/static        # Built frontend assets served by Spring Boot
+│   └── pom.xml                          # Backend Maven build
 ├── frontend
-│   ├── src
-│   ├── package.json
-│   └── vite.config.js
-├── pom.xml
+│   ├── src                              # React application source
+│   ├── index.html                       # Vite HTML entry point
+│   ├── package.json                     # Frontend scripts and dependencies
+│   └── vite.config.js                   # Vite build/proxy configuration
+├── pom.xml                              # Root Maven aggregator
+├── .gitignore                           # Ignored generated/local files
 └── README.md
 ```
 
-## Uruchomienie w trybie produkcyjnym
+## Requirements
 
-Zbuduj caly projekt z katalogu glownego:
+- Java 21 for the backend.
+- Maven for root/backend builds.
+- Node.js and npm for standalone frontend development.
+
+The production Maven build downloads and uses its configured Node/npm versions through `frontend-maven-plugin`, so a separate Node installation is mainly needed when running the frontend directly during development.
+
+## Production build and run
+
+From the repository root, build the full application:
 
 ```bash
 mvn clean package
 ```
 
-Uruchom finalny JAR:
+Run the packaged application:
 
 ```bash
 java -jar backend/target/app-0.0.1-SNAPSHOT.jar
 ```
 
-Aplikacja bedzie dostepna pod adresem:
+Open the application at:
 
 ```text
 http://localhost:8080
 ```
 
-Endpointy API:
+## Development workflow
 
-```text
-GET /api/hello
-GET /api/status
-```
-
-## Tryb developerski frontendu
-
-Mozesz uruchomic Vite osobno podczas pracy nad UI:
+Run the backend from the repository root or the `backend/` module with Maven/Spring Boot tooling. When the backend is running on port `8080`, start the frontend development server separately:
 
 ```bash
 cd frontend
@@ -57,44 +93,33 @@ npm install
 npm run dev
 ```
 
-Frontend developerski dziala na `http://localhost:5173` i proxyuje `/api` do
-backendu na `http://localhost:8080`. CORS dla tych adresow jest wlaczony po
-stronie Spring Boot.
+Then open:
 
-## Integracja React + Spring Boot
+```text
+http://localhost:5173
+```
 
-`frontend/vite.config.js` ustawia `build.outDir` na:
+The Vite dev server proxies `/api` requests to `http://localhost:8080`.
+
+## Frontend and backend integration
+
+`frontend/vite.config.js` builds the React app into:
 
 ```text
 ../backend/src/main/resources/static
 ```
 
-Dlatego `npm run build` kopiuje wynik produkcyjny Reacta bezposrednio do:
+During `mvn clean package`, `backend/pom.xml` runs the frontend build before packaging the Spring Boot JAR. This means production deployment does not require a separate static web server for the React app.
 
-```text
-backend/src/main/resources/static
-```
+## SPA routing
 
-`backend/pom.xml` uzywa `frontend-maven-plugin`, ktory podczas `mvn clean package`:
-
-1. instaluje lokalnie Node.js i npm,
-2. wykonuje `npm install`,
-3. wykonuje `npm run build`,
-4. pakuje zbudowany frontend do jednego JAR-a Spring Boot.
-
-W produkcji nie jest potrzebny osobny serwer frontendu.
-
-## Routing SPA
-
-React uzywa `BrowserRouter` z trasami `/` i `/about`. Spring Boot ma konfiguracje
-`WebMvcConfigurer`, ktora przekazuje nie-API requesty bez rozszerzenia pliku do
-`/index.html`.
-
-Dzieki temu deep linki i refresh strony, np.:
+The React app uses browser-based routing for `/` and `/about`. The Spring MVC configuration forwards non-API requests without a file extension to `index.html`, which allows direct navigation and refreshes such as:
 
 ```text
 http://localhost:8080/about
 ```
 
-nie koncza sie 404, tylko laduja aplikacje React, a routing po stronie klienta
-renderuje odpowiednia strone.
+## Notes
+
+- Generated folders such as `target/`, `node_modules/`, frontend build output, logs, local environment files, and editor metadata are ignored by Git.
+- The checked-in static files under `backend/src/main/resources/static` represent built frontend assets that Spring Boot can serve.
