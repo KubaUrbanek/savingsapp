@@ -5,8 +5,6 @@ import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import pl.oszczednosci.app.dto.CreateInvestmentEntryRequest;
 import pl.oszczednosci.app.model.InvestmentEntry;
 import pl.oszczednosci.app.model.InvestmentSubcategory;
@@ -25,7 +23,6 @@ public class InvestmentEntryService {
         this.policyRegistry = policyRegistry;
     }
 
-    @Transactional
     public InvestmentEntry create(CreateInvestmentEntryRequest request) {
         InvestmentCategoryRules.validate(request.type(), request.subcategory());
         BigDecimal normalizedValue = policyRegistry.forType(request.type()).normalizePln(request.valuePln());
@@ -33,7 +30,6 @@ public class InvestmentEntryService {
         return repository.save(entry);
     }
 
-    @Transactional(readOnly = true)
     public List<InvestmentEntry> list(PortfolioUser owner, InvestmentType type, InvestmentSubcategory subcategory) {
         if (type == null) {
             return repository.findByOwnerOrderByDateDescCreatedAtDesc(owner);
@@ -45,7 +41,6 @@ public class InvestmentEntryService {
         return repository.findByOwnerAndTypeOrderByDateDescCreatedAtDesc(owner, type);
     }
 
-    @Transactional
     public void delete(UUID id) {
         repository.deleteById(id);
     }

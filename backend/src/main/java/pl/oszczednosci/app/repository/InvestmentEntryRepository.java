@@ -1,22 +1,110 @@
 package pl.oszczednosci.app.repository;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Repository;
+
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import pl.oszczednosci.app.model.InvestmentEntry;
 import pl.oszczednosci.app.model.InvestmentSubcategory;
 import pl.oszczednosci.app.model.InvestmentType;
 import pl.oszczednosci.app.model.PortfolioUser;
 
-public interface InvestmentEntryRepository extends JpaRepository<InvestmentEntry, UUID> {
+@Repository
+public class InvestmentEntryRepository {
 
-    List<InvestmentEntry> findByOwnerAndTypeOrderByDateDescCreatedAtDesc(PortfolioUser owner, InvestmentType type);
+    private static final TypeReference<List<InvestmentEntry>> ENTRY_LIST = new TypeReference<>() {
+    };
+    private static final Comparator<InvestmentEntry> NEWEST_FIRST = Comparator
+            .comparing(InvestmentEntry::getDate, Comparator.reverseOrder())
+            .thenComparing(InvestmentEntry::getCreatedAt, Comparator.reverseOrder());
 
-    List<InvestmentEntry> findByOwnerAndTypeAndSubcategoryOrderByDateDescCreatedAtDesc(
+    private final ObjectMapper objectMapper;
+    private final Path databasePath;
+
+    public InvestmentEntryRepository(
+            ObjectMapper objectMapper,
+            @Value("${app.database.file:./backend/data/investment-entries.json}") Path databasePath
+    ) {
+        this.objectMapper = objectMapper;
+        this.databasePath = databasePath;
+    }
+
+    public synchronized InvestmentEntry save(InvestmentEntry entry) {
+        entry.prepareForSave();
+        List<InvestmentEntry> entries = readEntries();
+        entries.removeIf(existing -> existing.getId().equals(entry.getId()));
+        entries.add(entry);
+        writeEntries(entries);
+        return entry;
+    }
+
+    public synchronized void deleteById(UUID id) {
+        List<InvestmentEntry> entries = readEntries();
+        boolean removed = entries.removeIf(entry -> entry.getId().equals(id));
+        if (removed) {
+            writeEntries(entries);
+        }
+    }
+
+    public synchronized List<InvestmentEntry> findByOwnerAndTypeOrderByDateDescCreatedAtDesc(PortfolioUser owner, InvestmentType type) {
+        return readEntries().stream()
+                .filter(entry -> entry.getOwner() == owner)
+                .filter(entry -> entry.getType() == type)
+                .sorted(NEWEST_FIRST)
+                .toList();
+    }
+
+    public synchronized List<InvestmentEntry> findByOwnerAndTypeAndSubcategoryOrderByDateDescCreatedAtDesc(
             PortfolioUser owner, InvestmentType type, InvestmentSubcategory subcategory
-    );
+    ) {
+        return readEntries().stream()
+                .filter(entry -> entry.getOwner() == owner)
+                .filter(entry -> entry.getType() == type)
+                .filter(entry -> entry.getSubcategory() == subcategory)
+                .sorted(NEWEST_FIRST)
+                .toList();
+    }
 
-    List<InvestmentEntry> findByOwnerOrderByDateDescCreatedAtDesc(PortfolioUser owner);
+    public synchronized List<InvestmentEntry> findByOwnerOrderByDateDescCreatedAtDesc(PortfolioUser owner) {
+        return readEntries().stream()
+                .filter(entry -> entry.getOwner() == owner)
+                .sorted(NEWEST_FIRST)
+                .toList();
+    }
+
+    private List<InvestmentEntry> readEntries() {
+        if (Files.notExists(databasePath)) {
+            return new ArrayList<>();
+        }
+        try {
+            return new ArrayList<>(objectMapper.readValue(databasePath.toFile(), ENTRY_LIST));
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to read JSON database file: " + databasePath, exception);
+        }
+    }
+
+    private void writeEntries(List<InvestmentEntry> entries) {
+        try {
+            Path parent = databasePath.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
+            Path temporaryFile = Files.createTempFile(parent, databasePath.getFileName().toString(), ".tmp");
+            objectMapper.writerWithDefaultPrettyPrinter().writeValue(temporaryFile.toFile(), entries);
+            Files.move(temporaryFile, databasePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to write JSON database file: " + databasePath, exception);
+        }
+    }
 }
