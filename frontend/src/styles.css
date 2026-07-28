@@ -155,3 +155,159 @@ pre {
     font-size: 2.7rem;
   }
 }
+
+.userSwitcher {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0 0 28px;
+}
+
+.userPill {
+  min-height: 48px;
+  padding: 0 22px;
+  border: 1px solid #9ac7a6;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #183d26;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.userPill.active,
+.userPill:hover {
+  background: #173d27;
+  color: #ffffff;
+}
+
+.dashboardGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.summaryPanel,
+.formPanel,
+.entriesPanel {
+  max-width: none;
+}
+
+.totalValue {
+  color: #102016;
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.summaryCard {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 10px;
+  background: #f1f7f3;
+}
+
+.summaryCard span,
+.entryRow span,
+label {
+  color: #59675e;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.summaryCard strong {
+  color: #163822;
+}
+
+.formPanel label {
+  display: grid;
+  gap: 8px;
+}
+
+input,
+select {
+  min-height: 44px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #c7d7cc;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #17202a;
+  font: inherit;
+}
+
+.primaryButton {
+  cursor: pointer;
+  font: inherit;
+}
+
+.success {
+  color: #21753c;
+  font-weight: 800;
+}
+
+.entriesPanel {
+  margin-top: 24px;
+}
+
+.entriesHeader,
+.entryRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.entriesHeader select {
+  max-width: 220px;
+}
+
+.entryList {
+  display: grid;
+  gap: 10px;
+}
+
+.entryRow {
+  padding: 14px 0;
+  border-top: 1px solid #e1e9e4;
+}
+
+.entryRow div {
+  display: grid;
+  gap: 3px;
+}
+
+.entryRow button {
+  padding: 8px 12px;
+  border: 1px solid #e5b1b1;
+  border-radius: 8px;
+  background: #fff4f4;
+  color: #8f2626;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+@media (max-width: 860px) {
+  .dashboardGrid,
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .entriesHeader,
+  .entryRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .entriesHeader select {
+    max-width: none;
+  }
+}

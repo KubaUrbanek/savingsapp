@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import pl.oszczednosci.app.dto.CreateInvestmentEntryRequest;
 import pl.oszczednosci.app.model.InvestmentEntry;
 import pl.oszczednosci.app.model.InvestmentType;
+import pl.oszczednosci.app.model.PortfolioUser;
 import pl.oszczednosci.app.repository.InvestmentEntryRepository;
 
 @Service
@@ -26,16 +27,16 @@ public class InvestmentEntryService {
     @Transactional
     public InvestmentEntry create(CreateInvestmentEntryRequest request) {
         BigDecimal normalizedValue = policyRegistry.forType(request.type()).normalizePln(request.valuePln());
-        InvestmentEntry entry = new InvestmentEntry(request.type(), normalizedValue, request.date());
+        InvestmentEntry entry = new InvestmentEntry(request.type(), request.owner(), normalizedValue, request.date());
         return repository.save(entry);
     }
 
     @Transactional(readOnly = true)
-    public List<InvestmentEntry> list(InvestmentType type) {
+    public List<InvestmentEntry> list(PortfolioUser owner, InvestmentType type) {
         if (type == null) {
-            return repository.findAllByOrderByDateDescCreatedAtDesc();
+            return repository.findByOwnerOrderByDateDescCreatedAtDesc(owner);
         }
-        return repository.findByTypeOrderByDateDescCreatedAtDesc(type);
+        return repository.findByOwnerAndTypeOrderByDateDescCreatedAtDesc(owner, type);
     }
 
     @Transactional
