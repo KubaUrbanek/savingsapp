@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import pl.oszczednosci.app.dto.CreateInvestmentEntryRequest;
 import pl.oszczednosci.app.dto.InvestmentEntryResponse;
 import pl.oszczednosci.app.model.InvestmentType;
+import pl.oszczednosci.app.model.PortfolioUser;
 import pl.oszczednosci.app.service.InvestmentEntryService;
 
 @RestController
@@ -39,6 +40,13 @@ public class InvestmentEntryController {
                 .toList();
     }
 
+    @GetMapping("/users")
+    public List<String> users() {
+        return Arrays.stream(PortfolioUser.values())
+                .map(Enum::name)
+                .toList();
+    }
+
     @PostMapping("/investments")
     @ResponseStatus(HttpStatus.CREATED)
     public InvestmentEntryResponse create(@Valid @RequestBody CreateInvestmentEntryRequest request) {
@@ -46,8 +54,11 @@ public class InvestmentEntryController {
     }
 
     @GetMapping("/investments")
-    public List<InvestmentEntryResponse> list(@RequestParam(required = false) InvestmentType type) {
-        return service.list(type).stream()
+    public List<InvestmentEntryResponse> list(
+            @RequestParam PortfolioUser owner,
+            @RequestParam(required = false) InvestmentType type
+    ) {
+        return service.list(owner, type).stream()
                 .map(InvestmentEntryResponse::fromEntity)
                 .toList();
     }

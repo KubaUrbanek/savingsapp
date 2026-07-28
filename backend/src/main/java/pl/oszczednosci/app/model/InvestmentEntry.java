@@ -24,6 +24,10 @@ public class InvestmentEntry {
     @Column(nullable = false, length = 32)
     private InvestmentType type;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 64)
+    private PortfolioUser owner;
+
     @Column(name = "value_pln", nullable = false, precision = 19, scale = 2)
     private BigDecimal valuePln;
 
@@ -36,9 +40,10 @@ public class InvestmentEntry {
     protected InvestmentEntry() {
     }
 
-    public InvestmentEntry(InvestmentType type, BigDecimal valuePln, LocalDate date) {
+    public InvestmentEntry(InvestmentType type, PortfolioUser owner, BigDecimal valuePln, LocalDate date) {
         this.id = UUID.randomUUID();
         this.type = type;
+        this.owner = owner;
         this.valuePln = valuePln;
         this.date = date;
     }
@@ -59,6 +64,10 @@ public class InvestmentEntry {
 
     public InvestmentType getType() {
         return type;
+    }
+
+    public PortfolioUser getOwner() {
+        return owner;
     }
 
     public BigDecimal getValuePln() {

@@ -7,10 +7,12 @@ import java.util.UUID;
 
 import pl.oszczednosci.app.model.InvestmentEntry;
 import pl.oszczednosci.app.model.InvestmentType;
+import pl.oszczednosci.app.model.PortfolioUser;
 
 public record InvestmentEntryResponse(
         UUID id,
         InvestmentType type,
+        PortfolioUser owner,
         BigDecimal valuePln,
         LocalDate date,
         Instant createdAt
@@ -19,6 +21,7 @@ public record InvestmentEntryResponse(
         return new InvestmentEntryResponse(
                 entry.getId(),
                 entry.getType(),
+                entry.getOwner(),
                 entry.getValuePln(),
                 entry.getDate(),
                 entry.getCreatedAt()
