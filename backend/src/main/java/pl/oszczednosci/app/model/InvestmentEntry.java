@@ -5,56 +5,43 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.Table;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-@Entity
-@Table(name = "investment_entries")
 public class InvestmentEntry {
 
-    @Id
     private UUID id;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 32)
     private InvestmentType type;
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 64)
     private PortfolioUser owner;
-
-    @Enumerated(EnumType.STRING)
-    @Column(length = 64)
     private InvestmentSubcategory subcategory;
-
-    @Column(name = "value_pln", nullable = false, precision = 19, scale = 2)
     private BigDecimal valuePln;
-
-    @Column(nullable = false)
     private LocalDate date;
-
-    @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
-    protected InvestmentEntry() {
-    }
-
-    public InvestmentEntry(InvestmentType type, PortfolioUser owner, InvestmentSubcategory subcategory, BigDecimal valuePln, LocalDate date) {
-        this.id = UUID.randomUUID();
+    @JsonCreator
+    public InvestmentEntry(
+            @JsonProperty("id") UUID id,
+            @JsonProperty("type") InvestmentType type,
+            @JsonProperty("owner") PortfolioUser owner,
+            @JsonProperty("subcategory") InvestmentSubcategory subcategory,
+            @JsonProperty("valuePln") BigDecimal valuePln,
+            @JsonProperty("date") LocalDate date,
+            @JsonProperty("createdAt") Instant createdAt
+    ) {
+        this.id = id;
         this.type = type;
         this.owner = owner;
         this.subcategory = subcategory;
         this.valuePln = valuePln;
         this.date = date;
+        this.createdAt = createdAt;
     }
 
-    @PrePersist
-    void prePersist() {
+    public InvestmentEntry(InvestmentType type, PortfolioUser owner, InvestmentSubcategory subcategory, BigDecimal valuePln, LocalDate date) {
+        this(null, type, owner, subcategory, valuePln, date, null);
+    }
+
+    public void prepareForSave() {
         if (id == null) {
             id = UUID.randomUUID();
         }
