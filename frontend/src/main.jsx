@@ -41,6 +41,117 @@ function displayName(user) {
   return user.charAt(0) + user.slice(1).toLowerCase();
 }
 
+function formatPercent(value) {
+  if (!Number.isFinite(value)) return '—';
+  return `${value > 0 ? '+' : ''}${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 }).format(value)}%`;
+}
+
+function monthKey(dateValue) {
+  return dateValue.slice(0, 7);
+}
+
+function yearKey(dateValue) {
+  return dateValue.slice(0, 4);
+}
+
+function monthLabel(key) {
+  const [year, month] = key.split('-');
+  return new Intl.DateTimeFormat('pl-PL', { month: 'short', year: 'numeric' }).format(new Date(Number(year), Number(month) - 1, 1));
+}
+
+function buildSummary(entries, period) {
+  const keyFor = period === 'yearly' ? yearKey : monthKey;
+  const labelFor = period === 'yearly' ? (key) => key : monthLabel;
+  const totals = entries.reduce((result, entry) => {
+    const key = keyFor(entry.date);
+    result[key] = (result[key] || 0) + Number(entry.valuePln);
+    return result;
+  }, {});
+
+  return Object.entries(totals)
+    .sort(([first], [second]) => first.localeCompare(second))
+    .map(([key, total], index, sorted) => {
+      const previousTotal = index > 0 ? sorted[index - 1][1] : null;
+      const changeAmount = previousTotal === null ? 0 : total - previousTotal;
+      const changePercent = previousTotal > 0 ? (changeAmount / previousTotal) * 100 : null;
+      return { key, label: labelFor(key), total, changeAmount, changePercent };
+    });
+}
+
+function SummaryChart({ entries, types }) {
+  const [selectedType, setSelectedType] = React.useState('ALL');
+  const [period, setPeriod] = React.useState('monthly');
+  const filteredEntries = selectedType === 'ALL' ? entries : entries.filter((entry) => entry.type === selectedType);
+  const points = buildSummary(filteredEntries, period);
+  const latestPoint = points[points.length - 1];
+  const maxTotal = Math.max(...points.map((point) => point.total), 0);
+  const chartWidth = 760;
+  const chartHeight = 300;
+  const padding = { top: 22, right: 24, bottom: 58, left: 62 };
+  const innerWidth = chartWidth - padding.left - padding.right;
+  const innerHeight = chartHeight - padding.top - padding.bottom;
+  const barGap = 14;
+  const barWidth = points.length ? Math.max(18, (innerWidth - barGap * (points.length - 1)) / points.length) : 0;
+
+  return (
+    <section className="panel graphPanel">
+      <div className="graphHeader">
+        <div>
+          <p className="eyebrow">Analiza wzrostu</p>
+          <h2>Miesięczne i roczne podsumowanie inwestycji</h2>
+        </div>
+        <div className="graphControls">
+          <label>Zakres inwestycji
+            <select value={selectedType} onChange={(event) => setSelectedType(event.target.value)}>
+              <option value="ALL">Wszystkie inwestycje</option>
+              {types.map((type) => <option key={type} value={type}>{TYPE_LABELS[type] || type}</option>)}
+            </select>
+          </label>
+          <label>Okres
+            <select value={period} onChange={(event) => setPeriod(event.target.value)}>
+              <option value="monthly">Miesięcznie</option>
+              <option value="yearly">Rocznie</option>
+            </select>
+          </label>
+        </div>
+      </div>
+
+      <div className="metricGrid">
+        <div className="metricCard"><span>Aktualna suma</span><strong>{formatMoney(latestPoint?.total || 0)}</strong></div>
+        <div className={latestPoint?.changeAmount >= 0 ? 'metricCard positive' : 'metricCard negative'}><span>Zmiana kwotowa</span><strong>{formatMoney(latestPoint?.changeAmount || 0)}</strong></div>
+        <div className={latestPoint?.changePercent >= 0 ? 'metricCard positive' : 'metricCard negative'}><span>Zmiana procentowa</span><strong>{formatPercent(latestPoint?.changePercent)}</strong></div>
+      </div>
+
+      {points.length === 0 ? <p>Brak danych do narysowania wykresu dla wybranego zakresu.</p> : (
+        <div className="chartScroller" role="img" aria-label="Wykres słupkowy podsumowania inwestycji">
+          <svg className="summaryChart" viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none">
+            <defs>
+              <linearGradient id="barGradient" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="#3f9d63" />
+                <stop offset="100%" stopColor="#173d27" />
+              </linearGradient>
+            </defs>
+            <line x1={padding.left} x2={chartWidth - padding.right} y1={chartHeight - padding.bottom} y2={chartHeight - padding.bottom} />
+            {points.map((point, index) => {
+              const height = maxTotal ? (point.total / maxTotal) * innerHeight : 0;
+              const x = padding.left + index * (barWidth + barGap);
+              const y = padding.top + innerHeight - height;
+              return (
+                <g key={point.key}>
+                  <rect className="chartBar" x={x} y={y} width={barWidth} height={height} rx="8" />
+                  <text className="chartValue" x={x + barWidth / 2} y={Math.max(18, y - 8)} textAnchor="middle">{formatMoney(point.total)}</text>
+                  <text className={point.changeAmount >= 0 ? 'chartChange positiveText' : 'chartChange negativeText'} x={x + barWidth / 2} y={chartHeight - 34} textAnchor="middle">{formatPercent(point.changePercent)}</text>
+                  <text className="chartLabel" x={x + barWidth / 2} y={chartHeight - 12} textAnchor="middle">{point.label}</text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function subcategoriesFor(type) {
   return SUBCATEGORIES_BY_TYPE[type] || [];
 }
@@ -50,11 +161,22 @@ function Home() {
   const [selectedUser, setSelectedUser] = React.useState(() => localStorage.getItem(USER_STORAGE_KEY) || FALLBACK_USERS[0]);
   const [types, setTypes] = React.useState([]);
   const [entries, setEntries] = React.useState([]);
+  const [graphEntries, setGraphEntries] = React.useState([]);
   const [typeFilter, setTypeFilter] = React.useState('');
   const [subcategoryFilter, setSubcategoryFilter] = React.useState('');
   const [form, setForm] = React.useState({ type: '', subcategory: '', valuePln: '', date: today() });
   const [status, setStatus] = React.useState('');
   const [error, setError] = React.useState('');
+
+  const loadGraphEntries = React.useCallback(() => {
+    const params = new URLSearchParams({ owner: selectedUser });
+    return fetch(`/api/investments?${params}`)
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then(setGraphEntries);
+  }, [selectedUser]);
 
   const loadEntries = React.useCallback(() => {
     const params = new URLSearchParams({ owner: selectedUser });
@@ -92,8 +214,8 @@ function Home() {
   React.useEffect(() => {
     localStorage.setItem(USER_STORAGE_KEY, selectedUser);
     setStatus('');
-    loadEntries().catch((fetchError) => setError(fetchError.message));
-  }, [selectedUser, typeFilter, subcategoryFilter, loadEntries]);
+    Promise.all([loadEntries(), loadGraphEntries()]).catch((fetchError) => setError(fetchError.message));
+  }, [selectedUser, typeFilter, subcategoryFilter, loadEntries, loadGraphEntries]);
 
   const totalsByType = entries.reduce((totals, entry) => {
     totals[entry.type] = (totals[entry.type] || 0) + Number(entry.valuePln);
@@ -133,7 +255,7 @@ function Home() {
       .then(() => {
         setForm((current) => ({ ...current, valuePln: '', date: current.date || today() }));
         setStatus(`Dodano wpis dla: ${displayName(selectedUser)}.`);
-        return loadEntries();
+        return Promise.all([loadEntries(), loadGraphEntries()]);
       })
       .catch((fetchError) => {
         setStatus('');
@@ -146,7 +268,7 @@ function Home() {
       .then((response) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         setStatus('Usunięto wpis.');
-        return loadEntries();
+        return Promise.all([loadEntries(), loadGraphEntries()]);
       })
       .catch((fetchError) => setError(fetchError.message));
   }
@@ -222,6 +344,8 @@ function Home() {
           {error && <p className="error">Nie udało się wykonać operacji: {error}</p>}
         </form>
       </section>
+
+      <SummaryChart entries={graphEntries} types={types} />
 
       <section className="panel entriesPanel">
         <div className="entriesHeader"><h2>Wpisy: {displayName(selectedUser)}</h2></div>
