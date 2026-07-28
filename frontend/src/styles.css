@@ -352,3 +352,130 @@ select {
   background: #e5f3e8;
   color: #133c23;
 }
+
+.graphPanel {
+  gap: 22px;
+  overflow: hidden;
+}
+
+.graphHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.graphHeader h2 {
+  margin-top: 4px;
+  font-size: 1.25rem;
+}
+
+.graphControls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(170px, 1fr));
+  gap: 12px;
+  width: min(440px, 100%);
+}
+
+.graphControls label,
+.metricCard {
+  display: grid;
+  gap: 8px;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metricCard {
+  padding: 16px;
+  border: 1px solid #dfebe3;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #f8fbf9, #ffffff);
+}
+
+.metricCard span {
+  color: #59675e;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.metricCard strong {
+  color: #111b15;
+  font-size: clamp(1.25rem, 2vw, 1.75rem);
+  line-height: 1;
+}
+
+.metricCard.positive strong,
+.positiveText {
+  fill: #21753c;
+  color: #21753c;
+}
+
+.metricCard.negative strong,
+.negativeText {
+  fill: #a83232;
+  color: #a83232;
+}
+
+.chartScroller {
+  overflow-x: auto;
+  padding: 10px 2px 4px;
+}
+
+.summaryChart {
+  min-width: 720px;
+  width: 100%;
+  height: 340px;
+  border-radius: 18px;
+  background:
+    linear-gradient(180deg, rgb(229 243 232 / 70%), rgb(255 255 255 / 95%)),
+    repeating-linear-gradient(0deg, transparent 0 54px, rgb(23 61 39 / 10%) 55px);
+}
+
+.summaryChart line {
+  stroke: #9fb7a8;
+  stroke-width: 2;
+}
+
+.chartBar {
+  fill: url(#barGradient);
+  filter: drop-shadow(0 12px 16px rgb(33 117 60 / 18%));
+}
+
+
+.chartValue,
+.chartChange,
+.chartLabel {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+}
+
+.chartValue {
+  fill: #172018;
+  font-size: 12px;
+}
+
+.chartChange {
+  font-size: 12px;
+}
+
+.chartLabel {
+  fill: #59675e;
+  font-size: 12px;
+}
+
+@media (max-width: 860px) {
+  .graphHeader,
+  .graphControls,
+  .metricGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .graphHeader {
+    display: grid;
+  }
+}
