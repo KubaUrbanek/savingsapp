@@ -19,8 +19,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import pl.oszczednosci.app.dto.CreateInvestmentEntryRequest;
 import pl.oszczednosci.app.dto.InvestmentEntryResponse;
+import pl.oszczednosci.app.model.InvestmentSubcategory;
 import pl.oszczednosci.app.model.InvestmentType;
 import pl.oszczednosci.app.model.PortfolioUser;
+import pl.oszczednosci.app.service.InvestmentCategoryRules;
 import pl.oszczednosci.app.service.InvestmentEntryService;
 
 @RestController
@@ -36,6 +38,13 @@ public class InvestmentEntryController {
     @GetMapping("/investment-types")
     public List<String> investmentTypes() {
         return Arrays.stream(InvestmentType.values())
+                .map(Enum::name)
+                .toList();
+    }
+
+    @GetMapping("/investment-subcategories")
+    public List<String> investmentSubcategories(@RequestParam InvestmentType type) {
+        return InvestmentCategoryRules.allowedSubcategories(type).stream()
                 .map(Enum::name)
                 .toList();
     }
@@ -56,9 +65,10 @@ public class InvestmentEntryController {
     @GetMapping("/investments")
     public List<InvestmentEntryResponse> list(
             @RequestParam PortfolioUser owner,
-            @RequestParam(required = false) InvestmentType type
+            @RequestParam(required = false) InvestmentType type,
+            @RequestParam(required = false) InvestmentSubcategory subcategory
     ) {
-        return service.list(owner, type).stream()
+        return service.list(owner, type, subcategory).stream()
                 .map(InvestmentEntryResponse::fromEntity)
                 .toList();
     }

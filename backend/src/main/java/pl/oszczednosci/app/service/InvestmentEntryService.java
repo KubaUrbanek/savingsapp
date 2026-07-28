@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import pl.oszczednosci.app.dto.CreateInvestmentEntryRequest;
 import pl.oszczednosci.app.model.InvestmentEntry;
+import pl.oszczednosci.app.model.InvestmentSubcategory;
 import pl.oszczednosci.app.model.InvestmentType;
 import pl.oszczednosci.app.model.PortfolioUser;
 import pl.oszczednosci.app.repository.InvestmentEntryRepository;
@@ -26,15 +27,20 @@ public class InvestmentEntryService {
 
     @Transactional
     public InvestmentEntry create(CreateInvestmentEntryRequest request) {
+        InvestmentCategoryRules.validate(request.type(), request.subcategory());
         BigDecimal normalizedValue = policyRegistry.forType(request.type()).normalizePln(request.valuePln());
-        InvestmentEntry entry = new InvestmentEntry(request.type(), request.owner(), normalizedValue, request.date());
+        InvestmentEntry entry = new InvestmentEntry(request.type(), request.owner(), request.subcategory(), normalizedValue, request.date());
         return repository.save(entry);
     }
 
     @Transactional(readOnly = true)
-    public List<InvestmentEntry> list(PortfolioUser owner, InvestmentType type) {
+    public List<InvestmentEntry> list(PortfolioUser owner, InvestmentType type, InvestmentSubcategory subcategory) {
         if (type == null) {
             return repository.findByOwnerOrderByDateDescCreatedAtDesc(owner);
+        }
+        if (subcategory != null) {
+            InvestmentCategoryRules.validate(type, subcategory);
+            return repository.findByOwnerAndTypeAndSubcategoryOrderByDateDescCreatedAtDesc(owner, type, subcategory);
         }
         return repository.findByOwnerAndTypeOrderByDateDescCreatedAtDesc(owner, type);
     }

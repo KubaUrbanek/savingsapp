@@ -1,7 +1,11 @@
 package pl.oszczednosci.app.model;
 
 public enum InvestmentType {
-    BOND,
-    STOCK,
-    SAVINGS
+    OBLIGACJE,
+    GIELDA,
+    IKE,
+    IKZE,
+    KONTO_OSZCZEDNOSCIOWE,
+    KONTO_BANKOWE,
+    PPK
 }

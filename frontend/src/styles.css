@@ -203,7 +203,7 @@ pre {
 
 .summaryGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
 }
 
@@ -310,4 +310,45 @@ select {
   .entriesHeader select {
     max-width: none;
   }
+}
+
+.typeNav,
+.subtypeNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.typeTab,
+.subtypeTab {
+  min-height: 42px;
+  padding: 8px 14px;
+  border: 1px solid #bdd6c5;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #234532;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+}
+
+.typeTab.active,
+.typeTab:hover {
+  border-color: #173d27;
+  background: #173d27;
+  color: #ffffff;
+}
+
+.subtypeTab {
+  min-height: 36px;
+  background: #f8fbf9;
+  font-size: 0.92rem;
+}
+
+.subtypeTab.active,
+.subtypeTab:hover {
+  border-color: #2c6f45;
+  background: #e5f3e8;
+  color: #133c23;
 }
