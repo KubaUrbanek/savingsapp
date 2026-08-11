@@ -479,3 +479,63 @@ select {
     display: grid;
   }
 }
+
+.databasePanel {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  max-width: none;
+  margin-bottom: 24px;
+}
+
+.databasePanel h2 {
+  margin-top: 4px;
+  font-size: 1.2rem;
+}
+
+.databasePanel p:not(.eyebrow) {
+  margin-top: 6px;
+  color: #59675e;
+}
+
+.databaseActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.dangerButton {
+  border-color: #d99a9a;
+  background: #fff4f4;
+  color: #8f2626;
+  cursor: pointer;
+  font: inherit;
+}
+
+.dangerButton:hover {
+  border-color: #8f2626;
+  background: #f8dede;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+@media (max-width: 860px) {
+  .databasePanel {
+    grid-template-columns: 1fr;
+  }
+
+  .databaseActions {
+    justify-content: stretch;
+  }
+
+  .databaseActions .button {
+    width: 100%;
+  }
+}

@@ -41,6 +41,14 @@ public class InvestmentEntryService {
         return repository.findByOwnerAndTypeOrderByDateDescCreatedAtDesc(owner, type);
     }
 
+    public byte[] exportDatabase() {
+        return repository.exportDatabase();
+    }
+
+    public void importDatabase(byte[] databaseContents) {
+        repository.importDatabase(databaseContents);
+    }
+
     public void delete(UUID id) {
         repository.deleteById(id);
     }

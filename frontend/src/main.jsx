@@ -167,6 +167,7 @@ function Home() {
   const [form, setForm] = React.useState({ type: '', subcategory: '', valuePln: '', date: today() });
   const [status, setStatus] = React.useState('');
   const [error, setError] = React.useState('');
+  const importInputRef = React.useRef(null);
 
   const loadGraphEntries = React.useCallback(() => {
     const params = new URLSearchParams({ owner: selectedUser });
@@ -230,6 +231,65 @@ function Home() {
     setTypeFilter(nextType);
     setSubcategoryFilter('');
     setForm((current) => ({ ...current, type: nextType, subcategory: nextSubcategories[0] || '' }));
+  }
+
+
+  function exportDatabase() {
+    setError('');
+    setStatus('Przygotowywanie eksportu...');
+
+    fetch('/api/database/export')
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.blob();
+      })
+      .then((blob) => {
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `oszczednosci-database-${today()}.json`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(downloadUrl);
+        setStatus('Wyeksportowano bazę danych do pliku JSON.');
+      })
+      .catch((fetchError) => {
+        setStatus('');
+        setError(fetchError.message);
+      });
+  }
+
+  function chooseImportFile() {
+    importInputRef.current?.click();
+  }
+
+  function importDatabase(event) {
+    const [file] = event.target.files;
+    event.target.value = '';
+    if (!file) return;
+
+    const confirmed = window.confirm('Import nadpisze aktualną bazę danych. Czy na pewno chcesz kontynuować?');
+    if (!confirmed) return;
+
+    const payload = new FormData();
+    payload.append('file', file);
+    setError('');
+    setStatus('Importowanie bazy danych...');
+
+    fetch('/api/database/import', {
+      method: 'POST',
+      body: payload
+    })
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        setStatus('Zaimportowano bazę danych i odświeżono widok.');
+        return Promise.all([loadEntries(), loadGraphEntries()]);
+      })
+      .catch((fetchError) => {
+        setStatus('');
+        setError(fetchError.message);
+      });
   }
 
   function submitEntry(event) {
@@ -307,6 +367,20 @@ function Home() {
           ))}
         </section>
       )}
+
+
+      <section className="panel databasePanel">
+        <div>
+          <p className="eyebrow">Kopia danych</p>
+          <h2>Eksport i import jednoplikowej bazy JSON</h2>
+          <p>Pobierz aktualny plik bazy danych lub wgraj wcześniej wyeksportowany plik. Import nadpisuje całą obecną bazę.</p>
+        </div>
+        <div className="databaseActions">
+          <button className="button primaryButton" type="button" onClick={exportDatabase}>Eksportuj bazę</button>
+          <button className="button dangerButton" type="button" onClick={chooseImportFile}>Importuj i nadpisz</button>
+          <input ref={importInputRef} className="visuallyHidden" type="file" accept="application/json,.json" onChange={importDatabase} />
+        </div>
+      </section>
 
       <section className="dashboardGrid">
         <article className="panel summaryPanel">
