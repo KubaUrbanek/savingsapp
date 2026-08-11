@@ -83,6 +83,33 @@ Open the application at:
 http://localhost:8080
 ```
 
+
+## Docker build and run
+
+Build a self-contained container image from the repository root:
+
+```bash
+docker build -t oszczednosci-app .
+```
+
+Run the application in Docker:
+
+```bash
+docker run --rm -p 8080:8080 -v oszczednosci-data:/app/data oszczednosci-app
+```
+
+The container serves the React SPA and Spring Boot API together at:
+
+```text
+http://localhost:8080
+```
+
+The image stores runtime investment data at `/app/data/investment-entries.json` by default. Mount a Docker volume, as shown above, to preserve data across container restarts. You can pass additional JVM options with `JAVA_OPTS`, for example:
+
+```bash
+docker run --rm -p 8080:8080 -e JAVA_OPTS="-Xmx512m" -v oszczednosci-data:/app/data oszczednosci-app
+```
+
 ## Development workflow
 
 Run the backend from the repository root or the `backend/` module with Maven/Spring Boot tooling. When the backend is running on port `8080`, start the frontend development server separately:
