@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -13,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import pl.oszczednosci.app.model.InvestmentEntry;
@@ -47,6 +49,24 @@ public class InvestmentEntryRepository {
         entries.add(entry);
         writeEntries(entries);
         return entry;
+    }
+
+
+    public synchronized byte[] exportDatabase() {
+        if (Files.notExists(databasePath)) {
+            writeEntries(Collections.emptyList());
+        }
+        try {
+            return Files.readAllBytes(databasePath);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to export JSON database file: " + databasePath, exception);
+        }
+    }
+
+    public synchronized void importDatabase(byte[] databaseContents) {
+        List<InvestmentEntry> entries = parseEntries(databaseContents);
+        entries.forEach(InvestmentEntry::prepareForSave);
+        writeEntries(entries);
     }
 
     public synchronized void deleteById(UUID id) {
@@ -91,6 +111,16 @@ public class InvestmentEntryRepository {
             return new ArrayList<>(objectMapper.readValue(databasePath.toFile(), ENTRY_LIST));
         } catch (IOException exception) {
             throw new IllegalStateException("Unable to read JSON database file: " + databasePath, exception);
+        }
+    }
+
+    private List<InvestmentEntry> parseEntries(byte[] databaseContents) {
+        try {
+            return new ArrayList<>(objectMapper.readValue(databaseContents, ENTRY_LIST));
+        } catch (JsonMappingException exception) {
+            throw new IllegalArgumentException("Imported file is not a valid investment entries JSON database.", exception);
+        } catch (IOException exception) {
+            throw new IllegalArgumentException("Unable to read imported JSON database file.", exception);
         }
     }
 
