@@ -1,0 +1,45 @@
+.git
+.gitignore
+Dockerfile
+.dockerignore
+
+# Build outputs
+target/
+backend/target/
+frontend/dist/
+backend/src/main/resources/static/
+
+# Dependencies and caches
+node_modules/
+frontend/node_modules/
+.npm/
+.m2/
+
+# Local runtime data and logs
+backend/data/
+data/
+logs/
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# Local configuration and editor metadata
+.env
+.env.*
+!.env.example
+*.local
+.idea/
+.vscode/
+*.iml
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Test and coverage output
+coverage/
+.nyc_output/
+.tmp/
+tmp/
+temp/
