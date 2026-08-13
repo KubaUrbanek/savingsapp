@@ -681,9 +681,9 @@ function Home() {
 
       <section className="panel entriesPanel">
         <div className="entriesHeader"><h2>Wpisy: {displayName(selectedUser)}</h2></div>
-        {entries.length === 0 ? <p>Brak wpisów w wybranym widoku.</p> : (
+        {graphEntries.length === 0 ? <p>Brak wpisów dla wybranej osoby.</p> : (
           <div className="entryList">
-            {entries.map((entry) => <div className="entryRow" key={entry.id}>
+            {graphEntries.map((entry) => <div className="entryRow" key={entry.id}>
               <div><strong>{TYPE_LABELS[entry.type] || entry.type}</strong><span>{entry.subcategory ? SUBCATEGORY_LABELS[entry.subcategory] : 'Bez podkategorii'} · {entry.date}</span></div>
               <strong>{formatMoney(entry.valuePln)}</strong>
               <button type="button" onClick={() => deleteEntry(entry.id)}>Usuń</button>
