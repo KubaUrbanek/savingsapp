@@ -539,3 +539,113 @@ select {
     width: 100%;
   }
 }
+
+.stockPanel {
+  max-width: none;
+}
+
+.stockHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, auto);
+  gap: 18px;
+  align-items: start;
+}
+
+.stockHeader h2 {
+  margin-top: 4px;
+  font-size: 1.25rem;
+}
+
+.stockHeader p:not(.eyebrow) {
+  margin-top: 8px;
+  color: #59675e;
+}
+
+.stockTotal {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 14px;
+  background: #173d27;
+  color: #ffffff;
+}
+
+.stockTotal span {
+  color: #cae4d1;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.stockTotal strong {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.stockTable {
+  overflow-x: auto;
+  border: 1px solid #dfebe3;
+  border-radius: 14px;
+}
+
+.stockTableHeader,
+.stockRow {
+  display: grid;
+  grid-template-columns: 1.25fr repeat(5, minmax(120px, 1fr));
+  gap: 12px;
+  min-width: 860px;
+  padding: 12px 16px;
+  align-items: center;
+}
+
+.stockTableHeader {
+  background: #f1f7f3;
+  color: #59675e;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.stockRow + .stockRow {
+  border-top: 1px solid #e1e9e4;
+}
+
+.stockRow div {
+  display: grid;
+  gap: 2px;
+}
+
+.stockRow small {
+  color: #718078;
+  font-weight: 700;
+}
+
+.stockRow.buy strong:last-of-type {
+  color: #21753c;
+}
+
+.stockRow.trim strong:last-of-type {
+  color: #a83232;
+}
+
+.rebalanceHint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #fff8e6;
+  color: #5d4513;
+}
+
+.quickStockActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+@media (max-width: 860px) {
+  .stockHeader {
+    grid-template-columns: 1fr;
+  }
+}
