@@ -76,23 +76,54 @@ function monthLabel(key) {
   return new Intl.DateTimeFormat('pl-PL', { month: 'short', year: 'numeric' }).format(new Date(Number(year), Number(month) - 1, 1));
 }
 
-function buildSummary(entries, period) {
-  const keyFor = period === 'yearly' ? yearKey : monthKey;
-  const labelFor = period === 'yearly' ? (key) => key : monthLabel;
-  const totals = entries.reduce((result, entry) => {
-    const key = keyFor(entry.date);
-    result[key] = (result[key] || 0) + Number(entry.valuePln);
+function snapshotKey(entry) {
+  return `${entry.type}:${entry.subcategory || 'NONE'}`;
+}
+
+function isNewerEntry(candidate, current) {
+  return !current || candidate.date > current.date || (candidate.date === current.date && candidate.createdAt > current.createdAt);
+}
+
+function buildCurrentSnapshot(entries) {
+  const latestByInvestment = entries.reduce((result, entry) => {
+    const key = snapshotKey(entry);
+    if (isNewerEntry(entry, result[key])) {
+      result[key] = entry;
+    }
     return result;
   }, {});
 
-  return Object.entries(totals)
-    .sort(([first], [second]) => first.localeCompare(second))
-    .map(([key, total], index, sorted) => {
-      const previousTotal = index > 0 ? sorted[index - 1][1] : null;
-      const changeAmount = previousTotal === null ? 0 : total - previousTotal;
-      const changePercent = previousTotal > 0 ? (changeAmount / previousTotal) * 100 : null;
-      return { key, label: labelFor(key), total, changeAmount, changePercent };
-    });
+  return Object.values(latestByInvestment);
+}
+
+function buildSummary(entries, period) {
+  const keyFor = period === 'yearly' ? yearKey : monthKey;
+  const labelFor = period === 'yearly' ? (key) => key : monthLabel;
+  const sortedEntries = [...entries].sort((first, second) => {
+    const dateOrder = first.date.localeCompare(second.date);
+    if (dateOrder !== 0) return dateOrder;
+    return first.createdAt.localeCompare(second.createdAt);
+  });
+  const periodKeys = [...new Set(sortedEntries.map((entry) => keyFor(entry.date)))].sort((first, second) => first.localeCompare(second));
+  const latestByInvestment = {};
+  const totalsByPeriod = [];
+  let entryIndex = 0;
+
+  return periodKeys.map((key, index) => {
+    while (entryIndex < sortedEntries.length && keyFor(sortedEntries[entryIndex].date) <= key) {
+      const entry = sortedEntries[entryIndex];
+      latestByInvestment[snapshotKey(entry)] = entry;
+      entryIndex += 1;
+    }
+
+    const total = Object.values(latestByInvestment).reduce((sum, entry) => sum + Number(entry.valuePln), 0);
+    const previousTotal = index > 0 ? totalsByPeriod[index - 1] : null;
+    const changeAmount = previousTotal === null ? 0 : total - previousTotal;
+    const changePercent = previousTotal > 0 ? (changeAmount / previousTotal) * 100 : null;
+
+    totalsByPeriod[index] = total;
+    return { key, label: labelFor(key), total, changeAmount, changePercent };
+  });
 }
 
 
@@ -106,7 +137,7 @@ function buildStockAllocation(entries) {
     .filter((entry) => entry.type === 'GIELDA' && STOCK_SUBCATEGORIES.includes(entry.subcategory))
     .forEach((entry) => {
       const current = latestBySubcategory[entry.subcategory];
-      if (!current || entry.date > current.date || (entry.date === current.date && entry.createdAt > current.createdAt)) {
+      if (isNewerEntry(entry, current)) {
         latestBySubcategory[entry.subcategory] = entry;
       }
     });
@@ -327,11 +358,12 @@ function Home() {
     Promise.all([loadEntries(), loadGraphEntries()]).catch((fetchError) => setError(fetchError.message));
   }, [selectedUser, typeFilter, subcategoryFilter, loadEntries, loadGraphEntries]);
 
-  const totalsByType = entries.reduce((totals, entry) => {
+  const currentEntries = buildCurrentSnapshot(entries);
+  const totalsByType = currentEntries.reduce((totals, entry) => {
     totals[entry.type] = (totals[entry.type] || 0) + Number(entry.valuePln);
     return totals;
   }, {});
-  const totalValue = entries.reduce((sum, entry) => sum + Number(entry.valuePln), 0);
+  const totalValue = currentEntries.reduce((sum, entry) => sum + Number(entry.valuePln), 0);
   const currentSubcategories = subcategoriesFor(form.type);
   const filterSubcategories = subcategoriesFor(typeFilter);
 
@@ -423,7 +455,7 @@ function Home() {
       })
       .then(() => {
         setForm((current) => ({ ...current, valuePln: '', date: current.date || today() }));
-        setStatus(`Dodano wpis dla: ${displayName(selectedUser)}.`);
+        setStatus(`Zapisano stan dla: ${displayName(selectedUser)}.`);
         return Promise.all([loadEntries(), loadGraphEntries()]);
       })
       .catch((fetchError) => {
@@ -455,7 +487,7 @@ function Home() {
       <section className="hero">
         <p className="eyebrow">Portfele użytkowników</p>
         <h1>Zarządzaj inwestycjami po polsku.</h1>
-        <p>Wybierz osobę, typ inwestycji i podkategorię, a następnie dopisz wartość z konkretną datą.</p>
+        <p>Wybierz osobę, typ inwestycji i podkategorię, a następnie zapisz aktualny stan z konkretną datą.</p>
       </section>
 
       <section className="userSwitcher" aria-label="Wybór użytkownika">
@@ -510,7 +542,7 @@ function Home() {
         </article>
 
         <form className="panel formPanel" onSubmit={submitEntry}>
-          <h2>Dodaj wartość dla: {displayName(selectedUser)}</h2>
+          <h2>Dodaj aktualny stan dla: {displayName(selectedUser)}</h2>
           <label>Typ inwestycji
             <select value={form.type} onChange={(event) => {
               const nextType = event.target.value;
@@ -524,13 +556,13 @@ function Home() {
               {currentSubcategories.map((subcategory) => <option key={subcategory} value={subcategory}>{SUBCATEGORY_LABELS[subcategory] || subcategory}</option>)}
             </select>
           </label>}
-          <label>Wartość w PLN
+          <label>Aktualny stan w PLN
             <input min="0.01" step="0.01" type="number" value={form.valuePln} onChange={(event) => setForm({ ...form, valuePln: event.target.value })} required />
           </label>
           <label>Data wpisu
             <input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} required />
           </label>
-          <button className="button primaryButton" type="submit">Dodaj do portfela</button>
+          <button className="button primaryButton" type="submit">Zapisz stan portfela</button>
           {status && <p className="success">{status}</p>}
           {error && <p className="error">Nie udało się wykonać operacji: {error}</p>}
         </form>
