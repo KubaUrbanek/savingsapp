@@ -709,3 +709,57 @@ select {
   color: #a83232;
   font-weight: 800;
 }
+
+.allocationEditor {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #cfe2d5;
+  border-radius: 14px;
+  background: #f8fbf9;
+}
+
+.allocationEditor h3 {
+  margin: 4px 0 0;
+  color: #172018;
+  font-size: 1.1rem;
+}
+
+.allocationEditor p:not(.eyebrow) {
+  margin-top: 6px;
+  color: #59675e;
+}
+
+.allocationInputs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.allocationInputs label {
+  display: grid;
+  gap: 8px;
+}
+
+.allocationStatus {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+}
+
+.allocationStatus.valid span {
+  color: #21753c;
+}
+
+.allocationStatus.invalid span,
+.allocationStatus.invalid strong {
+  color: #a83232;
+}
+
+@media (max-width: 860px) {
+  .allocationInputs {
+    grid-template-columns: 1fr;
+  }
+}

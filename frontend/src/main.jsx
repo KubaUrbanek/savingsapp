@@ -20,12 +20,13 @@ const TYPE_LABELS = {
   KONTO_BANKOWE: 'Konto bankowe',
   PPK: 'PPK'
 };
-const STOCK_TARGET_ALLOCATIONS = {
+const DEFAULT_STOCK_TARGET_ALLOCATIONS = {
   ZLOTO: 40,
   RYNKI_ROZWINIETE: 30,
   RYNKI_ROZWIJAJACE_SIE: 30
 };
-const STOCK_SUBCATEGORIES = Object.keys(STOCK_TARGET_ALLOCATIONS);
+const STOCK_SUBCATEGORIES = Object.keys(DEFAULT_STOCK_TARGET_ALLOCATIONS);
+const STOCK_ALLOCATION_STORAGE_KEY = 'oszczednosci.stockTargetAllocations';
 
 const SUBCATEGORY_LABELS = {
   ZLOTO: 'Złoto',
@@ -127,7 +128,31 @@ function buildSummary(entries, period) {
 }
 
 
-function buildStockAllocation(entries) {
+function normalizeStockAllocations(weights) {
+  return STOCK_SUBCATEGORIES.reduce((result, subcategory) => {
+    const parsedWeight = Number(weights?.[subcategory]);
+    result[subcategory] = Number.isFinite(parsedWeight) && parsedWeight >= 0 ? parsedWeight : DEFAULT_STOCK_TARGET_ALLOCATIONS[subcategory];
+    return result;
+  }, {});
+}
+
+function loadStoredStockAllocations() {
+  try {
+    return normalizeStockAllocations(JSON.parse(localStorage.getItem(STOCK_ALLOCATION_STORAGE_KEY) || 'null'));
+  } catch {
+    return normalizeStockAllocations(DEFAULT_STOCK_TARGET_ALLOCATIONS);
+  }
+}
+
+function allocationTotal(weights) {
+  return STOCK_SUBCATEGORIES.reduce((sum, subcategory) => sum + Number(weights[subcategory] || 0), 0);
+}
+
+function formatAllocationHeadline(weights) {
+  return STOCK_SUBCATEGORIES.map((subcategory) => `${SUBCATEGORY_LABELS[subcategory].toLowerCase()} ${formatUnsignedPercent(Number(weights[subcategory] || 0))}`).join(', ');
+}
+
+function buildStockAllocation(entries, targetAllocations) {
   const latestBySubcategory = STOCK_SUBCATEGORIES.reduce((result, subcategory) => ({
     ...result,
     [subcategory]: null
@@ -145,7 +170,7 @@ function buildStockAllocation(entries) {
   const total = Object.values(latestBySubcategory).reduce((sum, entry) => sum + Number(entry?.valuePln || 0), 0);
   const rows = STOCK_SUBCATEGORIES.map((subcategory) => {
     const currentValue = Number(latestBySubcategory[subcategory]?.valuePln || 0);
-    const targetWeight = STOCK_TARGET_ALLOCATIONS[subcategory];
+    const targetWeight = targetAllocations[subcategory];
     const targetValue = total * (targetWeight / 100);
     const difference = targetValue - currentValue;
     const divergencePercent = targetValue > 0 ? (difference / targetValue) * 100 : null;
@@ -168,7 +193,25 @@ function buildStockAllocation(entries) {
 
 function StockAllocationPanel({ entries, onAddStockValue }) {
   const [virtualContribution, setVirtualContribution] = React.useState('');
-  const allocation = React.useMemo(() => buildStockAllocation(entries), [entries]);
+  const [targetAllocations, setTargetAllocations] = React.useState(loadStoredStockAllocations);
+  const allocation = React.useMemo(() => buildStockAllocation(entries, targetAllocations), [entries, targetAllocations]);
+  const targetAllocationTotal = allocationTotal(targetAllocations);
+  const isAllocationValid = Math.abs(targetAllocationTotal - 100) < 0.001;
+
+  React.useEffect(() => {
+    localStorage.setItem(STOCK_ALLOCATION_STORAGE_KEY, JSON.stringify(targetAllocations));
+  }, [targetAllocations]);
+
+  function changeTargetAllocation(subcategory, value) {
+    setTargetAllocations((current) => ({
+      ...current,
+      [subcategory]: value === '' ? 0 : Number(value)
+    }));
+  }
+
+  function resetTargetAllocations() {
+    setTargetAllocations(normalizeStockAllocations(DEFAULT_STOCK_TARGET_ALLOCATIONS));
+  }
   const contributionAmount = Number(virtualContribution || 0);
   const projectedTotal = allocation.total + contributionAmount;
   const contributionRows = allocation.rows.map((row) => {
@@ -190,10 +233,30 @@ function StockAllocationPanel({ entries, onAddStockValue }) {
       <div className="stockHeader">
         <div>
           <p className="eyebrow">Giełda — rebalancing ETF</p>
-          <h2>Docelowy podział: złoto 40%, rynki rozwinięte 30%, rynki wschodzące 30%</h2>
+          <h2>Docelowy podział: {formatAllocationHeadline(targetAllocations)}</h2>
           <p>Panel używa najnowszej wartości każdej podkategorii Giełdy, więc możesz regularnie dopisywać aktualne wyceny ETF bez nadpisywania historii.</p>
         </div>
         <div className="stockTotal"><span>Aktualna wartość ETF</span><strong>{formatMoney(allocation.total)}</strong></div>
+      </div>
+
+      <div className="allocationEditor">
+        <div>
+          <p className="eyebrow">Wagi ETF</p>
+          <h3>Zmień docelowy udział każdej pozycji</h3>
+          <p>Wpisz dowolne wartości procentowe, np. 50% złota i po 25% dla pozostałych ETF. Suma wag powinna wynosić 100%.</p>
+        </div>
+        <div className="allocationInputs">
+          {STOCK_SUBCATEGORIES.map((subcategory) => (
+            <label key={subcategory}>{SUBCATEGORY_LABELS[subcategory]}
+              <input min="0" max="100" step="0.01" type="number" value={targetAllocations[subcategory]} onChange={(event) => changeTargetAllocation(subcategory, event.target.value)} />
+            </label>
+          ))}
+        </div>
+        <div className={isAllocationValid ? 'allocationStatus valid' : 'allocationStatus invalid'}>
+          <span>Suma wag: {formatUnsignedPercent(targetAllocationTotal)}</span>
+          {!isAllocationValid && <strong>Ustaw łącznie 100%, aby plan był poprawny.</strong>}
+          <button className="subtypeTab" type="button" onClick={resetTargetAllocations}>Przywróć 40/30/30</button>
+        </div>
       </div>
 
       {allocation.total === 0 ? <p>Dodaj pierwsze wartości dla trzech ETF w typie „Giełda”, aby zobaczyć odchylenia od planu.</p> : (
