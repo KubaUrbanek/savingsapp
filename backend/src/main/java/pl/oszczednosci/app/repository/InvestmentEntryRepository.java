@@ -13,9 +13,9 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.DatabindException;
+import tools.jackson.databind.ObjectMapper;
 
 import pl.oszczednosci.app.model.InvestmentEntry;
 import pl.oszczednosci.app.model.InvestmentSubcategory;
@@ -117,7 +117,7 @@ public class InvestmentEntryRepository {
     private List<InvestmentEntry> parseEntries(byte[] databaseContents) {
         try {
             return new ArrayList<>(objectMapper.readValue(databaseContents, ENTRY_LIST));
-        } catch (JsonMappingException exception) {
+        } catch (DatabindException exception) {
             throw new IllegalArgumentException("Imported file is not a valid investment entries JSON database.", exception);
         } catch (IOException exception) {
             throw new IllegalArgumentException("Unable to read imported JSON database file.", exception);
