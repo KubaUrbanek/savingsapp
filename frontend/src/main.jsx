@@ -20,6 +20,13 @@ const TYPE_LABELS = {
   KONTO_BANKOWE: 'Konto bankowe',
   PPK: 'PPK'
 };
+const STOCK_TARGET_ALLOCATIONS = {
+  ZLOTO: 40,
+  RYNKI_ROZWINIETE: 30,
+  RYNKI_ROZWIJAJACE_SIE: 30
+};
+const STOCK_SUBCATEGORIES = Object.keys(STOCK_TARGET_ALLOCATIONS);
+
 const SUBCATEGORY_LABELS = {
   ZLOTO: 'Złoto',
   RYNKI_ROZWINIETE: 'Rynki rozwinięte',
@@ -44,6 +51,16 @@ function displayName(user) {
 function formatPercent(value) {
   if (!Number.isFinite(value)) return '—';
   return `${value > 0 ? '+' : ''}${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 }).format(value)}%`;
+}
+
+function formatUnsignedPercent(value) {
+  if (!Number.isFinite(value)) return '—';
+  return `${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 }).format(value)}%`;
+}
+
+function formatSignedMoney(value) {
+  const sign = value > 0 ? '+' : '';
+  return `${sign}${formatMoney(value)}`;
 }
 
 function monthKey(dateValue) {
@@ -76,6 +93,98 @@ function buildSummary(entries, period) {
       const changePercent = previousTotal > 0 ? (changeAmount / previousTotal) * 100 : null;
       return { key, label: labelFor(key), total, changeAmount, changePercent };
     });
+}
+
+
+function buildStockAllocation(entries) {
+  const latestBySubcategory = STOCK_SUBCATEGORIES.reduce((result, subcategory) => ({
+    ...result,
+    [subcategory]: null
+  }), {});
+
+  entries
+    .filter((entry) => entry.type === 'GIELDA' && STOCK_SUBCATEGORIES.includes(entry.subcategory))
+    .forEach((entry) => {
+      const current = latestBySubcategory[entry.subcategory];
+      if (!current || entry.date > current.date || (entry.date === current.date && entry.createdAt > current.createdAt)) {
+        latestBySubcategory[entry.subcategory] = entry;
+      }
+    });
+
+  const total = Object.values(latestBySubcategory).reduce((sum, entry) => sum + Number(entry?.valuePln || 0), 0);
+  const rows = STOCK_SUBCATEGORIES.map((subcategory) => {
+    const currentValue = Number(latestBySubcategory[subcategory]?.valuePln || 0);
+    const targetWeight = STOCK_TARGET_ALLOCATIONS[subcategory];
+    const targetValue = total * (targetWeight / 100);
+    const difference = targetValue - currentValue;
+    const divergencePercent = targetValue > 0 ? (difference / targetValue) * 100 : null;
+    const currentWeight = total > 0 ? (currentValue / total) * 100 : 0;
+
+    return {
+      subcategory,
+      currentValue,
+      targetWeight,
+      targetValue,
+      difference,
+      divergencePercent,
+      currentWeight,
+      latestDate: latestBySubcategory[subcategory]?.date || null
+    };
+  });
+
+  return { total, rows };
+}
+
+function StockAllocationPanel({ entries, onAddStockValue }) {
+  const allocation = React.useMemo(() => buildStockAllocation(entries), [entries]);
+  const underweightRows = allocation.rows.filter((row) => row.difference > 0.005).sort((first, second) => second.difference - first.difference);
+
+  return (
+    <section className="panel stockPanel">
+      <div className="stockHeader">
+        <div>
+          <p className="eyebrow">Giełda — rebalancing ETF</p>
+          <h2>Docelowy podział: złoto 40%, rynki rozwinięte 30%, rynki wschodzące 30%</h2>
+          <p>Panel używa najnowszej wartości każdej podkategorii Giełdy, więc możesz regularnie dopisywać aktualne wyceny ETF bez nadpisywania historii.</p>
+        </div>
+        <div className="stockTotal"><span>Aktualna wartość ETF</span><strong>{formatMoney(allocation.total)}</strong></div>
+      </div>
+
+      {allocation.total === 0 ? <p>Dodaj pierwsze wartości dla trzech ETF w typie „Giełda”, aby zobaczyć odchylenia od planu.</p> : (
+        <>
+          <div className="stockTable" role="table" aria-label="Docelowa alokacja giełdowa">
+            <div className="stockTableHeader" role="row">
+              <span>ETF</span><span>Obecnie</span><span>Powinno być</span><span>Różnica</span><span>Udział</span><span>Odchylenie</span>
+            </div>
+            {allocation.rows.map((row) => (
+              <div className={row.difference >= 0 ? 'stockRow buy' : 'stockRow trim'} role="row" key={row.subcategory}>
+                <div><strong>{SUBCATEGORY_LABELS[row.subcategory]}</strong><small>{row.latestDate ? `Aktualizacja: ${row.latestDate}` : 'Brak wpisu'}</small></div>
+                <span>{formatMoney(row.currentValue)}</span>
+                <span>{formatMoney(row.targetValue)}</span>
+                <strong>{formatSignedMoney(row.difference)}</strong>
+                <span>{formatUnsignedPercent(row.currentWeight)} / {row.targetWeight}%</span>
+                <span>{formatPercent(row.divergencePercent)}</span>
+              </div>
+            ))}
+          </div>
+          <div className="rebalanceHint">
+            <strong>Co kupić teraz?</strong>
+            {underweightRows.length === 0 ? <span>Portfel jest powyżej lub bardzo blisko celu dla każdej pozycji.</span> : (
+              <span>Największe niedoważenie: {underweightRows.map((row) => `${SUBCATEGORY_LABELS[row.subcategory]} (${formatMoney(row.difference)})`).join(', ')}.</span>
+            )}
+          </div>
+        </>
+      )}
+
+      <div className="quickStockActions" aria-label="Szybkie dodawanie ETF">
+        {STOCK_SUBCATEGORIES.map((subcategory) => (
+          <button className="subtypeTab" type="button" key={subcategory} onClick={() => onAddStockValue(subcategory)}>
+            Dodaj wycenę: {SUBCATEGORY_LABELS[subcategory]}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function SummaryChart({ entries, types }) {
@@ -323,6 +432,14 @@ function Home() {
       });
   }
 
+  function prepareStockEntry(subcategory) {
+    setForm((current) => ({ ...current, type: 'GIELDA', subcategory, valuePln: '', date: today() }));
+    setTypeFilter('GIELDA');
+    setSubcategoryFilter(subcategory);
+    setStatus(`Wpisz aktualną wartość ETF: ${SUBCATEGORY_LABELS[subcategory]}.`);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
   function deleteEntry(id) {
     fetch(`/api/investments/${id}`, { method: 'DELETE' })
       .then((response) => {
@@ -418,6 +535,8 @@ function Home() {
           {error && <p className="error">Nie udało się wykonać operacji: {error}</p>}
         </form>
       </section>
+
+      {types.includes('GIELDA') && <StockAllocationPanel entries={graphEntries} onAddStockValue={prepareStockEntry} />}
 
       <SummaryChart entries={graphEntries} types={types} />
 
