@@ -649,3 +649,63 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+.virtualContribution {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid #cfe2d5;
+  border-radius: 14px;
+  background: #f8fbf9;
+}
+
+.virtualContribution h3 {
+  margin: 4px 0 0;
+  color: #172018;
+  font-size: 1.1rem;
+}
+
+.virtualContribution p:not(.eyebrow) {
+  margin-top: 6px;
+  color: #59675e;
+}
+
+.contributionTable {
+  overflow-x: auto;
+  border: 1px solid #dfebe3;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.contributionHeader,
+.contributionRow {
+  display: grid;
+  grid-template-columns: 1.3fr repeat(3, minmax(130px, 1fr));
+  gap: 12px;
+  min-width: 640px;
+  padding: 12px 14px;
+  align-items: center;
+}
+
+.contributionHeader {
+  background: #edf6f0;
+  color: #59675e;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.contributionRow + .contributionRow {
+  border-top: 1px solid #e1e9e4;
+}
+
+.contributionRow.buy span:first-of-type {
+  color: #21753c;
+  font-weight: 900;
+}
+
+.contributionRow.trim span:first-of-type,
+.warningText {
+  color: #a83232;
+  font-weight: 800;
+}

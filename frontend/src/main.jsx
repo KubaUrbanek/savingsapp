@@ -167,7 +167,22 @@ function buildStockAllocation(entries) {
 }
 
 function StockAllocationPanel({ entries, onAddStockValue }) {
+  const [virtualContribution, setVirtualContribution] = React.useState('');
   const allocation = React.useMemo(() => buildStockAllocation(entries), [entries]);
+  const contributionAmount = Number(virtualContribution || 0);
+  const projectedTotal = allocation.total + contributionAmount;
+  const contributionRows = allocation.rows.map((row) => {
+    const targetValueAfterContribution = projectedTotal * (row.targetWeight / 100);
+    const amountToAdd = targetValueAfterContribution - row.currentValue;
+
+    return {
+      ...row,
+      targetValueAfterContribution,
+      amountToAdd
+    };
+  });
+  const contributionHasOverweight = contributionRows.some((row) => row.amountToAdd < -0.005);
+  const totalPositiveContribution = contributionRows.reduce((sum, row) => sum + Math.max(row.amountToAdd, 0), 0);
   const underweightRows = allocation.rows.filter((row) => row.difference > 0.005).sort((first, second) => second.difference - first.difference);
 
   return (
@@ -202,6 +217,35 @@ function StockAllocationPanel({ entries, onAddStockValue }) {
             <strong>Co kupić teraz?</strong>
             {underweightRows.length === 0 ? <span>Portfel jest powyżej lub bardzo blisko celu dla każdej pozycji.</span> : (
               <span>Największe niedoważenie: {underweightRows.map((row) => `${SUBCATEGORY_LABELS[row.subcategory]} (${formatMoney(row.difference)})`).join(', ')}.</span>
+            )}
+          </div>
+
+          <div className="virtualContribution">
+            <div>
+              <p className="eyebrow">Wirtualna dopłata</p>
+              <h3>Jak podzielić nową kwotę między ETF?</h3>
+              <p>Wpisana kwota służy tylko do symulacji zakupów i nie powiększa aktualnej wartości portfela, dopóki nie zapiszesz nowych stanów ETF.</p>
+            </div>
+            <label>Kwota do dodania w PLN
+              <input min="0" step="0.01" type="number" value={virtualContribution} onChange={(event) => setVirtualContribution(event.target.value)} placeholder="np. 20000" />
+            </label>
+            {contributionAmount > 0 && (
+              <div className="contributionTable" role="table" aria-label="Plan podziału wirtualnej dopłaty">
+                <div className="contributionHeader" role="row">
+                  <span>ETF</span><span>Dodać</span><span>Stan po dopłacie</span><span>Docelowy udział</span>
+                </div>
+                {contributionRows.map((row) => (
+                  <div className={row.amountToAdd >= 0 ? 'contributionRow buy' : 'contributionRow trim'} role="row" key={row.subcategory}>
+                    <strong>{SUBCATEGORY_LABELS[row.subcategory]}</strong>
+                    <span>{formatSignedMoney(row.amountToAdd)}</span>
+                    <span>{formatMoney(row.currentValue + Math.max(row.amountToAdd, 0))}</span>
+                    <span>{row.targetWeight}%</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {contributionAmount > 0 && contributionHasOverweight && (
+              <p className="warningText">Aby idealnie zachować wagi po dopłacie {formatMoney(contributionAmount)}, jedna z pozycji musiałaby zostać zmniejszona. Jeśli kupujesz tylko za nową kwotę, dodatnie rekomendacje sumują się do {formatMoney(totalPositiveContribution)}.</p>
             )}
           </div>
         </>
