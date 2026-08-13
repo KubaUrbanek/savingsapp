@@ -109,7 +109,7 @@ public class InvestmentEntryRepository {
         }
         try {
             return new ArrayList<>(objectMapper.readValue(databasePath.toFile(), ENTRY_LIST));
-        } catch (IOException exception) {
+        } catch (DatabindException exception) {
             throw new IllegalStateException("Unable to read JSON database file: " + databasePath, exception);
         }
     }
@@ -119,8 +119,6 @@ public class InvestmentEntryRepository {
             return new ArrayList<>(objectMapper.readValue(databaseContents, ENTRY_LIST));
         } catch (DatabindException exception) {
             throw new IllegalArgumentException("Imported file is not a valid investment entries JSON database.", exception);
-        } catch (IOException exception) {
-            throw new IllegalArgumentException("Unable to read imported JSON database file.", exception);
         }
     }
 
