@@ -110,6 +110,25 @@ The image stores runtime investment data at `/app/data/investment-entries.json` 
 docker run --rm -p 8080:8080 -e JAVA_OPTS="-Xmx512m" -v oszczednosci-data:/app/data oszczednosci-app
 ```
 
+
+### Docker secrets/config tree
+
+The application maps a `MASTER_PASSWORD` value from the Spring environment into the internal `app.security.master-password` property. This supports Docker config-tree secrets by importing a directory whose file names become property names.
+
+For example, create a secret file named `MASTER_PASSWORD` in the mounted config-tree directory and start the container with:
+
+```yaml
+services:
+  savingsapp:
+    image: savingsapp:latest
+    volumes:
+      - /share/Container/secrets:/run/secrets:ro
+    environment:
+      SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
+```
+
+At runtime, Spring Boot reads `/run/secrets/MASTER_PASSWORD` and makes it available as `MASTER_PASSWORD`; `application.properties` then maps it to `app.security.master-password` for application code.
+
 ## Development workflow
 
 Run the backend from the repository root or the `backend/` module with Maven/Spring Boot tooling. When the backend is running on port `8080`, start the frontend development server separately:
