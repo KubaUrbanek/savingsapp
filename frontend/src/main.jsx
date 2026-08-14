@@ -18,7 +18,8 @@ const TYPE_LABELS = {
   IKZE: 'IKZE',
   KONTO_OSZCZEDNOSCIOWE: 'Konto oszczędnościowe',
   KONTO_BANKOWE: 'Konto bankowe',
-  PPK: 'PPK'
+  PPK: 'PPK',
+  PPO: 'PPO'
 };
 const DEFAULT_STOCK_TARGET_ALLOCATIONS = {
   ZLOTO: 40,
