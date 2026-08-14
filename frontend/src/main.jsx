@@ -465,12 +465,13 @@ function Home() {
     Promise.all([loadEntries(), loadGraphEntries()]).catch((fetchError) => setError(fetchError.message));
   }, [selectedUser, typeFilter, subcategoryFilter, loadEntries, loadGraphEntries]);
 
-  const currentEntries = buildCurrentSnapshot(entries);
+  const currentEntries = buildCurrentSnapshot(graphEntries);
+  const currentEntriesForView = typeFilter ? currentEntries.filter((entry) => entry.type === typeFilter) : currentEntries;
   const totalsByType = currentEntries.reduce((totals, entry) => {
     totals[entry.type] = (totals[entry.type] || 0) + Number(entry.valuePln);
     return totals;
   }, {});
-  const totalValue = currentEntries.reduce((sum, entry) => sum + Number(entry.valuePln), 0);
+  const totalValue = currentEntriesForView.reduce((sum, entry) => sum + Number(entry.valuePln), 0);
   const currentSubcategories = subcategoriesFor(form.type);
   const filterSubcategories = subcategoriesFor(typeFilter);
 
