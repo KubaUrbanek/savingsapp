@@ -7,5 +7,6 @@ public enum InvestmentType {
     IKZE,
     KONTO_OSZCZEDNOSCIOWE,
     KONTO_BANKOWE,
-    PPK
+    PPK,
+    PPO
 }
