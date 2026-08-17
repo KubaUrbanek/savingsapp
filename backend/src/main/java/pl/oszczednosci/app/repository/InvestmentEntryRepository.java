@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -75,6 +76,12 @@ public class InvestmentEntryRepository {
         if (removed) {
             writeEntries(entries);
         }
+    }
+
+    public synchronized Optional<InvestmentEntry> findById(UUID id) {
+        return readEntries().stream()
+                .filter(entry -> entry.getId().equals(id))
+                .findFirst();
     }
 
     public synchronized List<InvestmentEntry> findByOwnerAndTypeOrderByDateDescCreatedAtDesc(PortfolioUser owner, InvestmentType type) {

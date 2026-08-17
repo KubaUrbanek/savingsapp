@@ -249,6 +249,17 @@ select {
   font: inherit;
 }
 
+.formPanel.editing {
+  border-color: #68a77b;
+  box-shadow: 0 18px 50px rgb(33 117 60 / 14%);
+}
+
+.formActions,
+.entryActions {
+  display: flex;
+  gap: 10px;
+}
+
 .success {
   color: #21753c;
   font-weight: 800;
@@ -285,6 +296,10 @@ select {
   gap: 3px;
 }
 
+.entryRow small {
+  color: #718078;
+}
+
 .entryRow button {
   padding: 8px 12px;
   border: 1px solid #e5b1b1;
@@ -293,6 +308,18 @@ select {
   color: #8f2626;
   cursor: pointer;
   font-weight: 800;
+}
+
+.entryRow .editButton {
+  border-color: #9ac7a6;
+  background: #eaf6ed;
+  color: #1d6535;
+}
+
+.entryRow .entryActions {
+  display: flex;
+  grid-auto-flow: column;
+  gap: 10px;
 }
 
 @media (max-width: 860px) {

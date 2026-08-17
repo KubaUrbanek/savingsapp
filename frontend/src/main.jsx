@@ -46,6 +46,10 @@ function formatMoney(value) {
   return new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(Number(value));
 }
 
+function formatDateTime(value) {
+  return new Intl.DateTimeFormat('pl-PL', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+}
+
 function displayName(user) {
   return user.charAt(0) + user.slice(1).toLowerCase();
 }
@@ -413,6 +417,7 @@ function Home() {
   const [typeFilter, setTypeFilter] = React.useState('');
   const [subcategoryFilter, setSubcategoryFilter] = React.useState('');
   const [form, setForm] = React.useState({ type: '', subcategory: '', valuePln: '', date: today() });
+  const [editingId, setEditingId] = React.useState(null);
   const [status, setStatus] = React.useState('');
   const [error, setError] = React.useState('');
   const importInputRef = React.useRef(null);
@@ -481,6 +486,7 @@ function Home() {
     setTypeFilter(nextType);
     setSubcategoryFilter('');
     setForm((current) => ({ ...current, type: nextType, subcategory: nextSubcategories[0] || '' }));
+    setEditingId(null);
   }
 
 
@@ -553,8 +559,8 @@ function Home() {
       valuePln: Number(form.valuePln)
     };
 
-    fetch('/api/investments', {
-      method: 'POST',
+    fetch(editingId ? `/api/investments/${editingId}` : '/api/investments', {
+      method: editingId ? 'PUT' : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     })
@@ -564,13 +570,33 @@ function Home() {
       })
       .then(() => {
         setForm((current) => ({ ...current, valuePln: '', date: current.date || today() }));
-        setStatus(`Zapisano stan dla: ${displayName(selectedUser)}.`);
+        setStatus(editingId ? 'Zapisano zmiany we wpisie.' : `Zapisano stan dla: ${displayName(selectedUser)}.`);
+        setEditingId(null);
         return Promise.all([loadEntries(), loadGraphEntries()]);
       })
       .catch((fetchError) => {
         setStatus('');
         setError(fetchError.message);
       });
+  }
+
+  function editEntry(entry) {
+    setEditingId(entry.id);
+    setForm({
+      type: entry.type,
+      subcategory: entry.subcategory || '',
+      valuePln: String(entry.valuePln),
+      date: entry.date
+    });
+    setStatus('Edytujesz istniejący wpis. Zapisz zmiany lub anuluj.');
+    setError('');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function cancelEditing() {
+    setEditingId(null);
+    setForm((current) => ({ ...current, valuePln: '', date: today() }));
+    setStatus('Anulowano edycję wpisu.');
   }
 
   function prepareStockEntry(subcategory) {
@@ -642,8 +668,8 @@ function Home() {
           </div>
         </article>
 
-        <form className="panel formPanel" onSubmit={submitEntry}>
-          <h2>Dodaj aktualny stan dla: {displayName(selectedUser)}</h2>
+        <form className={`panel formPanel${editingId ? ' editing' : ''}`} onSubmit={submitEntry}>
+          <h2>{editingId ? 'Edytuj wpis' : 'Dodaj aktualny stan'} dla: {displayName(selectedUser)}</h2>
           <label>Typ inwestycji
             <select value={form.type} onChange={(event) => {
               const nextType = event.target.value;
@@ -663,7 +689,10 @@ function Home() {
           <label>Data wpisu
             <input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} required />
           </label>
-          <button className="button primaryButton" type="submit">Zapisz stan portfela</button>
+          <div className="formActions">
+            <button className="button primaryButton" type="submit">{editingId ? 'Zapisz zmiany' : 'Zapisz stan portfela'}</button>
+            {editingId && <button className="button secondaryButton" type="button" onClick={cancelEditing}>Anuluj</button>}
+          </div>
           {status && <p className="success">{status}</p>}
           {error && <p className="error">Nie udało się wykonać operacji: {error}</p>}
         </form>
@@ -678,9 +707,12 @@ function Home() {
         {graphEntries.length === 0 ? <p>Brak wpisów dla wybranej osoby.</p> : (
           <div className="entryList">
             {graphEntries.map((entry) => <div className="entryRow" key={entry.id}>
-              <div><strong>{TYPE_LABELS[entry.type] || entry.type}</strong><span>{entry.subcategory ? SUBCATEGORY_LABELS[entry.subcategory] : 'Bez podkategorii'} · {entry.date}</span></div>
+              <div><strong>{TYPE_LABELS[entry.type] || entry.type}</strong><span>{entry.subcategory ? SUBCATEGORY_LABELS[entry.subcategory] : 'Bez podkategorii'} · {entry.date}</span>{entry.updatedAt && <small>Ostatnia modyfikacja: {formatDateTime(entry.updatedAt)}</small>}</div>
               <strong>{formatMoney(entry.valuePln)}</strong>
-              <button type="button" onClick={() => deleteEntry(entry.id)}>Usuń</button>
+              <div className="entryActions">
+                <button className="editButton" type="button" onClick={() => editEntry(entry)}>Edytuj</button>
+                <button type="button" onClick={() => deleteEntry(entry.id)}>Usuń</button>
+              </div>
             </div>)}
           </div>
         )}
