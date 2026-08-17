@@ -10,6 +10,14 @@ Oszczednosci is a savings and investment tracker. Its current domain focuses on 
 
 An investment entry represents one saved or invested amount at a specific date.
 
+Entries are valuation snapshots only. Money movements and trades are represented by separate investment operations, so a higher valuation is not automatically treated as investment profit.
+
+## Investment operations and performance
+
+An operation records a `DEPOSIT`, `WITHDRAWAL`, `BUY`, or `SELL` for an investment type and optional subcategory. It contains the gross PLN amount, optional fee and tax, business date, owner, and an optional note. Operations never replace valuation snapshots.
+
+The performance endpoint combines the latest valuation snapshot for each asset with external cash flows. It reports current value, net contributed capital (deposits minus withdrawals), nominal result, simple return rate, fees, taxes, result after costs, and annualized XIRR. Purchases and sales remain useful transaction history but are not treated as external portfolio cash flows for XIRR. A result can be calculated for the complete owner portfolio, an investment type, or an individual subcategory.
+
 ### Entry attributes
 
 Each investment entry contains:

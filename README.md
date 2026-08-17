@@ -10,6 +10,7 @@ Oszczednosci is a monorepo for a savings and investment tracking application. It
 - **SPA routing support**: Spring forwards non-API, extensionless browser requests to `index.html`, so direct links and page refreshes work for client-side routes.
 - **Persistence layer** with Spring Data JPA, Flyway migrations, and an H2 runtime database.
 - **Investment entry domain** with API support for listing investment types, creating entries, listing entries, filtering by type, and deleting entries.
+- **Investment operations and performance** keep deposits, withdrawals, purchases, and sales separate from valuation snapshots and calculate contributed capital, nominal/net result, return rate, and XIRR.
 - **Seed data migrations** for initial investment/bond entries.
 
 ## Supported features
@@ -35,6 +36,9 @@ The backend exposes these routes under `/api`:
 | `GET` | `/api/investments` | Lists investment entries. Accepts an optional `type` query parameter. |
 | `POST` | `/api/investments` | Creates an investment entry from a validated JSON request body. |
 | `DELETE` | `/api/investments/{id}` | Deletes an investment entry by UUID. |
+| `GET/POST` | `/api/investment-operations` | Lists or records portfolio cash flows and trades. |
+| `DELETE` | `/api/investment-operations/{id}` | Deletes an operation by UUID. |
+| `GET` | `/api/portfolio-performance` | Calculates performance for an owner and optional asset filters. |
 
 ## Project structure
 
