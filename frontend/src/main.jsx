@@ -28,6 +28,11 @@ const DEFAULT_STOCK_TARGET_ALLOCATIONS = {
 };
 const STOCK_SUBCATEGORIES = Object.keys(DEFAULT_STOCK_TARGET_ALLOCATIONS);
 const STOCK_ALLOCATION_STORAGE_KEY = 'oszczednosci.stockTargetAllocations';
+const GLOBAL_ALLOCATION_STORAGE_KEY = 'oszczednosci.globalTargetAllocations';
+const GLOBAL_ASSET_CLASSES = ['BONDS', 'STOCKS', 'GOLD'];
+const DEFAULT_GLOBAL_TARGET_ALLOCATIONS = { BONDS: 50, STOCKS: 30, GOLD: 20 };
+const GLOBAL_ASSET_LABELS = { BONDS: 'Obligacje', STOCKS: 'Akcje', GOLD: 'Złoto' };
+const CASH_TYPES = ['KONTO_OSZCZEDNOSCIOWE', 'KONTO_BANKOWE', 'PPO', 'PPK'];
 const OPERATION_LABELS = { DEPOSIT: 'Wpłata', WITHDRAWAL: 'Wypłata', BUY: 'Zakup', SELL: 'Sprzedaż' };
 
 const SUBCATEGORY_LABELS = {
@@ -63,6 +68,11 @@ function formatPercent(value) {
 function formatUnsignedPercent(value) {
   if (!Number.isFinite(value)) return '—';
   return `${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 }).format(value)}%`;
+}
+
+function formatPercentagePoints(value) {
+  if (!Number.isFinite(value)) return '—';
+  return `${value > 0 ? '+' : ''}${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 }).format(value)} pp`;
 }
 
 function formatSignedMoney(value) {
@@ -156,6 +166,113 @@ function allocationTotal(weights) {
 
 function formatAllocationHeadline(weights) {
   return STOCK_SUBCATEGORIES.map((subcategory) => `${SUBCATEGORY_LABELS[subcategory].toLowerCase()} ${formatUnsignedPercent(Number(weights[subcategory] || 0))}`).join(', ');
+}
+
+function loadStoredGlobalAllocations() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(GLOBAL_ALLOCATION_STORAGE_KEY) || 'null');
+    return GLOBAL_ASSET_CLASSES.reduce((result, assetClass) => {
+      const value = Number(stored?.[assetClass]);
+      result[assetClass] = Number.isFinite(value) && value >= 0 ? value : DEFAULT_GLOBAL_TARGET_ALLOCATIONS[assetClass];
+      return result;
+    }, {});
+  } catch {
+    return { ...DEFAULT_GLOBAL_TARGET_ALLOCATIONS };
+  }
+}
+
+function globalAssetClass(entry) {
+  if (CASH_TYPES.includes(entry.type)) return 'CASH';
+  if (entry.type === 'OBLIGACJE') return 'BONDS';
+  if (entry.subcategory === 'ZLOTO') return 'GOLD';
+  if (['GIELDA', 'IKE', 'IKZE'].includes(entry.type)) return 'STOCKS';
+  return 'CASH';
+}
+
+function GlobalAllocationPanel({ entries }) {
+  const [targets, setTargets] = React.useState(loadStoredGlobalAllocations);
+  const snapshot = React.useMemo(() => buildCurrentSnapshot(entries), [entries]);
+  const values = snapshot.reduce((result, entry) => {
+    const assetClass = globalAssetClass(entry);
+    result[assetClass] = (result[assetClass] || 0) + Number(entry.valuePln);
+    return result;
+  }, {});
+  const investedTotal = GLOBAL_ASSET_CLASSES.reduce((sum, assetClass) => sum + (values[assetClass] || 0), 0);
+  const cashTotal = values.CASH || 0;
+  const targetTotal = GLOBAL_ASSET_CLASSES.reduce((sum, assetClass) => sum + Number(targets[assetClass] || 0), 0);
+  const isValid = Math.abs(targetTotal - 100) < 0.001;
+  const requiredFinalTotal = GLOBAL_ASSET_CLASSES.reduce((minimum, assetClass) => {
+    const weight = Number(targets[assetClass] || 0);
+    const value = values[assetClass] || 0;
+    if (weight === 0) return value > 0 ? Infinity : minimum;
+    return Math.max(minimum, value / (weight / 100));
+  }, investedTotal);
+  const contributionOnlyTotal = requiredFinalTotal - investedTotal;
+
+  React.useEffect(() => {
+    localStorage.setItem(GLOBAL_ALLOCATION_STORAGE_KEY, JSON.stringify(targets));
+  }, [targets]);
+
+  const rows = GLOBAL_ASSET_CLASSES.map((assetClass) => {
+    const currentValue = values[assetClass] || 0;
+    const currentWeight = investedTotal > 0 ? currentValue / investedTotal * 100 : 0;
+    const targetWeight = Number(targets[assetClass] || 0);
+    const targetValue = investedTotal * targetWeight / 100;
+    return {
+      assetClass, currentValue, currentWeight, targetWeight,
+      deviation: currentWeight - targetWeight,
+      rebalanceAmount: targetValue - currentValue,
+      contributionAmount: Number.isFinite(requiredFinalTotal) ? Math.max(0, requiredFinalTotal * targetWeight / 100 - currentValue) : null
+    };
+  });
+
+  return (
+    <section className="panel globalAllocationPanel">
+      <div className="stockHeader">
+        <div>
+          <p className="eyebrow">Alokacja całego majątku</p>
+          <h2>Globalny plan portfela inwestycyjnego</h2>
+          <p>Obligacje, akcje i złoto są liczone na podstawie najnowszych wycen. Gotówka pozostaje poza wagami docelowymi i jest pokazana osobno.</p>
+        </div>
+        <div className="globalTotals">
+          <div><span>Aktywa w planie</span><strong>{formatMoney(investedTotal)}</strong></div>
+          <div><span>Gotówka poza planem</span><strong>{formatMoney(cashTotal)}</strong><small>Konta, PPO i PPK</small></div>
+        </div>
+      </div>
+
+      <div className="allocationEditor">
+        <div><p className="eyebrow">Wagi globalne</p><h3>Ustaw docelową strukturę</h3></div>
+        <div className="allocationInputs globalInputs">
+          {GLOBAL_ASSET_CLASSES.map((assetClass) => <label key={assetClass}>{GLOBAL_ASSET_LABELS[assetClass]}
+            <input type="number" min="0" max="100" step="0.01" value={targets[assetClass]} onChange={(event) => setTargets((current) => ({ ...current, [assetClass]: event.target.value === '' ? 0 : Number(event.target.value) }))} />
+          </label>)}
+        </div>
+        <div className={isValid ? 'allocationStatus valid' : 'allocationStatus invalid'}>
+          <span>Suma wag: {formatUnsignedPercent(targetTotal)}</span>
+          {!isValid && <strong>Ustaw łącznie 100%, aby obliczenia tworzyły poprawny plan.</strong>}
+          <button className="subtypeTab" type="button" onClick={() => setTargets({ ...DEFAULT_GLOBAL_TARGET_ALLOCATIONS })}>Przywróć 50/30/20</button>
+        </div>
+      </div>
+
+      {investedTotal === 0 ? <p>Dodaj wyceny aktywów, aby zobaczyć aktualną alokację i plan równoważenia.</p> : <>
+        <div className="globalAllocationTable" role="table" aria-label="Globalna alokacja majątku">
+          <div className="globalAllocationHeader" role="row"><span>Klasa aktywów</span><span>Aktualnie</span><span>Cel</span><span>Odchylenie</span><span>Kup / sprzedaj</span><span>Tylko nowe wpłaty</span></div>
+          {rows.map((row) => <div className="globalAllocationRow" role="row" key={row.assetClass}>
+            <strong>{GLOBAL_ASSET_LABELS[row.assetClass]}</strong>
+            <span>{formatMoney(row.currentValue)}<small>{formatUnsignedPercent(row.currentWeight)}</small></span>
+            <span>{formatUnsignedPercent(row.targetWeight)}</span>
+            <strong className={Math.abs(row.deviation) < 0.01 ? '' : row.deviation > 0 ? 'negativeText' : 'positiveText'}>{formatPercentagePoints(row.deviation)}</strong>
+            <span className={row.rebalanceAmount >= 0 ? 'positiveText' : 'negativeText'}>{formatSignedMoney(row.rebalanceAmount)}</span>
+            <span>{row.contributionAmount == null ? 'Niemożliwe' : formatMoney(row.contributionAmount)}</span>
+          </div>)}
+        </div>
+        <div className="rebalanceHint">
+          <strong>Wariant bez sprzedaży:</strong>
+          <span>{Number.isFinite(contributionOnlyTotal) ? `dopłać łącznie ${formatMoney(contributionOnlyTotal)}, dzieląc kwotę zgodnie z ostatnią kolumną.` : 'nie można osiągnąć celu samymi wpłatami, dopóki klasa z wagą 0% ma dodatnią wartość.'}</span>
+        </div>
+      </>}
+    </section>
+  );
 }
 
 function buildStockAllocation(entries, targetAllocations) {
@@ -761,6 +878,8 @@ function Home() {
         </form>
         <section className="panel entriesPanel operationList"><h2>Historia operacji</h2>{operations.length === 0 ? <p>Brak operacji w tym widoku.</p> : operations.map((operation) => <div className="entryRow" key={operation.id}><div><strong>{OPERATION_LABELS[operation.operationType]}</strong><span>{TYPE_LABELS[operation.type]}{operation.subcategory ? ` · ${SUBCATEGORY_LABELS[operation.subcategory]}` : ''} · {operation.date}</span><small>{operation.note}</small></div><strong>{formatMoney(operation.amountPln)}</strong><button type="button" onClick={() => deleteOperation(operation.id)}>Usuń</button></div>)}</section>
       </section>
+
+      <GlobalAllocationPanel entries={graphEntries} />
 
       {types.includes('GIELDA') && <StockAllocationPanel entries={graphEntries} onAddStockValue={prepareStockEntry} />}
 

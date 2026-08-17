@@ -620,6 +620,63 @@ select {
   max-width: none;
 }
 
+.globalAllocationPanel {
+  max-width: none;
+}
+
+.globalTotals {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.globalTotals div {
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #173d27;
+  color: #fff;
+}
+
+.globalTotals span,
+.globalTotals small {
+  color: #cae4d1;
+  font-size: .76rem;
+  font-weight: 800;
+}
+
+.globalTotals strong { font-size: 1.25rem; }
+.globalInputs { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
+
+.globalAllocationTable {
+  overflow-x: auto;
+  border: 1px solid #dfebe3;
+  border-radius: 14px;
+}
+
+.globalAllocationHeader,
+.globalAllocationRow {
+  display: grid;
+  grid-template-columns: 1.15fr 1.4fr repeat(4, minmax(125px, 1fr));
+  gap: 12px;
+  min-width: 900px;
+  padding: 13px 16px;
+  align-items: center;
+}
+
+.globalAllocationHeader {
+  background: #f1f7f3;
+  color: #59675e;
+  font-size: .76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.globalAllocationRow + .globalAllocationRow { border-top: 1px solid #e1e9e4; }
+.globalAllocationRow span { display: grid; }
+.globalAllocationRow small { color: #718078; font-weight: 700; }
+
 .stockHeader {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(220px, auto);
@@ -724,6 +781,9 @@ select {
   .stockHeader {
     grid-template-columns: 1fr;
   }
+
+  .globalTotals,
+  .globalInputs { grid-template-columns: 1fr; }
 }
 
 .virtualContribution {
