@@ -5,6 +5,9 @@ import './styles.css';
 
 const USER_STORAGE_KEY = 'oszczednosci.selectedUser';
 const FALLBACK_USERS = ['JAKUB', 'ZOSIA'];
+const HOUSEHOLD_VIEW = 'RAZEM';
+const HOUSEHOLD_GOAL_STORAGE_KEY = 'oszczednosci.householdGoal';
+const DEFAULT_HOUSEHOLD_GOAL = 500000;
 const SUBCATEGORIES_BY_TYPE = {
   OBLIGACJE: ['TRZYLETNIE', 'DZIESIECIOLETNIE', 'DWUNASTOLETNIE'],
   GIELDA: ['ZLOTO', 'RYNKI_ROZWINIETE', 'RYNKI_ROZWIJAJACE_SIE'],
@@ -51,6 +54,7 @@ function formatDateTime(value) {
 }
 
 function displayName(user) {
+  if (user === HOUSEHOLD_VIEW) return 'Razem';
   return user.charAt(0) + user.slice(1).toLowerCase();
 }
 
@@ -83,7 +87,7 @@ function monthLabel(key) {
 }
 
 function snapshotKey(entry) {
-  return `${entry.type}:${entry.subcategory || 'NONE'}`;
+  return `${entry.owner || 'OWNER'}:${entry.type}:${entry.subcategory || 'NONE'}`;
 }
 
 function isNewerEntry(candidate, current) {
@@ -408,6 +412,79 @@ function subcategoriesFor(type) {
   return SUBCATEGORIES_BY_TYPE[type] || [];
 }
 
+function HouseholdDashboard({ entries, users, types }) {
+  const [goal, setGoal] = React.useState(() => Number(localStorage.getItem(HOUSEHOLD_GOAL_STORAGE_KEY)) || DEFAULT_HOUSEHOLD_GOAL);
+  const snapshot = buildCurrentSnapshot(entries);
+  const total = snapshot.reduce((sum, entry) => sum + Number(entry.valuePln), 0);
+  const totalsByOwner = users.reduce((result, user) => ({
+    ...result,
+    [user]: snapshot.filter((entry) => entry.owner === user).reduce((sum, entry) => sum + Number(entry.valuePln), 0)
+  }), {});
+  const totalsByType = types.reduce((result, type) => ({
+    ...result,
+    [type]: snapshot.filter((entry) => entry.type === type).reduce((sum, entry) => sum + Number(entry.valuePln), 0)
+  }), {});
+  const liquidTypes = ['KONTO_BANKOWE', 'KONTO_OSZCZEDNOSCIOWE'];
+  const retirementTypes = ['IKE', 'IKZE', 'PPK', 'PPO'];
+  const liquid = snapshot.filter((entry) => liquidTypes.includes(entry.type)).reduce((sum, entry) => sum + Number(entry.valuePln), 0);
+  const retirement = snapshot.filter((entry) => retirementTypes.includes(entry.type)).reduce((sum, entry) => sum + Number(entry.valuePln), 0);
+  const longTerm = total - liquid;
+  const monthlySummary = buildSummary(entries, 'monthly');
+  const latestMonth = monthlySummary[monthlySummary.length - 1];
+  const goalProgress = goal > 0 ? Math.min((total / goal) * 100, 100) : 0;
+
+  function updateGoal(value) {
+    const nextGoal = Number(value);
+    setGoal(nextGoal);
+    if (nextGoal > 0) localStorage.setItem(HOUSEHOLD_GOAL_STORAGE_KEY, String(nextGoal));
+  }
+
+  return (
+    <section className="householdDashboard" aria-label="Podsumowanie całego gospodarstwa domowego">
+      <article className="householdHero">
+        <div>
+          <p className="eyebrow">Wspólny majątek</p>
+          <h2>Wasze finanse w jednym miejscu</h2>
+          <p className="householdTotal">{formatMoney(total)}</p>
+          <p className={latestMonth?.changeAmount >= 0 ? 'householdChange positiveText' : 'householdChange negativeText'}>
+            {formatSignedMoney(latestMonth?.changeAmount || 0)} ({formatPercent(latestMonth?.changePercent)}) miesiąc do miesiąca
+          </p>
+        </div>
+        <div className="ownershipList">
+          {users.map((user) => {
+            const value = totalsByOwner[user] || 0;
+            const share = total > 0 ? (value / total) * 100 : 0;
+            return <div className="ownershipRow" key={user}><span className={`ownerDot owner${user}`} /><div><strong>{displayName(user)}</strong><small>{formatUnsignedPercent(share)} majątku</small></div><b>{formatMoney(value)}</b></div>;
+          })}
+        </div>
+      </article>
+
+      <div className="householdMetricGrid">
+        <article className="householdMetric"><span>Aktywa płynne</span><strong>{formatMoney(liquid)}</strong><small>{formatUnsignedPercent(total ? liquid / total * 100 : 0)} całości</small></article>
+        <article className="householdMetric"><span>Długoterminowe</span><strong>{formatMoney(longTerm)}</strong><small>{formatUnsignedPercent(total ? longTerm / total * 100 : 0)} całości</small></article>
+        <article className="householdMetric retirement"><span>Emerytura</span><strong>{formatMoney(retirement)}</strong><small>IKE, IKZE, PPK i PPO</small></article>
+      </div>
+
+      <div className="householdDetailsGrid">
+        <article className="panel assetPanel">
+          <p className="eyebrow">Klasy aktywów</p><h2>Struktura wspólnego portfela</h2>
+          <div className="assetList">{types.map((type) => {
+            const value = totalsByType[type] || 0;
+            const share = total > 0 ? value / total * 100 : 0;
+            return <div className="assetRow" key={type}><div><span>{TYPE_LABELS[type] || type}</span><strong>{formatMoney(value)}</strong></div><div className="progressTrack"><span style={{ width: `${share}%` }} /></div><small>{formatUnsignedPercent(share)}</small></div>;
+          })}</div>
+        </article>
+        <article className="panel goalPanel">
+          <p className="eyebrow">Wspólny cel</p><h2>Łączna realizacja celów</h2>
+          <div className="goalRing" style={{ '--progress': `${goalProgress * 3.6}deg` }}><strong>{formatUnsignedPercent(goalProgress)}</strong><span>zrealizowano</span></div>
+          <label>Docelowa wartość majątku<input min="1" step="1000" type="number" value={goal} onChange={(event) => updateGoal(event.target.value)} /></label>
+          <p>{formatMoney(total)} z {formatMoney(goal)}</p>
+        </article>
+      </div>
+    </section>
+  );
+}
+
 function Home() {
   const [users, setUsers] = React.useState(FALLBACK_USERS);
   const [selectedUser, setSelectedUser] = React.useState(() => localStorage.getItem(USER_STORAGE_KEY) || FALLBACK_USERS[0]);
@@ -421,29 +498,29 @@ function Home() {
   const [status, setStatus] = React.useState('');
   const [error, setError] = React.useState('');
   const importInputRef = React.useRef(null);
+  const isHouseholdView = selectedUser === HOUSEHOLD_VIEW;
+
+  const fetchEntriesForView = React.useCallback((params = {}) => {
+    const owners = isHouseholdView ? users : [selectedUser];
+    return Promise.all(owners.map((owner) => {
+      const query = new URLSearchParams({ owner, ...params });
+      return fetch(`/api/investments?${query}`).then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      });
+    })).then((results) => results.flat());
+  }, [isHouseholdView, selectedUser, users]);
 
   const loadGraphEntries = React.useCallback(() => {
-    const params = new URLSearchParams({ owner: selectedUser });
-    return fetch(`/api/investments?${params}`)
-      .then((response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
-      })
-      .then(setGraphEntries);
-  }, [selectedUser]);
+    return fetchEntriesForView().then(setGraphEntries);
+  }, [fetchEntriesForView]);
 
   const loadEntries = React.useCallback(() => {
-    const params = new URLSearchParams({ owner: selectedUser });
-    if (typeFilter) params.set('type', typeFilter);
-    if (typeFilter && subcategoryFilter) params.set('subcategory', subcategoryFilter);
-
-    return fetch(`/api/investments?${params}`)
-      .then((response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
-      })
-      .then(setEntries);
-  }, [selectedUser, typeFilter, subcategoryFilter]);
+    const params = {};
+    if (typeFilter) params.type = typeFilter;
+    if (typeFilter && subcategoryFilter) params.subcategory = subcategoryFilter;
+    return fetchEntriesForView(params).then(setEntries);
+  }, [fetchEntriesForView, typeFilter, subcategoryFilter]);
 
   React.useEffect(() => {
     Promise.all([
@@ -460,7 +537,7 @@ function Home() {
           type: current.type || firstType,
           subcategory: subcategoriesFor(current.type || firstType)[0] || ''
         }));
-        if (!loadedUsers.includes(selectedUser)) setSelectedUser(loadedUsers[0]);
+        if (!loadedUsers.includes(selectedUser) && selectedUser !== HOUSEHOLD_VIEW) setSelectedUser(loadedUsers[0]);
       })
       .catch((fetchError) => setError(fetchError.message));
   }, []);
@@ -629,14 +706,14 @@ function Home() {
         <div className="filterGroup">
           <p className="filterLabel">Czyj portfel wyświetlić?</p>
           <div className="userSwitcher" aria-label="Wybór użytkownika">
-            {users.map((user) => (
+            {[...users, HOUSEHOLD_VIEW].map((user) => (
               <button className={user === selectedUser ? 'userPill active' : 'userPill'} key={user} type="button" onClick={() => setSelectedUser(user)}>
-                <span className="userAvatar" aria-hidden="true">{displayName(user).charAt(0)}</span>{displayName(user)}
+                <span className="userAvatar" aria-hidden="true">{user === HOUSEHOLD_VIEW ? '⌂' : displayName(user).charAt(0)}</span>{displayName(user)}
               </button>
             ))}
           </div>
         </div>
-        <div className="filterGroup">
+        {!isHouseholdView && <div className="filterGroup">
           <p className="filterLabel">Rodzaj inwestycji</p>
           <div className="typeNav" aria-label="Rodzaje inwestycji">
             {types.map((type) => (
@@ -655,9 +732,10 @@ function Home() {
               ))}
             </div>
           )}
-        </div>
+        </div>}
       </section>
 
+      {isHouseholdView ? <HouseholdDashboard entries={graphEntries} users={users} types={types} /> : <>
       <section className="dashboardGrid">
         <article className="panel summaryPanel">
           <p className="eyebrow">Aktualny widok</p>
@@ -699,10 +777,11 @@ function Home() {
       </section>
 
       {types.includes('GIELDA') && <StockAllocationPanel entries={graphEntries} onAddStockValue={prepareStockEntry} />}
+      </>}
 
       <SummaryChart entries={graphEntries} types={types} />
 
-      <section className="panel entriesPanel">
+      {!isHouseholdView && <section className="panel entriesPanel">
         <div className="entriesHeader"><h2>Wpisy: {displayName(selectedUser)}</h2></div>
         {graphEntries.length === 0 ? <p>Brak wpisów dla wybranej osoby.</p> : (
           <div className="entryList">
@@ -716,7 +795,7 @@ function Home() {
             </div>)}
           </div>
         )}
-      </section>
+      </section>}
 
       <section className="panel databasePanel">
         <div>

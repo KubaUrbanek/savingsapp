@@ -785,6 +785,67 @@ select {
   color: #a83232;
 }
 
+.householdDashboard {
+  display: grid;
+  gap: 22px;
+  margin-bottom: 28px;
+}
+
+.householdHero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+  gap: 36px;
+  padding: 34px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #123c28, #236b43);
+  box-shadow: 0 20px 50px rgb(18 60 40 / 22%);
+  color: #fff;
+}
+
+.householdHero .eyebrow { color: #a9dbb9; }
+.householdHero h2 { margin-top: 7px; color: #fff; font-size: 1.35rem; }
+.householdTotal { margin-top: 18px; font-size: clamp(2.4rem, 6vw, 4.8rem); font-weight: 900; letter-spacing: -0.05em; line-height: 1; }
+.householdChange { margin-top: 13px; font-weight: 800; }
+.householdHero .positiveText { color: #b9efc9; }
+.householdHero .negativeText { color: #ffc2c2; }
+
+.ownershipList { display: grid; align-content: center; gap: 10px; }
+.ownershipRow { display: grid; grid-template-columns: auto 1fr auto; gap: 11px; align-items: center; padding: 14px; border: 1px solid rgb(255 255 255 / 14%); border-radius: 14px; background: rgb(255 255 255 / 8%); }
+.ownershipRow div { display: grid; }
+.ownershipRow small { color: #cce3d3; }
+.ownerDot { width: 12px; height: 12px; border-radius: 50%; background: #7dd69a; }
+.ownerZOSIA { background: #f2c66d; }
+
+.householdMetricGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.householdMetric { display: grid; gap: 7px; padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: #fff; box-shadow: var(--shadow); }
+.householdMetric span { color: var(--muted); font-size: .78rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
+.householdMetric strong { color: var(--green-900); font-size: clamp(1.45rem, 3vw, 2.1rem); }
+.householdMetric small { color: var(--muted); }
+.householdMetric.retirement { background: #fff9eb; border-color: #eddfba; }
+
+.householdDetailsGrid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); gap: 22px; }
+.householdDetailsGrid .panel { max-width: none; margin: 0; }
+.assetPanel h2, .goalPanel h2 { margin-top: 5px; font-size: 1.25rem; }
+.assetList { display: grid; gap: 14px; margin-top: 7px; }
+.assetRow { display: grid; grid-template-columns: minmax(160px, 1fr) minmax(140px, 1.3fr) 55px; align-items: center; gap: 14px; }
+.assetRow > div:first-child { display: grid; }
+.assetRow span, .assetRow small { color: var(--muted); font-size: .82rem; font-weight: 750; }
+.progressTrack { height: 8px; overflow: hidden; border-radius: 99px; background: #e8efe9; }
+.progressTrack span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #48a86d, #236b43); }
+.goalPanel { justify-items: center; text-align: center; }
+.goalRing { display: grid; width: 160px; height: 160px; margin: 8px auto; place-content: center; border-radius: 50%; background: radial-gradient(circle, #fff 56%, transparent 58%), conic-gradient(#48a86d var(--progress), #e4ede7 0); }
+.goalRing strong { color: var(--green-900); font-size: 1.8rem; }
+.goalRing span { color: var(--muted); font-size: .78rem; }
+.goalPanel label { width: 100%; text-align: left; }
+.goalPanel p { color: var(--muted); font-weight: 750; }
+
+@media (max-width: 860px) {
+  .householdHero, .householdDetailsGrid { grid-template-columns: 1fr; }
+  .householdMetricGrid { grid-template-columns: 1fr; }
+  .assetRow { grid-template-columns: 1fr auto; }
+  .assetRow .progressTrack { grid-column: 1 / -1; grid-row: 2; }
+}
+
 /* Refined application shell */
 :root {
   color: #19241e;
