@@ -17,7 +17,8 @@ public record InvestmentEntryResponse(
         InvestmentSubcategory subcategory,
         BigDecimal valuePln,
         LocalDate date,
-        Instant createdAt
+        Instant createdAt,
+        Instant updatedAt
 ) {
     public static InvestmentEntryResponse fromEntity(InvestmentEntry entry) {
         return new InvestmentEntryResponse(
@@ -27,7 +28,8 @@ public record InvestmentEntryResponse(
                 entry.getSubcategory(),
                 entry.getValuePln(),
                 entry.getDate(),
-                entry.getCreatedAt()
+                entry.getCreatedAt(),
+                entry.getUpdatedAt()
         );
     }
 }

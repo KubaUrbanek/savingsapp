@@ -17,6 +17,7 @@ public class InvestmentEntry {
     private BigDecimal valuePln;
     private LocalDate date;
     private Instant createdAt;
+    private Instant updatedAt;
 
     @JsonCreator
     public InvestmentEntry(
@@ -26,7 +27,8 @@ public class InvestmentEntry {
             @JsonProperty("subcategory") InvestmentSubcategory subcategory,
             @JsonProperty("valuePln") BigDecimal valuePln,
             @JsonProperty("date") LocalDate date,
-            @JsonProperty("createdAt") Instant createdAt
+            @JsonProperty("createdAt") Instant createdAt,
+            @JsonProperty("updatedAt") Instant updatedAt
     ) {
         this.id = id;
         this.type = type;
@@ -35,10 +37,11 @@ public class InvestmentEntry {
         this.valuePln = valuePln;
         this.date = date;
         this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
     }
 
     public InvestmentEntry(InvestmentType type, PortfolioUser owner, InvestmentSubcategory subcategory, BigDecimal valuePln, LocalDate date) {
-        this(null, type, owner, subcategory, valuePln, date, null);
+        this(null, type, owner, subcategory, valuePln, date, null, null);
     }
 
     public void prepareForSave() {
@@ -76,5 +79,18 @@ public class InvestmentEntry {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void update(InvestmentType type, PortfolioUser owner, InvestmentSubcategory subcategory, BigDecimal valuePln, LocalDate date) {
+        this.type = type;
+        this.owner = owner;
+        this.subcategory = subcategory;
+        this.valuePln = valuePln;
+        this.date = date;
+        this.updatedAt = Instant.now();
     }
 }
