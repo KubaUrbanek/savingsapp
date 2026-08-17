@@ -28,6 +28,7 @@ const DEFAULT_STOCK_TARGET_ALLOCATIONS = {
 };
 const STOCK_SUBCATEGORIES = Object.keys(DEFAULT_STOCK_TARGET_ALLOCATIONS);
 const STOCK_ALLOCATION_STORAGE_KEY = 'oszczednosci.stockTargetAllocations';
+const OPERATION_LABELS = { DEPOSIT: 'Wpłata', WITHDRAWAL: 'Wypłata', BUY: 'Zakup', SELL: 'Sprzedaż' };
 
 const SUBCATEGORY_LABELS = {
   ZLOTO: 'Złoto',
@@ -420,6 +421,9 @@ function Home() {
   const [editingId, setEditingId] = React.useState(null);
   const [status, setStatus] = React.useState('');
   const [error, setError] = React.useState('');
+  const [operations, setOperations] = React.useState([]);
+  const [performance, setPerformance] = React.useState(null);
+  const [operationForm, setOperationForm] = React.useState({ operationType: 'DEPOSIT', type: '', subcategory: '', amountPln: '', feePln: '', taxPln: '', date: today(), note: '' });
   const importInputRef = React.useRef(null);
 
   const loadGraphEntries = React.useCallback(() => {
@@ -445,6 +449,19 @@ function Home() {
       .then(setEntries);
   }, [selectedUser, typeFilter, subcategoryFilter]);
 
+  const loadOperations = React.useCallback(() => {
+    const params = new URLSearchParams({ owner: selectedUser });
+    if (typeFilter) params.set('type', typeFilter);
+    if (typeFilter && subcategoryFilter) params.set('subcategory', subcategoryFilter);
+    return Promise.all([
+      fetch(`/api/investment-operations?${params}`).then((response) => response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`))),
+      fetch(`/api/portfolio-performance?${params}`).then((response) => response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`)))
+    ]).then(([loadedOperations, loadedPerformance]) => {
+      setOperations(loadedOperations);
+      setPerformance(loadedPerformance);
+    });
+  }, [selectedUser, typeFilter, subcategoryFilter]);
+
   React.useEffect(() => {
     Promise.all([
       fetch('/api/users').then((response) => response.json()),
@@ -460,6 +477,7 @@ function Home() {
           type: current.type || firstType,
           subcategory: subcategoriesFor(current.type || firstType)[0] || ''
         }));
+        setOperationForm((current) => ({ ...current, type: current.type || firstType, subcategory: subcategoriesFor(current.type || firstType)[0] || '' }));
         if (!loadedUsers.includes(selectedUser)) setSelectedUser(loadedUsers[0]);
       })
       .catch((fetchError) => setError(fetchError.message));
@@ -468,8 +486,8 @@ function Home() {
   React.useEffect(() => {
     localStorage.setItem(USER_STORAGE_KEY, selectedUser);
     setStatus('');
-    Promise.all([loadEntries(), loadGraphEntries()]).catch((fetchError) => setError(fetchError.message));
-  }, [selectedUser, typeFilter, subcategoryFilter, loadEntries, loadGraphEntries]);
+    Promise.all([loadEntries(), loadGraphEntries(), loadOperations()]).catch((fetchError) => setError(fetchError.message));
+  }, [selectedUser, typeFilter, subcategoryFilter, loadEntries, loadGraphEntries, loadOperations]);
 
   const currentEntries = buildCurrentSnapshot(graphEntries);
   const currentEntriesForView = typeFilter ? currentEntries.filter((entry) => entry.type === typeFilter) : currentEntries;
@@ -617,6 +635,25 @@ function Home() {
       .catch((fetchError) => setError(fetchError.message));
   }
 
+  function submitOperation(event) {
+    event.preventDefault();
+    const operationSubcategories = subcategoriesFor(operationForm.type);
+    const payload = { ...operationForm, owner: selectedUser,
+      subcategory: operationSubcategories.length ? operationForm.subcategory : null,
+      amountPln: Number(operationForm.amountPln), feePln: Number(operationForm.feePln || 0), taxPln: Number(operationForm.taxPln || 0) };
+    setError('');
+    fetch('/api/investment-operations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`)))
+      .then(() => { setOperationForm((current) => ({ ...current, amountPln: '', feePln: '', taxPln: '', note: '' })); setStatus('Zapisano operację.'); return loadOperations(); })
+      .catch((fetchError) => setError(fetchError.message));
+  }
+
+  function deleteOperation(id) {
+    fetch(`/api/investment-operations/${id}`, { method: 'DELETE' })
+      .then((response) => response.ok ? loadOperations() : Promise.reject(new Error(`HTTP ${response.status}`)))
+      .catch((fetchError) => setError(fetchError.message));
+  }
+
   return (
     <main className="page">
       <section className="hero">
@@ -696,6 +733,33 @@ function Home() {
           {status && <p className="success">{status}</p>}
           {error && <p className="error">Nie udało się wykonać operacji: {error}</p>}
         </form>
+      </section>
+
+      <section className="panel performancePanel">
+        <div><p className="eyebrow">Wynik inwestycyjny</p><h2>Wartość oddzielona od przepływów pieniężnych</h2></div>
+        {!performance ? <p>Ładowanie wyniku…</p> : <div className="performanceGrid">
+          <div><span>Kapitał wpłacony netto</span><strong>{formatMoney(performance.contributedCapitalPln)}</strong></div>
+          <div><span>Wynik nominalny</span><strong className={Number(performance.nominalResultPln) >= 0 ? 'positiveText' : 'negativeText'}>{formatSignedMoney(performance.nominalResultPln)}</strong></div>
+          <div><span>Stopa zwrotu</span><strong>{formatPercent(performance.returnRatePercent == null ? NaN : Number(performance.returnRatePercent))}</strong></div>
+          <div><span>Po opłatach i podatkach</span><strong>{formatSignedMoney(performance.resultAfterFeesAndTaxesPln)}</strong></div>
+          <div><span>Opłaty / podatki</span><strong>{formatMoney(performance.feesPln)} / {formatMoney(performance.taxesPln)}</strong></div>
+          <div><span>XIRR</span><strong>{formatPercent(performance.xirrPercent == null ? NaN : Number(performance.xirrPercent))}</strong></div>
+        </div>}
+      </section>
+
+      <section className="operationsGrid">
+        <form className="panel formPanel" onSubmit={submitOperation}>
+          <p className="eyebrow">Przepływy i transakcje</p><h2>Dodaj operację dla: {displayName(selectedUser)}</h2>
+          <label>Operacja<select value={operationForm.operationType} onChange={(event) => setOperationForm({ ...operationForm, operationType: event.target.value })}>{Object.entries(OPERATION_LABELS).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
+          <label>Aktywo<select value={operationForm.type} onChange={(event) => { const type = event.target.value; setOperationForm({ ...operationForm, type, subcategory: subcategoriesFor(type)[0] || '' }); }}>{types.map((type) => <option key={type} value={type}>{TYPE_LABELS[type] || type}</option>)}</select></label>
+          {subcategoriesFor(operationForm.type).length > 0 && <label>Podkategoria<select value={operationForm.subcategory} onChange={(event) => setOperationForm({ ...operationForm, subcategory: event.target.value })}>{subcategoriesFor(operationForm.type).map((value) => <option key={value} value={value}>{SUBCATEGORY_LABELS[value]}</option>)}</select></label>}
+          <label>Kwota PLN<input type="number" min="0.01" step="0.01" required value={operationForm.amountPln} onChange={(event) => setOperationForm({ ...operationForm, amountPln: event.target.value })} /></label>
+          <div className="inlineFields"><label>Opłata<input type="number" min="0" step="0.01" value={operationForm.feePln} onChange={(event) => setOperationForm({ ...operationForm, feePln: event.target.value })} /></label><label>Podatek<input type="number" min="0" step="0.01" value={operationForm.taxPln} onChange={(event) => setOperationForm({ ...operationForm, taxPln: event.target.value })} /></label></div>
+          <label>Data<input type="date" required value={operationForm.date} onChange={(event) => setOperationForm({ ...operationForm, date: event.target.value })} /></label>
+          <label>Notatka<input maxLength="250" value={operationForm.note} onChange={(event) => setOperationForm({ ...operationForm, note: event.target.value })} /></label>
+          <button className="button primaryButton" type="submit">Zapisz operację</button>
+        </form>
+        <section className="panel entriesPanel operationList"><h2>Historia operacji</h2>{operations.length === 0 ? <p>Brak operacji w tym widoku.</p> : operations.map((operation) => <div className="entryRow" key={operation.id}><div><strong>{OPERATION_LABELS[operation.operationType]}</strong><span>{TYPE_LABELS[operation.type]}{operation.subcategory ? ` · ${SUBCATEGORY_LABELS[operation.subcategory]}` : ''} · {operation.date}</span><small>{operation.note}</small></div><strong>{formatMoney(operation.amountPln)}</strong><button type="button" onClick={() => deleteOperation(operation.id)}>Usuń</button></div>)}</section>
       </section>
 
       {types.includes('GIELDA') && <StockAllocationPanel entries={graphEntries} onAddStockValue={prepareStockEntry} />}
