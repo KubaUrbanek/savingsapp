@@ -194,6 +194,55 @@ pre {
   max-width: none;
 }
 
+.performancePanel {
+  max-width: none;
+}
+
+.performanceGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.performanceGrid div {
+  display: grid;
+  gap: 5px;
+  padding: 16px;
+  border-radius: 8px;
+  background: #f1f7f3;
+}
+
+.performanceGrid span {
+  color: #59675e;
+  font-size: .82rem;
+  font-weight: 700;
+}
+
+.operationsGrid {
+  display: grid;
+  grid-template-columns: minmax(300px, .8fr) minmax(0, 1.2fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.operationsGrid .panel {
+  max-width: none;
+}
+
+.operationList {
+  margin-top: 28px;
+}
+
+.inlineFields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 800px) {
+  .operationsGrid { grid-template-columns: 1fr; }
+}
+
 .totalValue {
   color: #102016;
   font-size: clamp(2rem, 5vw, 4rem);
