@@ -594,49 +594,41 @@ function Home() {
   return (
     <main className="page">
       <section className="hero">
-        <p className="eyebrow">Portfele użytkowników</p>
-        <h1>Zarządzaj inwestycjami po polsku.</h1>
-        <p>Wybierz osobę, typ inwestycji i podkategorię, a następnie zapisz aktualny stan z konkretną datą.</p>
+        <p className="eyebrow">Twój finansowy pulpit</p>
+        <h1>Oszczędności pod kontrolą.</h1>
+        <p>Sprawdzaj wartość portfela, aktualizuj wyceny i pilnuj przyjętego planu — wszystko w jednym, czytelnym miejscu.</p>
       </section>
 
-      <section className="userSwitcher" aria-label="Wybór użytkownika">
-        {users.map((user) => (
-          <button className={user === selectedUser ? 'userPill active' : 'userPill'} key={user} type="button" onClick={() => setSelectedUser(user)}>
-            {displayName(user)}
-          </button>
-        ))}
-      </section>
-
-      <section className="typeNav" aria-label="Rodzaje inwestycji">
-        {types.map((type) => (
-          <button className={type === typeFilter ? 'typeTab active' : 'typeTab'} key={type} type="button" onClick={() => changeType(type)}>
-            {TYPE_LABELS[type] || type}
-          </button>
-        ))}
-      </section>
-
-      {filterSubcategories.length > 0 && (
-        <section className="subtypeNav" aria-label="Podkategorie inwestycji">
-          <button className={!subcategoryFilter ? 'subtypeTab active' : 'subtypeTab'} type="button" onClick={() => setSubcategoryFilter('')}>Wszystkie</button>
-          {filterSubcategories.map((subcategory) => (
-            <button className={subcategory === subcategoryFilter ? 'subtypeTab active' : 'subtypeTab'} key={subcategory} type="button" onClick={() => setSubcategoryFilter(subcategory)}>
-              {SUBCATEGORY_LABELS[subcategory] || subcategory}
-            </button>
-          ))}
-        </section>
-      )}
-
-
-      <section className="panel databasePanel">
-        <div>
-          <p className="eyebrow">Kopia danych</p>
-          <h2>Eksport i import jednoplikowej bazy JSON</h2>
-          <p>Pobierz aktualny plik bazy danych lub wgraj wcześniej wyeksportowany plik. Import nadpisuje całą obecną bazę.</p>
+      <section className="controlSurface" aria-label="Ustawienia widoku portfela">
+        <div className="filterGroup">
+          <p className="filterLabel">Czyj portfel wyświetlić?</p>
+          <div className="userSwitcher" aria-label="Wybór użytkownika">
+            {users.map((user) => (
+              <button className={user === selectedUser ? 'userPill active' : 'userPill'} key={user} type="button" onClick={() => setSelectedUser(user)}>
+                <span className="userAvatar" aria-hidden="true">{displayName(user).charAt(0)}</span>{displayName(user)}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="databaseActions">
-          <button className="button primaryButton" type="button" onClick={exportDatabase}>Eksportuj bazę</button>
-          <button className="button dangerButton" type="button" onClick={chooseImportFile}>Importuj i nadpisz</button>
-          <input ref={importInputRef} className="visuallyHidden" type="file" accept="application/json,.json" onChange={importDatabase} />
+        <div className="filterGroup">
+          <p className="filterLabel">Rodzaj inwestycji</p>
+          <div className="typeNav" aria-label="Rodzaje inwestycji">
+            {types.map((type) => (
+              <button className={type === typeFilter ? 'typeTab active' : 'typeTab'} key={type} type="button" onClick={() => changeType(type)}>
+                {TYPE_LABELS[type] || type}
+              </button>
+            ))}
+          </div>
+          {filterSubcategories.length > 0 && (
+            <div className="subtypeNav" aria-label="Podkategorie inwestycji">
+              <button className={!subcategoryFilter ? 'subtypeTab active' : 'subtypeTab'} type="button" onClick={() => setSubcategoryFilter('')}>Wszystkie</button>
+              {filterSubcategories.map((subcategory) => (
+                <button className={subcategory === subcategoryFilter ? 'subtypeTab active' : 'subtypeTab'} key={subcategory} type="button" onClick={() => setSubcategoryFilter(subcategory)}>
+                  {SUBCATEGORY_LABELS[subcategory] || subcategory}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -693,6 +685,19 @@ function Home() {
           </div>
         )}
       </section>
+
+      <section className="panel databasePanel">
+        <div>
+          <p className="eyebrow">Kopia bezpieczeństwa</p>
+          <h2>Eksport i import danych</h2>
+          <p>Pobierz aktualny plik bazy danych lub wgraj wcześniej wyeksportowany plik. Import nadpisuje całą obecną bazę.</p>
+        </div>
+        <div className="databaseActions">
+          <button className="button secondaryButton" type="button" onClick={exportDatabase}>Eksportuj bazę</button>
+          <button className="button dangerButton" type="button" onClick={chooseImportFile}>Importuj i nadpisz</button>
+          <input ref={importInputRef} className="visuallyHidden" type="file" accept="application/json,.json" onChange={importDatabase} />
+        </div>
+      </section>
     </main>
   );
 }
@@ -708,7 +713,7 @@ function NotFound() {
 function App() {
   return (
     <BrowserRouter>
-      <header className="topbar"><Link className="brand" to="/">Oszczędności</Link><nav aria-label="Główne"><NavLink to="/" end>Portfele</NavLink><NavLink to="/about">Informacje</NavLink></nav></header>
+      <header className="siteHeader"><div className="topbar"><Link className="brand" to="/"><span className="brandMark" aria-hidden="true">O</span><span>Oszczędności<small>Twój portfel</small></span></Link><nav aria-label="Główne"><NavLink to="/" end>Portfele</NavLink><NavLink to="/about">Informacje</NavLink></nav></div></header>
       <Routes><Route path="/" element={<Home />} /><Route path="/about" element={<About />} /><Route path="*" element={<NotFound />} /></Routes>
     </BrowserRouter>
   );
