@@ -218,17 +218,6 @@ pre {
   font-weight: 700;
 }
 
-.operationsGrid {
-  display: grid;
-  grid-template-columns: minmax(300px, .8fr) minmax(0, 1.2fr);
-  gap: 24px;
-  align-items: start;
-}
-
-.operationsGrid .panel {
-  max-width: none;
-}
-
 .operationList {
   margin-top: 28px;
 }
@@ -237,10 +226,6 @@ pre {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
-}
-
-@media (max-width: 800px) {
-  .operationsGrid { grid-template-columns: 1fr; }
 }
 
 .totalValue {
@@ -1491,3 +1476,7 @@ select:focus {
     grid-template-columns: 1fr;
   }
 }
+
+.compactPerformance { margin-top: 24px; }
+.formHint { margin-top: -8px; color: #59675e; line-height: 1.5; }
+.unifiedForm select, .unifiedForm input { width: 100%; }
