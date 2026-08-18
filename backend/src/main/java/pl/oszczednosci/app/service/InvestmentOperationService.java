@@ -65,8 +65,19 @@ public class InvestmentOperationService {
         BigDecimal rate = capital.signum() > 0
                 ? nominal.multiply(BigDecimal.valueOf(100)).divide(capital, 4, RoundingMode.HALF_UP) : null;
         BigDecimal xirr = calculateXirr(operations, currentValue, valuationDate);
+        LocalDate monthStart = valuationDate.withDayOfMonth(1);
+        BigDecimal openingValue = currentValue(owner, type, subcategory, monthStart.minusDays(1));
+        List<InvestmentOperation> monthlyOperations = operations.stream()
+                .filter(operation -> !operation.getDate().isBefore(monthStart)).toList();
+        BigDecimal monthlyDeposits = sum(monthlyOperations, InvestmentOperationType.DEPOSIT);
+        BigDecimal monthlyWithdrawals = sum(monthlyOperations, InvestmentOperationType.WITHDRAWAL);
+        BigDecimal monthlyResult = currentValue.subtract(openingValue).subtract(monthlyDeposits).add(monthlyWithdrawals);
+        BigDecimal monthlyBase = openingValue.add(monthlyDeposits);
+        BigDecimal monthlyRate = monthlyBase.signum() > 0
+                ? monthlyResult.multiply(BigDecimal.valueOf(100)).divide(monthlyBase, 4, RoundingMode.HALF_UP) : null;
         return new PortfolioPerformanceResponse(money(currentValue), money(capital), money(nominal), rate,
-                money(fees), money(taxes), money(nominal.subtract(fees).subtract(taxes)), xirr);
+                money(fees), money(taxes), money(nominal.subtract(fees).subtract(taxes)), xirr,
+                money(monthlyResult), monthlyRate);
     }
 
     private BigDecimal currentValue(PortfolioUser owner, InvestmentType type, InvestmentSubcategory subcategory,

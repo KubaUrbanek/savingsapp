@@ -611,13 +611,11 @@ function Home() {
   const [graphEntries, setGraphEntries] = React.useState([]);
   const [typeFilter, setTypeFilter] = React.useState('');
   const [subcategoryFilter, setSubcategoryFilter] = React.useState('');
-  const [form, setForm] = React.useState({ type: '', subcategory: '', valuePln: '', date: today() });
-  const [editingId, setEditingId] = React.useState(null);
   const [status, setStatus] = React.useState('');
   const [error, setError] = React.useState('');
   const [operations, setOperations] = React.useState([]);
   const [performance, setPerformance] = React.useState(null);
-  const [operationForm, setOperationForm] = React.useState({ operationType: 'DEPOSIT', type: '', subcategory: '', amountPln: '', feePln: '', taxPln: '', date: today(), note: '' });
+  const [operationForm, setOperationForm] = React.useState({ operationType: 'DEPOSIT', type: '', subcategory: '', amountPln: '', currentValuePln: '', date: today() });
   const importInputRef = React.useRef(null);
   const isHouseholdView = selectedUser === HOUSEHOLD_VIEW;
 
@@ -694,15 +692,12 @@ function Home() {
     return totals;
   }, {});
   const totalValue = currentEntriesForView.reduce((sum, entry) => sum + Number(entry.valuePln), 0);
-  const currentSubcategories = subcategoriesFor(form.type);
   const filterSubcategories = subcategoriesFor(typeFilter);
 
   function changeType(nextType) {
-    const nextSubcategories = subcategoriesFor(nextType);
     setTypeFilter(nextType);
     setSubcategoryFilter('');
-    setForm((current) => ({ ...current, type: nextType, subcategory: nextSubcategories[0] || '' }));
-    setEditingId(null);
+    setOperationForm((current) => ({ ...current, type: nextType, subcategory: subcategoriesFor(nextType)[0] || '' }));
   }
 
 
@@ -764,59 +759,8 @@ function Home() {
       });
   }
 
-  function submitEntry(event) {
-    event.preventDefault();
-    setError('');
-    setStatus('Zapisywanie...');
-    const payload = {
-      ...form,
-      owner: selectedUser,
-      subcategory: currentSubcategories.length ? form.subcategory : null,
-      valuePln: Number(form.valuePln)
-    };
-
-    fetch(editingId ? `/api/investments/${editingId}` : '/api/investments', {
-      method: editingId ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-      .then((response) => {
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return response.json();
-      })
-      .then(() => {
-        setForm((current) => ({ ...current, valuePln: '', date: current.date || today() }));
-        setStatus(editingId ? 'Zapisano zmiany we wpisie.' : `Zapisano stan dla: ${displayName(selectedUser)}.`);
-        setEditingId(null);
-        return Promise.all([loadEntries(), loadGraphEntries()]);
-      })
-      .catch((fetchError) => {
-        setStatus('');
-        setError(fetchError.message);
-      });
-  }
-
-  function editEntry(entry) {
-    setEditingId(entry.id);
-    setForm({
-      type: entry.type,
-      subcategory: entry.subcategory || '',
-      valuePln: String(entry.valuePln),
-      date: entry.date
-    });
-    setStatus('Edytujesz istniejący wpis. Zapisz zmiany lub anuluj.');
-    setError('');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  function cancelEditing() {
-    setEditingId(null);
-    setForm((current) => ({ ...current, valuePln: '', date: today() }));
-    setStatus('Anulowano edycję wpisu.');
-  }
-
   function prepareStockEntry(subcategory) {
-    setForm((current) => ({ ...current, type: 'GIELDA', subcategory, valuePln: '', date: today() }));
+    setOperationForm((current) => ({ ...current, operationType: 'VALUATION', type: 'GIELDA', subcategory, currentValuePln: '', date: today() }));
     setTypeFilter('GIELDA');
     setSubcategoryFilter(subcategory);
     setStatus(`Wpisz aktualną wartość ETF: ${SUBCATEGORY_LABELS[subcategory]}.`);
@@ -835,15 +779,29 @@ function Home() {
 
   function submitOperation(event) {
     event.preventDefault();
-    const operationSubcategories = subcategoriesFor(operationForm.type);
-    const payload = { ...operationForm, owner: selectedUser,
-      subcategory: operationSubcategories.length ? operationForm.subcategory : null,
-      amountPln: Number(operationForm.amountPln), feePln: Number(operationForm.feePln || 0), taxPln: Number(operationForm.taxPln || 0) };
-    setError('');
-    fetch('/api/investment-operations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+    if (!operationForm.type) { setError('Wybierz aktywo.'); return; }
+    const choices = subcategoriesFor(operationForm.type);
+    const subcategory = choices.length ? operationForm.subcategory : null;
+    const latest = currentEntries.find((entry) => entry.type === operationForm.type && (entry.subcategory || null) === subcategory);
+    const previousValue = Number(latest?.valuePln || 0);
+    const isValuation = operationForm.operationType === 'VALUATION';
+    const amount = Number(operationForm.amountPln || 0);
+    const nextValue = isValuation ? Number(operationForm.currentValuePln) : Math.max(0, previousValue + (operationForm.operationType === 'WITHDRAWAL' ? -amount : amount));
+    const entryPayload = { type: operationForm.type, owner: selectedUser, subcategory, valuePln: nextValue, date: operationForm.date };
+    const operationPayload = {
+      operationType: operationForm.operationType,
+      type: operationForm.type,
+      owner: selectedUser,
+      subcategory,
+      amountPln: amount,
+      date: operationForm.date
+    };
+    setError(''); setStatus('Zapisywanie…');
+    const saveOperation = isValuation ? Promise.resolve() : fetch('/api/investment-operations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(operationPayload) }).then((response) => response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`)));
+    saveOperation.then(() => fetch('/api/investments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(entryPayload) }))
       .then((response) => response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`)))
-      .then(() => { setOperationForm((current) => ({ ...current, amountPln: '', feePln: '', taxPln: '', note: '' })); setStatus('Zapisano operację.'); return loadOperations(); })
-      .catch((fetchError) => setError(fetchError.message));
+      .then(() => { setOperationForm((current) => ({ ...current, amountPln: '', currentValuePln: '' })); setStatus(isValuation ? 'Zapisano aktualną wycenę.' : `Zapisano operację. Nowy stan: ${formatMoney(nextValue)}.`); return Promise.all([loadEntries(), loadGraphEntries(), loadOperations()]); })
+      .catch((fetchError) => { setStatus(''); setError(fetchError.message); });
   }
 
   function deleteOperation(id) {
@@ -896,70 +854,21 @@ function Home() {
       {isHouseholdView ? <HouseholdDashboard entries={graphEntries} users={users} types={types} /> : <>
       <section className="dashboardGrid">
         <article className="panel summaryPanel">
-          <p className="eyebrow">Aktualny widok</p>
-          <h2>{displayName(selectedUser)} — {typeFilter ? TYPE_LABELS[typeFilter] : 'wszystkie inwestycje'}</h2>
-          <p className="totalValue">{formatMoney(totalValue)}</p>
-          <div className="summaryGrid">
-            {types.map((type) => <div className="summaryCard" key={type}><span>{TYPE_LABELS[type] || type}</span><strong>{formatMoney(totalsByType[type] || 0)}</strong></div>)}
-          </div>
+          <p className="eyebrow">Aktualny widok</p><h2>{displayName(selectedUser)} — {typeFilter ? TYPE_LABELS[typeFilter] : 'wszystkie inwestycje'}</h2><p className="totalValue">{formatMoney(totalValue)}</p>
+          <div className="summaryGrid">{types.map((type) => <div className="summaryCard" key={type}><span>{TYPE_LABELS[type] || type}</span><strong>{formatMoney(totalsByType[type] || 0)}</strong></div>)}</div>
+          {performance && <div className="performanceGrid compactPerformance"><div><span>Wynik w tym miesiącu</span><strong className={Number(performance.monthlyResultPln) >= 0 ? 'positiveText' : 'negativeText'}>{formatSignedMoney(performance.monthlyResultPln)}</strong></div><div><span>Miesięczna stopa zwrotu</span><strong>{formatPercent(performance.monthlyReturnRatePercent == null ? NaN : Number(performance.monthlyReturnRatePercent))}</strong></div><div><span>Łączny wynik inwestycji</span><strong>{formatSignedMoney(performance.nominalResultPln)}</strong></div></div>}
         </article>
-
-        <form className={`panel formPanel${editingId ? ' editing' : ''}`} onSubmit={submitEntry}>
-          <h2>{editingId ? 'Edytuj wpis' : 'Dodaj aktualny stan'} dla: {displayName(selectedUser)}</h2>
-          <label>Typ inwestycji
-            <select value={form.type} onChange={(event) => {
-              const nextType = event.target.value;
-              setForm({ ...form, type: nextType, subcategory: subcategoriesFor(nextType)[0] || '' });
-            }} required>
-              {types.map((type) => <option key={type} value={type}>{TYPE_LABELS[type] || type}</option>)}
-            </select>
-          </label>
-          {currentSubcategories.length > 0 && <label>Podkategoria
-            <select value={form.subcategory} onChange={(event) => setForm({ ...form, subcategory: event.target.value })} required>
-              {currentSubcategories.map((subcategory) => <option key={subcategory} value={subcategory}>{SUBCATEGORY_LABELS[subcategory] || subcategory}</option>)}
-            </select>
-          </label>}
-          <label>Aktualny stan w PLN
-            <input min="0.01" step="0.01" type="number" value={form.valuePln} onChange={(event) => setForm({ ...form, valuePln: event.target.value })} required />
-          </label>
-          <label>Data wpisu
-            <input type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} required />
-          </label>
-          <div className="formActions">
-            <button className="button primaryButton" type="submit">{editingId ? 'Zapisz zmiany' : 'Zapisz stan portfela'}</button>
-            {editingId && <button className="button secondaryButton" type="button" onClick={cancelEditing}>Anuluj</button>}
-          </div>
-          {status && <p className="success">{status}</p>}
-          {error && <p className="error">Nie udało się wykonać operacji: {error}</p>}
-        </form>
-      </section>
-
-      <section className="panel performancePanel">
-        <div><p className="eyebrow">Wynik inwestycyjny</p><h2>Wartość oddzielona od przepływów pieniężnych</h2></div>
-        {!performance ? <p>Ładowanie wyniku…</p> : <div className="performanceGrid">
-          <div><span>Kapitał wpłacony netto</span><strong>{formatMoney(performance.contributedCapitalPln)}</strong></div>
-          <div><span>Wynik nominalny</span><strong className={Number(performance.nominalResultPln) >= 0 ? 'positiveText' : 'negativeText'}>{formatSignedMoney(performance.nominalResultPln)}</strong></div>
-          <div><span>Stopa zwrotu</span><strong>{formatPercent(performance.returnRatePercent == null ? NaN : Number(performance.returnRatePercent))}</strong></div>
-          <div><span>Po opłatach i podatkach</span><strong>{formatSignedMoney(performance.resultAfterFeesAndTaxesPln)}</strong></div>
-          <div><span>Opłaty / podatki</span><strong>{formatMoney(performance.feesPln)} / {formatMoney(performance.taxesPln)}</strong></div>
-          <div><span>XIRR</span><strong>{formatPercent(performance.xirrPercent == null ? NaN : Number(performance.xirrPercent))}</strong></div>
-        </div>}
-      </section>
-
-      <section className="operationsGrid">
-        <form className="panel formPanel" onSubmit={submitOperation}>
-          <p className="eyebrow">Przepływy i transakcje</p><h2>Dodaj operację dla: {displayName(selectedUser)}</h2>
-          <label>Operacja<select value={operationForm.operationType} onChange={(event) => setOperationForm({ ...operationForm, operationType: event.target.value })}>{Object.entries(OPERATION_LABELS).map(([value, label]) => <option value={value} key={value}>{label}</option>)}</select></label>
-          <label>Aktywo<select value={operationForm.type} onChange={(event) => { const type = event.target.value; setOperationForm({ ...operationForm, type, subcategory: subcategoriesFor(type)[0] || '' }); }}>{types.map((type) => <option key={type} value={type}>{TYPE_LABELS[type] || type}</option>)}</select></label>
-          {subcategoriesFor(operationForm.type).length > 0 && <label>Podkategoria<select value={operationForm.subcategory} onChange={(event) => setOperationForm({ ...operationForm, subcategory: event.target.value })}>{subcategoriesFor(operationForm.type).map((value) => <option key={value} value={value}>{SUBCATEGORY_LABELS[value]}</option>)}</select></label>}
-          <label>Kwota PLN<input type="number" min="0.01" step="0.01" required value={operationForm.amountPln} onChange={(event) => setOperationForm({ ...operationForm, amountPln: event.target.value })} /></label>
-          <div className="inlineFields"><label>Opłata<input type="number" min="0" step="0.01" value={operationForm.feePln} onChange={(event) => setOperationForm({ ...operationForm, feePln: event.target.value })} /></label><label>Podatek<input type="number" min="0" step="0.01" value={operationForm.taxPln} onChange={(event) => setOperationForm({ ...operationForm, taxPln: event.target.value })} /></label></div>
+        <form className="panel formPanel unifiedForm" onSubmit={submitOperation}>
+          <p className="eyebrow">Jedno miejsce do aktualizacji</p><h2>Co zmieniło się w portfelu?</h2><p className="formHint">Wpłata i wypłata automatycznie zmienią stan. „Aktualna wycena” zapisuje zmianę rynku bez przepływu pieniędzy.</p>
+          <label>Rodzaj zmiany<select value={operationForm.operationType} onChange={(event) => setOperationForm({ ...operationForm, operationType: event.target.value })}><option value="DEPOSIT">Wpłata — zwiększ stan</option><option value="WITHDRAWAL">Wypłata — zmniejsz stan</option><option value="VALUATION">Aktualna wycena — policz zysk lub stratę</option></select></label>
+          <label>Aktywo<select required value={operationForm.type} onChange={(event) => { const type = event.target.value; setOperationForm({ ...operationForm, type, subcategory: subcategoriesFor(type)[0] || '' }); }}>{types.map((type) => <option key={type} value={type}>{TYPE_LABELS[type] || type}</option>)}</select></label>
+          {subcategoriesFor(operationForm.type).length > 0 && <label>Podkategoria<select required value={operationForm.subcategory} onChange={(event) => setOperationForm({ ...operationForm, subcategory: event.target.value })}>{subcategoriesFor(operationForm.type).map((value) => <option key={value} value={value}>{SUBCATEGORY_LABELS[value]}</option>)}</select></label>}
+          {operationForm.operationType === 'VALUATION' ? <label>Aktualna wartość w PLN<input type="number" min="0" step="0.01" required value={operationForm.currentValuePln} onChange={(event) => setOperationForm({ ...operationForm, currentValuePln: event.target.value })} /></label> : <label>Kwota w PLN<input type="number" min="0.01" step="0.01" required value={operationForm.amountPln} onChange={(event) => setOperationForm({ ...operationForm, amountPln: event.target.value })} /></label>}
           <label>Data<input type="date" required value={operationForm.date} onChange={(event) => setOperationForm({ ...operationForm, date: event.target.value })} /></label>
-          <label>Notatka<input maxLength="250" value={operationForm.note} onChange={(event) => setOperationForm({ ...operationForm, note: event.target.value })} /></label>
-          <button className="button primaryButton" type="submit">Zapisz operację</button>
+          <button className="button primaryButton" type="submit" disabled={!operationForm.type}>Zapisz zmianę</button>{status && <p className="success">{status}</p>}{error && <p className="error">Nie udało się zapisać: {error}</p>}
         </form>
-        <section className="panel entriesPanel operationList"><h2>Historia operacji</h2>{operations.length === 0 ? <p>Brak operacji w tym widoku.</p> : operations.map((operation) => <div className="entryRow" key={operation.id}><div><strong>{OPERATION_LABELS[operation.operationType]}</strong><span>{TYPE_LABELS[operation.type]}{operation.subcategory ? ` · ${SUBCATEGORY_LABELS[operation.subcategory]}` : ''} · {operation.date}</span><small>{operation.note}</small></div><strong>{formatMoney(operation.amountPln)}</strong><button type="button" onClick={() => deleteOperation(operation.id)}>Usuń</button></div>)}</section>
       </section>
+      <section className="panel entriesPanel operationList"><div className="entriesHeader"><h2>Historia wpłat i wypłat</h2></div>{operations.length === 0 ? <p>Brak przepływów dla wybranego aktywa.</p> : operations.map((operation) => <div className="entryRow" key={operation.id}><div><strong>{OPERATION_LABELS[operation.operationType]}</strong><span>{TYPE_LABELS[operation.type]}{operation.subcategory ? ` · ${SUBCATEGORY_LABELS[operation.subcategory]}` : ''} · {operation.date}</span><small>{operation.note}</small></div><strong>{formatMoney(operation.amountPln)}</strong><button type="button" onClick={() => deleteOperation(operation.id)}>Usuń</button></div>)}</section>
 
       <GlobalAllocationPanel entries={graphEntries} />
 
@@ -969,14 +878,13 @@ function Home() {
       <SummaryChart entries={graphEntries} types={types} />
 
       {!isHouseholdView && <section className="panel entriesPanel">
-        <div className="entriesHeader"><h2>Wpisy: {displayName(selectedUser)}</h2></div>
+        <div className="entriesHeader"><h2>Historia wycen: {displayName(selectedUser)}</h2></div>
         {graphEntries.length === 0 ? <p>Brak wpisów dla wybranej osoby.</p> : (
           <div className="entryList">
             {graphEntries.map((entry) => <div className="entryRow" key={entry.id}>
               <div><strong>{TYPE_LABELS[entry.type] || entry.type}</strong><span>{entry.subcategory ? SUBCATEGORY_LABELS[entry.subcategory] : 'Bez podkategorii'} · {entry.date}</span>{entry.updatedAt && <small>Ostatnia modyfikacja: {formatDateTime(entry.updatedAt)}</small>}</div>
               <strong>{formatMoney(entry.valuePln)}</strong>
               <div className="entryActions">
-                <button className="editButton" type="button" onClick={() => editEntry(entry)}>Edytuj</button>
                 <button type="button" onClick={() => deleteEntry(entry.id)}>Usuń</button>
               </div>
             </div>)}

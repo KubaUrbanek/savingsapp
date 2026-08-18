@@ -10,5 +10,7 @@ public record PortfolioPerformanceResponse(
         BigDecimal feesPln,
         BigDecimal taxesPln,
         BigDecimal resultAfterFeesAndTaxesPln,
-        BigDecimal xirrPercent) {
+        BigDecimal xirrPercent,
+        BigDecimal monthlyResultPln,
+        BigDecimal monthlyReturnRatePercent) {
 }
