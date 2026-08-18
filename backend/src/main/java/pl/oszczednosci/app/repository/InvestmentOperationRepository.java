@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 import pl.oszczednosci.app.model.InvestmentOperation;
 import pl.oszczednosci.app.model.PortfolioUser;
 import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.DatabindException;
 import tools.jackson.databind.ObjectMapper;
 
 @Repository
@@ -51,7 +52,7 @@ public class InvestmentOperationRepository {
     private List<InvestmentOperation> read() {
         if (Files.notExists(path)) return new ArrayList<>();
         try { return new ArrayList<>(objectMapper.readValue(path.toFile(), LIST)); }
-        catch (IOException exception) { throw new IllegalStateException("Unable to read operations database: " + path, exception); }
+        catch (DatabindException exception) { throw new IllegalStateException("Unable to read operations database: " + path, exception); }
     }
 
     private void write(List<InvestmentOperation> operations) {
