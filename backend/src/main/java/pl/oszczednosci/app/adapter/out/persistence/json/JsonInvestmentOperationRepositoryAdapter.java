@@ -18,12 +18,13 @@ import tools.jackson.databind.DatabindException;
 import tools.jackson.databind.ObjectMapper;
 
 public final class JsonInvestmentOperationRepositoryAdapter implements InvestmentOperationRepository {
-    private static final TypeReference<List<InvestmentOperation>> LIST = new TypeReference<>() {};
+    private static final TypeReference<List<InvestmentOperationJsonRecord>> LIST = new TypeReference<>() {};
     private static final Comparator<InvestmentOperation> NEWEST_FIRST = Comparator
             .comparing(InvestmentOperation::getDate, Comparator.reverseOrder())
             .thenComparing(InvestmentOperation::getCreatedAt, Comparator.reverseOrder());
     private final ObjectMapper objectMapper;
     private final Path path;
+    private final InvestmentOperationJsonMapper mapper = new InvestmentOperationJsonMapper();
 
     public JsonInvestmentOperationRepositoryAdapter(ObjectMapper objectMapper,
             Path path) {
@@ -49,7 +50,7 @@ public final class JsonInvestmentOperationRepositoryAdapter implements Investmen
 
     private List<InvestmentOperation> read() {
         if (Files.notExists(path)) return new ArrayList<>();
-        try { return new ArrayList<>(objectMapper.readValue(path.toFile(), LIST)); }
+        try { return objectMapper.readValue(path.toFile(), LIST).stream().map(mapper::toDomain).collect(java.util.stream.Collectors.toCollection(ArrayList::new)); }
         catch (DatabindException exception) { throw new PersistenceException("Unable to read operations database: " + path, exception); }
     }
 
@@ -58,7 +59,7 @@ public final class JsonInvestmentOperationRepositoryAdapter implements Investmen
             Path parent = path.getParent();
             if (parent != null) Files.createDirectories(parent);
             Path temporary = Files.createTempFile(parent, path.getFileName().toString(), ".tmp");
-            objectMapper.writerWithDefaultPrettyPrinter().writeValue(temporary.toFile(), operations);
+            objectMapper.writerWithDefaultPrettyPrinter().writeValue(temporary.toFile(), operations.stream().map(mapper::toRecord).toList());
             Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException exception) { throw new PersistenceException("Unable to write operations database: " + path, exception); }
     }
