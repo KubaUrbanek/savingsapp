@@ -1,4 +1,4 @@
-import { mapInvestmentDto, mapOperationDto } from './dtoMapper.js';
+import { mapCollectionDto, mapInvestmentDto, mapOperationDto } from './dtoMapper.js';
 
 async function responseBody(response) {
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -8,8 +8,8 @@ const query = (filters = {}) => new URLSearchParams(Object.entries(filters).filt
 
 export class FetchPortfolioGateway {
   constructor(fetchImplementation, baseUrl = '/api') { this.fetch = fetchImplementation; this.baseUrl = baseUrl; }
-  getUsers() { return this.fetch(`${this.baseUrl}/users`).then(responseBody); }
-  getInvestmentTypes() { return this.fetch(`${this.baseUrl}/investment-types`).then(responseBody); }
+  getUsers() { return this.fetch(`${this.baseUrl}/users`).then(responseBody).then(mapCollectionDto); }
+  getInvestmentTypes() { return this.fetch(`${this.baseUrl}/investment-types`).then(responseBody).then(mapCollectionDto); }
   getInvestments(filters) { return this.fetch(`${this.baseUrl}/investments?${query(filters)}`).then(responseBody).then((rows) => rows.map(mapInvestmentDto)); }
   getOperations(filters) { return this.fetch(`${this.baseUrl}/investment-operations?${query(filters)}`).then(responseBody).then((rows) => rows.map(mapOperationDto)); }
   getPerformance(filters) { return this.fetch(`${this.baseUrl}/portfolio-performance?${query(filters)}`).then(responseBody); }

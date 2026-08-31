@@ -13,5 +13,9 @@ public class ApplicationConfiguration {
  @Bean DefaultInvestmentTypePolicy defaultPolicy(){ return new DefaultInvestmentTypePolicy(); }
  @Bean InvestmentTypePolicyRegistry policyRegistry(DefaultInvestmentTypePolicy policy){ return new InvestmentTypePolicyRegistry(List.of(policy)); }
  @Bean InvestmentEntryUseCase investmentEntryUseCase(JsonInvestmentEntryRepositoryAdapter adapter, InvestmentTypePolicyRegistry policies, Clock clock, IdGenerator ids){ return new InvestmentEntryUseCase(adapter,adapter,policies,clock,ids); }
- @Bean InvestmentOperationUseCase investmentOperationUseCase(JsonInvestmentOperationRepositoryAdapter operations, JsonInvestmentEntryRepositoryAdapter entries, Clock clock, IdGenerator ids){ return new InvestmentOperationUseCase(operations,entries,clock,ids); }
+ @Bean InvestmentOperationUseCase investmentOperationUseCase(JsonInvestmentOperationRepositoryAdapter operations, Clock clock, IdGenerator ids){ return new InvestmentOperationUseCase(operations,clock,ids); }
+ @Bean RateOfReturnCalculator rateOfReturnCalculator(){ return new NumericalRateOfReturnCalculator(); }
+ @Bean PortfolioPerformanceCalculator portfolioPerformanceCalculator(RateOfReturnCalculator rates){ return new PortfolioPerformanceCalculator(rates); }
+ @Bean CalculatePortfolioPerformanceService calculatePortfolioPerformanceService(JsonInvestmentEntryRepositoryAdapter entries, JsonInvestmentOperationRepositoryAdapter operations, PortfolioPerformanceCalculator calculator, Clock clock){ return new CalculatePortfolioPerformanceService(entries,operations,calculator,clock); }
+ @Bean ReferenceDataUseCase referenceDataUseCase(){ return new ReferenceDataUseCase(); }
 }

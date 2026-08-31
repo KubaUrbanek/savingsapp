@@ -22,5 +22,4 @@ public record CreateInvestmentOperationRequest(
         @DecimalMin("0.00") @Digits(integer = 17, fraction = 2) BigDecimal taxPln,
         @NotNull LocalDate date,
         @Size(max = 250) String note) {
- public pl.oszczednosci.app.application.port.in.CreateInvestmentOperationCommand toCommand() { return new pl.oszczednosci.app.application.port.in.CreateInvestmentOperationCommand(operationType,type,owner,subcategory,amountPln,feePln,taxPln,date,note); }
 }

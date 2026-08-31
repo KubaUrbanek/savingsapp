@@ -1,6 +1,6 @@
 package pl.oszczednosci.app.domain.model;
 import java.math.BigDecimal;
-public record PortfolioPerformance(BigDecimal currentValuePln, BigDecimal contributedCapitalPln,
- BigDecimal nominalResultPln, BigDecimal returnRatePercent, BigDecimal feesPln, BigDecimal taxesPln,
- BigDecimal resultAfterFeesAndTaxesPln, BigDecimal xirrPercent, BigDecimal monthlyResultPln,
- BigDecimal monthlyReturnRatePercent) {}
+/** Framework-independent calculation result. */
+public record PortfolioPerformance(Money currentValue, Money contributedCapital, Money nominalResult,
+ BigDecimal returnRatePercent, Money fees, Money taxes, Money resultAfterFeesAndTaxes,
+ RateOfReturnResult rateOfReturn, Money monthlyResult, BigDecimal monthlyReturnRatePercent) {}
