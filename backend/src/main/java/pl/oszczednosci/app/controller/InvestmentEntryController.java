@@ -33,7 +33,7 @@ import pl.oszczednosci.app.model.InvestmentOperationType;
 import pl.oszczednosci.app.model.InvestmentSubcategory;
 import pl.oszczednosci.app.model.InvestmentType;
 import pl.oszczednosci.app.model.PortfolioUser;
-import pl.oszczednosci.app.service.InvestmentCategoryRules;
+import pl.oszczednosci.app.model.AssetCategory;
 import pl.oszczednosci.app.service.InvestmentEntryService;
 import pl.oszczednosci.app.service.InvestmentOperationService;
 
@@ -58,7 +58,7 @@ public class InvestmentEntryController {
 
     @GetMapping("/investment-subcategories")
     public List<String> investmentSubcategories(@RequestParam InvestmentType type) {
-        return InvestmentCategoryRules.allowedSubcategories(type).stream()
+        return AssetCategory.allowedSubcategories(type).stream()
                 .map(Enum::name)
                 .toList();
     }

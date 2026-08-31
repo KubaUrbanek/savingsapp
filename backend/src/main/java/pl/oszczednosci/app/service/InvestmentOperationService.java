@@ -3,6 +3,7 @@ package pl.oszczednosci.app.service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -13,6 +14,12 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import pl.oszczednosci.app.dto.CreateInvestmentOperationRequest;
 import pl.oszczednosci.app.dto.PortfolioPerformanceResponse;
+import pl.oszczednosci.app.application.port.IdGenerator;
+import pl.oszczednosci.app.model.AssetCategory;
+import pl.oszczednosci.app.model.InvestmentEntryId;
+import pl.oszczednosci.app.model.InvestmentOperationId;
+import pl.oszczednosci.app.model.Money;
+import pl.oszczednosci.app.model.PortfolioOwner;
 import pl.oszczednosci.app.model.InvestmentEntry;
 import pl.oszczednosci.app.model.InvestmentOperation;
 import pl.oszczednosci.app.model.InvestmentOperationType;
@@ -27,22 +34,26 @@ public class InvestmentOperationService {
     private static final int SCALE = 2;
     private final InvestmentOperationRepository operationRepository;
     private final InvestmentEntryRepository entryRepository;
+    private final IdGenerator idGenerator;
+    private final Clock clock;
 
     public InvestmentOperationService(InvestmentOperationRepository operationRepository,
-            InvestmentEntryRepository entryRepository) {
-        this.operationRepository = operationRepository;
-        this.entryRepository = entryRepository;
+            InvestmentEntryRepository entryRepository, IdGenerator idGenerator, Clock clock) {
+        this.operationRepository = operationRepository; this.entryRepository = entryRepository;
+        this.idGenerator = idGenerator; this.clock = clock;
     }
 
     public InvestmentOperation create(CreateInvestmentOperationRequest request) {
-        InvestmentCategoryRules.validate(request.type(), request.subcategory());
-        return operationRepository.save(new InvestmentOperation(null, request.operationType(), request.type(), request.owner(),
-                request.subcategory(), money(request.amountPln()), moneyOrZero(request.feePln()), moneyOrZero(request.taxPln()),
-                request.date(), request.note() == null ? null : request.note().trim(), null));
+        return operationRepository.save(InvestmentOperation.create(new InvestmentOperationId(idGenerator.nextId()),
+                request.operationType(), AssetCategory.of(request.type(), request.subcategory()),
+                PortfolioOwner.of(request.owner()), Money.positive(request.amountPln()),
+                Money.zeroOrPositive(request.feePln() == null ? BigDecimal.ZERO : request.feePln()),
+                Money.zeroOrPositive(request.taxPln() == null ? BigDecimal.ZERO : request.taxPln()),
+                request.date(), request.note(), clock.instant()));
     }
 
     public List<InvestmentOperation> list(PortfolioUser owner, InvestmentType type, InvestmentSubcategory subcategory) {
-        if (type != null && subcategory != null) InvestmentCategoryRules.validate(type, subcategory);
+        if (type != null && subcategory != null) AssetCategory.of(type, subcategory);
         return operationRepository.findByOwner(owner).stream()
                 .filter(operation -> type == null || operation.getType() == type)
                 .filter(operation -> subcategory == null || operation.getSubcategory() == subcategory)

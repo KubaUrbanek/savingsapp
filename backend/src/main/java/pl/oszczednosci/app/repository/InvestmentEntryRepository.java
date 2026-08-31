@@ -19,6 +19,8 @@ import tools.jackson.databind.DatabindException;
 import tools.jackson.databind.ObjectMapper;
 
 import pl.oszczednosci.app.model.InvestmentEntry;
+import pl.oszczednosci.app.adapter.out.persistence.json.InvestmentEntryJsonMapper;
+import pl.oszczednosci.app.adapter.out.persistence.json.InvestmentEntryJsonRecord;
 import pl.oszczednosci.app.model.InvestmentSubcategory;
 import pl.oszczednosci.app.model.InvestmentType;
 import pl.oszczednosci.app.model.PortfolioUser;
@@ -26,7 +28,7 @@ import pl.oszczednosci.app.model.PortfolioUser;
 @Repository
 public class InvestmentEntryRepository {
 
-    private static final TypeReference<List<InvestmentEntry>> ENTRY_LIST = new TypeReference<>() {
+    private static final TypeReference<List<InvestmentEntryJsonRecord>> ENTRY_LIST = new TypeReference<>() {
     };
     private static final Comparator<InvestmentEntry> NEWEST_FIRST = Comparator
             .comparing(InvestmentEntry::getDate, Comparator.reverseOrder())
@@ -34,6 +36,7 @@ public class InvestmentEntryRepository {
 
     private final ObjectMapper objectMapper;
     private final Path databasePath;
+    private final InvestmentEntryJsonMapper mapper = new InvestmentEntryJsonMapper();
 
     public InvestmentEntryRepository(
             ObjectMapper objectMapper,
@@ -44,7 +47,6 @@ public class InvestmentEntryRepository {
     }
 
     public synchronized InvestmentEntry save(InvestmentEntry entry) {
-        entry.prepareForSave();
         List<InvestmentEntry> entries = readEntries();
         entries.removeIf(existing -> existing.getId().equals(entry.getId()));
         entries.add(entry);
@@ -66,7 +68,6 @@ public class InvestmentEntryRepository {
 
     public synchronized void importDatabase(byte[] databaseContents) {
         List<InvestmentEntry> entries = parseEntries(databaseContents);
-        entries.forEach(InvestmentEntry::prepareForSave);
         writeEntries(entries);
     }
 
@@ -115,7 +116,7 @@ public class InvestmentEntryRepository {
             return new ArrayList<>();
         }
         try {
-            return new ArrayList<>(objectMapper.readValue(databasePath.toFile(), ENTRY_LIST));
+            return objectMapper.readValue(databasePath.toFile(), ENTRY_LIST).stream().map(mapper::toDomain).collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         } catch (DatabindException exception) {
             throw new IllegalStateException("Unable to read JSON database file: " + databasePath, exception);
         }
@@ -123,7 +124,7 @@ public class InvestmentEntryRepository {
 
     private List<InvestmentEntry> parseEntries(byte[] databaseContents) {
         try {
-            return new ArrayList<>(objectMapper.readValue(databaseContents, ENTRY_LIST));
+            return objectMapper.readValue(databaseContents, ENTRY_LIST).stream().map(mapper::toDomain).collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         } catch (DatabindException exception) {
             throw new IllegalArgumentException("Imported file is not a valid investment entries JSON database.", exception);
         }
@@ -136,7 +137,7 @@ public class InvestmentEntryRepository {
                 Files.createDirectories(parent);
             }
             Path temporaryFile = Files.createTempFile(parent, databasePath.getFileName().toString(), ".tmp");
-            objectMapper.writerWithDefaultPrettyPrinter().writeValue(temporaryFile.toFile(), entries);
+            objectMapper.writerWithDefaultPrettyPrinter().writeValue(temporaryFile.toFile(), entries.stream().map(mapper::toRecord).toList());
             Files.move(temporaryFile, databasePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException exception) {
             throw new IllegalStateException("Unable to write JSON database file: " + databasePath, exception);

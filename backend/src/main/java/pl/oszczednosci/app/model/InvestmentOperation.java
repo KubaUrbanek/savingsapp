@@ -1,64 +1,70 @@
 package pl.oszczednosci.app.model;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.UUID;
+import java.util.Objects;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
+/** Immutable framework-independent cash operation aggregate. */
+public final class InvestmentOperation {
+    private final InvestmentOperationId id;
+    private final InvestmentOperationType operationType;
+    private final AssetCategory category;
+    private final PortfolioOwner owner;
+    private final Money amount;
+    private final Money fee;
+    private final Money tax;
+    private final LocalDate date;
+    private final String note;
+    private final Instant createdAt;
 
-public class InvestmentOperation {
-    private UUID id;
-    private InvestmentOperationType operationType;
-    private InvestmentType type;
-    private PortfolioUser owner;
-    private InvestmentSubcategory subcategory;
-    private BigDecimal amountPln;
-    private BigDecimal feePln;
-    private BigDecimal taxPln;
-    private LocalDate date;
-    private String note;
-    private Instant createdAt;
-
-    @JsonCreator
-    public InvestmentOperation(@JsonProperty("id") UUID id,
-            @JsonProperty("operationType") InvestmentOperationType operationType,
-            @JsonProperty("type") InvestmentType type,
-            @JsonProperty("owner") PortfolioUser owner,
-            @JsonProperty("subcategory") InvestmentSubcategory subcategory,
-            @JsonProperty("amountPln") BigDecimal amountPln,
-            @JsonProperty("feePln") BigDecimal feePln,
-            @JsonProperty("taxPln") BigDecimal taxPln,
-            @JsonProperty("date") LocalDate date,
-            @JsonProperty("note") String note,
-            @JsonProperty("createdAt") Instant createdAt) {
-        this.id = id;
-        this.operationType = operationType;
-        this.type = type;
-        this.owner = owner;
-        this.subcategory = subcategory;
-        this.amountPln = amountPln;
-        this.feePln = feePln == null ? BigDecimal.ZERO : feePln;
-        this.taxPln = taxPln == null ? BigDecimal.ZERO : taxPln;
-        this.date = date;
-        this.note = note;
-        this.createdAt = createdAt;
+    private InvestmentOperation(InvestmentOperationId id, InvestmentOperationType operationType, AssetCategory category,
+            PortfolioOwner owner, Money amount, Money fee, Money tax, LocalDate date, String note, Instant createdAt) {
+        this.id = Objects.requireNonNull(id, "Investment operation id is required");
+        this.operationType = Objects.requireNonNull(operationType, "Operation type is required");
+        this.category = Objects.requireNonNull(category, "Asset category is required");
+        this.owner = Objects.requireNonNull(owner, "Portfolio owner is required");
+        this.amount = Objects.requireNonNull(amount, "Operation amount is required");
+        if (amount.amount().signum() <= 0) throw new IllegalArgumentException("Operation amount must be positive");
+        this.fee = Objects.requireNonNull(fee, "Operation fee is required");
+        this.tax = Objects.requireNonNull(tax, "Operation tax is required");
+        this.date = Objects.requireNonNull(date, "Operation date is required");
+        this.note = normalizeNote(note);
+        this.createdAt = Objects.requireNonNull(createdAt, "Creation timestamp is required");
     }
 
-    public void prepareForSave() {
-        if (id == null) id = UUID.randomUUID();
-        if (createdAt == null) createdAt = Instant.now();
+    public static InvestmentOperation create(InvestmentOperationId id, InvestmentOperationType operationType,
+            AssetCategory category, PortfolioOwner owner, Money amount, Money fee, Money tax, LocalDate date,
+            String note, Instant createdAt) {
+        return new InvestmentOperation(id, operationType, category, owner, amount, fee, tax, date, note, createdAt);
     }
 
-    public UUID getId() { return id; }
+    public static InvestmentOperation reconstitute(InvestmentOperationId id, InvestmentOperationType operationType,
+            AssetCategory category, PortfolioOwner owner, Money amount, Money fee, Money tax, LocalDate date,
+            String note, Instant createdAt) {
+        return new InvestmentOperation(id, operationType, category, owner, amount, fee, tax, date, note, createdAt);
+    }
+
+    private static String normalizeNote(String note) {
+        if (note == null) return null;
+        String normalized = note.trim();
+        if (normalized.length() > 250) throw new IllegalArgumentException("Operation note cannot exceed 250 characters");
+        return normalized.isEmpty() ? null : normalized;
+    }
+
+    public InvestmentOperationId id() { return id; }
+    public AssetCategory category() { return category; }
+    public PortfolioOwner owner() { return owner; }
+    public Money amount() { return amount; }
+    public Money fee() { return fee; }
+    public Money tax() { return tax; }
+    public java.util.UUID getId() { return id.value(); }
     public InvestmentOperationType getOperationType() { return operationType; }
-    public InvestmentType getType() { return type; }
-    public PortfolioUser getOwner() { return owner; }
-    public InvestmentSubcategory getSubcategory() { return subcategory; }
-    public BigDecimal getAmountPln() { return amountPln; }
-    public BigDecimal getFeePln() { return feePln; }
-    public BigDecimal getTaxPln() { return taxPln; }
+    public InvestmentType getType() { return category.type(); }
+    public PortfolioUser getOwner() { return owner.value(); }
+    public InvestmentSubcategory getSubcategory() { return category.subcategory(); }
+    public java.math.BigDecimal getAmountPln() { return amount.amount(); }
+    public java.math.BigDecimal getFeePln() { return fee.amount(); }
+    public java.math.BigDecimal getTaxPln() { return tax.amount(); }
     public LocalDate getDate() { return date; }
     public String getNote() { return note; }
     public Instant getCreatedAt() { return createdAt; }

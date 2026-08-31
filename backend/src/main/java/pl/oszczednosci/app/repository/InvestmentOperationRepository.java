@@ -12,6 +12,8 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 import pl.oszczednosci.app.model.InvestmentOperation;
+import pl.oszczednosci.app.adapter.out.persistence.json.InvestmentOperationJsonMapper;
+import pl.oszczednosci.app.adapter.out.persistence.json.InvestmentOperationJsonRecord;
 import pl.oszczednosci.app.model.PortfolioUser;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.DatabindException;
@@ -19,12 +21,13 @@ import tools.jackson.databind.ObjectMapper;
 
 @Repository
 public class InvestmentOperationRepository {
-    private static final TypeReference<List<InvestmentOperation>> LIST = new TypeReference<>() {};
+    private static final TypeReference<List<InvestmentOperationJsonRecord>> LIST = new TypeReference<>() {};
     private static final Comparator<InvestmentOperation> NEWEST_FIRST = Comparator
             .comparing(InvestmentOperation::getDate, Comparator.reverseOrder())
             .thenComparing(InvestmentOperation::getCreatedAt, Comparator.reverseOrder());
     private final ObjectMapper objectMapper;
     private final Path path;
+    private final InvestmentOperationJsonMapper mapper = new InvestmentOperationJsonMapper();
 
     public InvestmentOperationRepository(ObjectMapper objectMapper,
             @Value("${app.operations.file:./backend/data/investment-operations.json}") Path path) {
@@ -33,7 +36,6 @@ public class InvestmentOperationRepository {
     }
 
     public synchronized InvestmentOperation save(InvestmentOperation operation) {
-        operation.prepareForSave();
         List<InvestmentOperation> operations = read();
         operations.add(operation);
         write(operations);
@@ -51,7 +53,7 @@ public class InvestmentOperationRepository {
 
     private List<InvestmentOperation> read() {
         if (Files.notExists(path)) return new ArrayList<>();
-        try { return new ArrayList<>(objectMapper.readValue(path.toFile(), LIST)); }
+        try { return objectMapper.readValue(path.toFile(), LIST).stream().map(mapper::toDomain).collect(java.util.stream.Collectors.toCollection(ArrayList::new)); }
         catch (DatabindException exception) { throw new IllegalStateException("Unable to read operations database: " + path, exception); }
     }
 
@@ -60,7 +62,7 @@ public class InvestmentOperationRepository {
             Path parent = path.getParent();
             if (parent != null) Files.createDirectories(parent);
             Path temporary = Files.createTempFile(parent, path.getFileName().toString(), ".tmp");
-            objectMapper.writerWithDefaultPrettyPrinter().writeValue(temporary.toFile(), operations);
+            objectMapper.writerWithDefaultPrettyPrinter().writeValue(temporary.toFile(), operations.stream().map(mapper::toRecord).toList());
             Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException exception) { throw new IllegalStateException("Unable to write operations database: " + path, exception); }
     }

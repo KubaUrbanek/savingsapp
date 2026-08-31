@@ -8,6 +8,9 @@ import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -16,10 +19,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import pl.oszczednosci.app.dto.CreateInvestmentEntryRequest;
-import pl.oszczednosci.app.model.InvestmentEntry;
-import pl.oszczednosci.app.model.InvestmentSubcategory;
-import pl.oszczednosci.app.model.InvestmentType;
-import pl.oszczednosci.app.model.PortfolioUser;
+import pl.oszczednosci.app.model.*;
 import pl.oszczednosci.app.repository.InvestmentEntryRepository;
 
 class InvestmentEntryServiceTest {
@@ -29,15 +29,11 @@ class InvestmentEntryServiceTest {
         InvestmentEntryRepository repository = mock(InvestmentEntryRepository.class);
         InvestmentTypePolicyRegistry policies = mock(InvestmentTypePolicyRegistry.class);
         InvestmentTypePolicy policy = mock(InvestmentTypePolicy.class);
-        InvestmentEntryService service = new InvestmentEntryService(repository, policies);
-        InvestmentEntry existing = new InvestmentEntry(
-                InvestmentType.GIELDA,
-                PortfolioUser.JAKUB,
-                InvestmentSubcategory.ZLOTO,
-                new BigDecimal("100.00"),
-                LocalDate.of(2026, 8, 1)
-        );
-        existing.prepareForSave();
+        InvestmentEntryService service = new InvestmentEntryService(repository, policies, UUID::randomUUID, Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneOffset.UTC));
+        InvestmentEntry existing = InvestmentEntry.create(new InvestmentEntryId(UUID.randomUUID()),
+                AssetCategory.of(InvestmentType.GIELDA, InvestmentSubcategory.ZLOTO),
+                PortfolioOwner.of(PortfolioUser.JAKUB), Money.positive(new BigDecimal("100.00")),
+                LocalDate.of(2026, 8, 1), Instant.parse("2026-08-01T00:00:00Z"));
         UUID id = existing.getId();
         CreateInvestmentEntryRequest request = new CreateInvestmentEntryRequest(
                 InvestmentType.GIELDA,
@@ -50,7 +46,7 @@ class InvestmentEntryServiceTest {
         when(repository.findById(id)).thenReturn(Optional.of(existing));
         when(policies.forType(InvestmentType.GIELDA)).thenReturn(policy);
         when(policy.normalizePln(request.valuePln())).thenReturn(new BigDecimal("250.13"));
-        when(repository.save(existing)).thenReturn(existing);
+        when(repository.save(org.mockito.ArgumentMatchers.any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         InvestmentEntry updated = service.update(id, request);
 
@@ -59,14 +55,14 @@ class InvestmentEntryServiceTest {
         assertThat(updated.getValuePln()).isEqualByComparingTo("250.13");
         assertThat(updated.getDate()).isEqualTo(LocalDate.of(2026, 8, 17));
         assertThat(updated.getUpdatedAt()).isNotNull();
-        verify(repository).save(existing);
+        verify(repository).save(updated);
     }
 
     @Test
     void returnsNotFoundWhenUpdatingAMissingEntry() {
         InvestmentEntryRepository repository = mock(InvestmentEntryRepository.class);
         InvestmentTypePolicyRegistry policies = mock(InvestmentTypePolicyRegistry.class);
-        InvestmentEntryService service = new InvestmentEntryService(repository, policies);
+        InvestmentEntryService service = new InvestmentEntryService(repository, policies, UUID::randomUUID, Clock.fixed(Instant.parse("2026-08-31T12:00:00Z"), ZoneOffset.UTC));
         UUID id = UUID.randomUUID();
         CreateInvestmentEntryRequest request = new CreateInvestmentEntryRequest(
                 InvestmentType.KONTO_BANKOWE,
