@@ -14,4 +14,5 @@ public class ApplicationConfiguration {
  @Bean InvestmentTypePolicyRegistry policyRegistry(DefaultInvestmentTypePolicy policy){ return new InvestmentTypePolicyRegistry(List.of(policy)); }
  @Bean InvestmentEntryUseCase investmentEntryUseCase(JsonInvestmentEntryRepositoryAdapter adapter, InvestmentTypePolicyRegistry policies, Clock clock, IdGenerator ids){ return new InvestmentEntryUseCase(adapter,adapter,policies,clock,ids); }
  @Bean InvestmentOperationUseCase investmentOperationUseCase(JsonInvestmentOperationRepositoryAdapter operations, JsonInvestmentEntryRepositoryAdapter entries, Clock clock, IdGenerator ids){ return new InvestmentOperationUseCase(operations,entries,clock,ids); }
+ @Bean ReferenceDataUseCase referenceDataUseCase(){ return new ReferenceDataUseCase(); }
 }

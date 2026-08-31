@@ -59,10 +59,11 @@ public final class InvestmentOperationUseCase implements CreateInvestmentOperati
     public void delete(UUID id) { operationRepository.deleteById(id); }
 
     public PortfolioPerformance calculate(InvestmentFilter filter, LocalDate valuationDate) {
+        LocalDate effectiveValuationDate = valuationDate == null ? clock.today() : valuationDate;
         PortfolioUser owner=filter.owner(); InvestmentType type=filter.type(); InvestmentSubcategory subcategory=filter.subcategory();
         List<InvestmentOperation> operations = list(filter).stream()
-                .filter(operation -> !operation.getDate().isAfter(valuationDate)).toList();
-        BigDecimal currentValue = currentValue(owner, type, subcategory, valuationDate);
+                .filter(operation -> !operation.getDate().isAfter(effectiveValuationDate)).toList();
+        BigDecimal currentValue = currentValue(owner, type, subcategory, effectiveValuationDate);
         BigDecimal deposits = sum(operations, InvestmentOperationType.DEPOSIT);
         BigDecimal withdrawals = sum(operations, InvestmentOperationType.WITHDRAWAL);
         BigDecimal capital = deposits.subtract(withdrawals);
@@ -71,8 +72,8 @@ public final class InvestmentOperationUseCase implements CreateInvestmentOperati
         BigDecimal nominal = currentValue.subtract(capital);
         BigDecimal rate = capital.signum() > 0
                 ? nominal.multiply(BigDecimal.valueOf(100)).divide(capital, 4, RoundingMode.HALF_UP) : null;
-        BigDecimal xirr = calculateXirr(operations, currentValue, valuationDate);
-        LocalDate monthStart = valuationDate.withDayOfMonth(1);
+        BigDecimal xirr = calculateXirr(operations, currentValue, effectiveValuationDate);
+        LocalDate monthStart = effectiveValuationDate.withDayOfMonth(1);
         BigDecimal openingValue = currentValue(owner, type, subcategory, monthStart.minusDays(1));
         List<InvestmentOperation> monthlyOperations = operations.stream()
                 .filter(operation -> !operation.getDate().isBefore(monthStart)).toList();
