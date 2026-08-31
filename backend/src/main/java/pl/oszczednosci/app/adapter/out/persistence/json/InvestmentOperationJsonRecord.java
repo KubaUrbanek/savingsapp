@@ -4,7 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
-import pl.oszczednosci.app.model.*;
+import pl.oszczednosci.app.domain.model.*;
 
 public record InvestmentOperationJsonRecord(UUID id, InvestmentOperationType operationType, InvestmentType type,
         PortfolioUser owner, InvestmentSubcategory subcategory, BigDecimal amountPln, BigDecimal feePln,

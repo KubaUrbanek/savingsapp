@@ -1,6 +1,6 @@
 package pl.oszczednosci.app.adapter.out.persistence.json;
 
-import pl.oszczednosci.app.model.*;
+import pl.oszczednosci.app.domain.model.*;
 
 public final class InvestmentOperationJsonMapper {
     public InvestmentOperationJsonRecord toRecord(InvestmentOperation value) {
