@@ -31,10 +31,11 @@ public class InvestmentWebMapper {
                 operation.getTaxPln(), operation.getDate(), operation.getNote(), operation.getCreatedAt());
     }
 
-    public PortfolioPerformanceResponse toResponse(PortfolioPerformance performance) {
+    public PortfolioPerformanceResponse toResponse(PortfolioPerformanceResult performance) {
         return new PortfolioPerformanceResponse(performance.currentValuePln(), performance.contributedCapitalPln(),
                 performance.nominalResultPln(), performance.returnRatePercent(), performance.feesPln(),
-                performance.taxesPln(), performance.resultAfterFeesAndTaxesPln(), performance.xirrPercent(),
+                performance.taxesPln(), performance.resultAfterFeesAndTaxesPln(),
+                performance.rateOfReturn().percent(), performance.rateOfReturn().status().name(),
                 performance.monthlyResultPln(), performance.monthlyReturnRatePercent());
     }
 }
