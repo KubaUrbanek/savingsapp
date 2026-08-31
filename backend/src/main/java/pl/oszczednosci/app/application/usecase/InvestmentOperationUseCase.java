@@ -12,8 +12,8 @@ import java.util.UUID;
 
 import pl.oszczednosci.app.application.port.in.*;
 import pl.oszczednosci.app.application.port.out.*;
-import pl.oszczednosci.app.domain.service.InvestmentCategoryRules;
 import pl.oszczednosci.app.application.port.in.CreateInvestmentOperationCommand;
+import pl.oszczednosci.app.domain.model.*;
 import pl.oszczednosci.app.domain.model.PortfolioPerformance;
 import pl.oszczednosci.app.domain.model.InvestmentEntry;
 import pl.oszczednosci.app.domain.model.InvestmentOperation;
@@ -29,26 +29,27 @@ public final class InvestmentOperationUseCase implements CreateInvestmentOperati
     private final InvestmentOperationRepository operationRepository;
     private final InvestmentEntryRepository entryRepository;
     private final Clock clock;
+    private final IdGenerator ids;
 
     public InvestmentOperationUseCase(InvestmentOperationRepository operationRepository,
-            InvestmentEntryRepository entryRepository, Clock clock) {
-        this.operationRepository = operationRepository;
-        this.entryRepository = entryRepository;
-        this.clock = clock;
+            InvestmentEntryRepository entryRepository, Clock clock, IdGenerator ids) {
+        this.operationRepository = operationRepository; this.entryRepository = entryRepository;
+        this.clock = clock; this.ids = ids;
     }
 
     public InvestmentOperation create(CreateInvestmentOperationCommand request) {
-        InvestmentCategoryRules.validate(request.type(), request.subcategory());
-        InvestmentOperation operation = new InvestmentOperation(null, request.operationType(), request.type(), request.owner(),
-                request.subcategory(), money(request.amountPln()), moneyOrZero(request.feePln()), moneyOrZero(request.taxPln()),
-                request.date(), request.note() == null ? null : request.note().trim(), null);
-        operation.prepareForSave(clock.now());
+        InvestmentOperation operation = InvestmentOperation.create(new InvestmentOperationId(ids.nextId()),
+                request.operationType(), AssetCategory.of(request.type(), request.subcategory()),
+                PortfolioOwner.of(request.owner()), Money.positive(request.amountPln()),
+                Money.zeroOrPositive(request.feePln() == null ? BigDecimal.ZERO : request.feePln()),
+                Money.zeroOrPositive(request.taxPln() == null ? BigDecimal.ZERO : request.taxPln()),
+                request.date(), request.note(), clock.now());
         return operationRepository.save(operation);
     }
 
     public List<InvestmentOperation> list(InvestmentFilter filter) {
         PortfolioUser owner=filter.owner(); InvestmentType type=filter.type(); InvestmentSubcategory subcategory=filter.subcategory();
-        if (type != null && subcategory != null) InvestmentCategoryRules.validate(type, subcategory);
+        if (type != null && subcategory != null) AssetCategory.of(type, subcategory);
         return operationRepository.findByOwner(owner).stream()
                 .filter(operation -> type == null || operation.getType() == type)
                 .filter(operation -> subcategory == null || operation.getSubcategory() == subcategory)

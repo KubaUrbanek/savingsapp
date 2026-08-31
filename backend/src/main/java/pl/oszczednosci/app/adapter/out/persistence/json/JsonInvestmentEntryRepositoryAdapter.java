@@ -25,7 +25,7 @@ import pl.oszczednosci.app.domain.model.PortfolioUser;
 
 public final class JsonInvestmentEntryRepositoryAdapter implements InvestmentEntryRepository, InvestmentDatabaseStorage {
 
-    private static final TypeReference<List<InvestmentEntry>> ENTRY_LIST = new TypeReference<>() {
+    private static final TypeReference<List<InvestmentEntryJsonRecord>> ENTRY_LIST = new TypeReference<>() {
     };
     private static final Comparator<InvestmentEntry> NEWEST_FIRST = Comparator
             .comparing(InvestmentEntry::getDate, Comparator.reverseOrder())
@@ -33,6 +33,7 @@ public final class JsonInvestmentEntryRepositoryAdapter implements InvestmentEnt
 
     private final ObjectMapper objectMapper;
     private final Path databasePath;
+    private final InvestmentEntryJsonMapper mapper = new InvestmentEntryJsonMapper();
 
     public JsonInvestmentEntryRepositoryAdapter(
             ObjectMapper objectMapper,
@@ -112,7 +113,7 @@ public final class JsonInvestmentEntryRepositoryAdapter implements InvestmentEnt
             return new ArrayList<>();
         }
         try {
-            return new ArrayList<>(objectMapper.readValue(databasePath.toFile(), ENTRY_LIST));
+            return objectMapper.readValue(databasePath.toFile(), ENTRY_LIST).stream().map(mapper::toDomain).collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         } catch (DatabindException exception) {
             throw new IllegalStateException("Unable to read JSON database file: " + databasePath, exception);
         }
@@ -120,7 +121,7 @@ public final class JsonInvestmentEntryRepositoryAdapter implements InvestmentEnt
 
     private List<InvestmentEntry> parseEntries(byte[] databaseContents) {
         try {
-            return new ArrayList<>(objectMapper.readValue(databaseContents, ENTRY_LIST));
+            return objectMapper.readValue(databaseContents, ENTRY_LIST).stream().map(mapper::toDomain).collect(java.util.stream.Collectors.toCollection(ArrayList::new));
         } catch (DatabindException exception) {
             throw new IllegalArgumentException("Imported file is not a valid investment entries JSON database.", exception);
         }
@@ -133,7 +134,7 @@ public final class JsonInvestmentEntryRepositoryAdapter implements InvestmentEnt
                 Files.createDirectories(parent);
             }
             Path temporaryFile = Files.createTempFile(parent, databasePath.getFileName().toString(), ".tmp");
-            objectMapper.writerWithDefaultPrettyPrinter().writeValue(temporaryFile.toFile(), entries);
+            objectMapper.writerWithDefaultPrettyPrinter().writeValue(temporaryFile.toFile(), entries.stream().map(mapper::toRecord).toList());
             Files.move(temporaryFile, databasePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException exception) {
             throw new IllegalStateException("Unable to write JSON database file: " + databasePath, exception);

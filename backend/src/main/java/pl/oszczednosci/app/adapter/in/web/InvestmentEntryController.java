@@ -24,12 +24,12 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import pl.oszczednosci.app.domain.model.AssetCategory;
 import pl.oszczednosci.app.domain.model.InvestmentOperation;
 import pl.oszczednosci.app.domain.model.InvestmentOperationType;
 import pl.oszczednosci.app.domain.model.InvestmentSubcategory;
 import pl.oszczednosci.app.domain.model.InvestmentType;
 import pl.oszczednosci.app.domain.model.PortfolioUser;
-import pl.oszczednosci.app.domain.service.InvestmentCategoryRules;
 import pl.oszczednosci.app.application.port.in.*;
 
 @RestController
@@ -61,7 +61,7 @@ public class InvestmentEntryController {
 
     @GetMapping("/investment-subcategories")
     public List<String> investmentSubcategories(@RequestParam InvestmentType type) {
-        return InvestmentCategoryRules.allowedSubcategories(type).stream()
+        return AssetCategory.allowedSubcategories(type).stream()
                 .map(Enum::name)
                 .toList();
     }
