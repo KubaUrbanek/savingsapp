@@ -13,6 +13,8 @@ import java.util.UUID;
 
 import pl.oszczednosci.app.application.port.out.InvestmentDatabaseStorage;
 import pl.oszczednosci.app.application.port.out.InvestmentEntryRepository;
+import pl.oszczednosci.app.application.exception.MalformedImportException;
+import pl.oszczednosci.app.application.exception.PersistenceException;
 
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.DatabindException;
@@ -58,7 +60,7 @@ public final class JsonInvestmentEntryRepositoryAdapter implements InvestmentEnt
         try {
             return Files.readAllBytes(databasePath);
         } catch (IOException exception) {
-            throw new IllegalStateException("Unable to export JSON database file: " + databasePath, exception);
+            throw new PersistenceException("Unable to export JSON database file: " + databasePath, exception);
         }
     }
 
@@ -114,7 +116,7 @@ public final class JsonInvestmentEntryRepositoryAdapter implements InvestmentEnt
         try {
             return new ArrayList<>(objectMapper.readValue(databasePath.toFile(), ENTRY_LIST));
         } catch (DatabindException exception) {
-            throw new IllegalStateException("Unable to read JSON database file: " + databasePath, exception);
+            throw new PersistenceException("Unable to read JSON database file: " + databasePath, exception);
         }
     }
 
@@ -122,7 +124,7 @@ public final class JsonInvestmentEntryRepositoryAdapter implements InvestmentEnt
         try {
             return new ArrayList<>(objectMapper.readValue(databaseContents, ENTRY_LIST));
         } catch (DatabindException exception) {
-            throw new IllegalArgumentException("Imported file is not a valid investment entries JSON database.", exception);
+            throw new MalformedImportException("Imported file is not a valid investment entries JSON database.", exception);
         }
     }
 
@@ -136,7 +138,7 @@ public final class JsonInvestmentEntryRepositoryAdapter implements InvestmentEnt
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(temporaryFile.toFile(), entries);
             Files.move(temporaryFile, databasePath, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException exception) {
-            throw new IllegalStateException("Unable to write JSON database file: " + databasePath, exception);
+            throw new PersistenceException("Unable to write JSON database file: " + databasePath, exception);
         }
     }
 }
