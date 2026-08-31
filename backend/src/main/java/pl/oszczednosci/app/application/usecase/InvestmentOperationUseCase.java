@@ -1,40 +1,24 @@
 package pl.oszczednosci.app.application.usecase;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
-
 import pl.oszczednosci.app.application.port.in.*;
-import pl.oszczednosci.app.application.port.out.*;
-import pl.oszczednosci.app.application.port.in.CreateInvestmentOperationCommand;
-import pl.oszczednosci.app.domain.model.*;
-import pl.oszczednosci.app.domain.model.PortfolioPerformance;
-import pl.oszczednosci.app.domain.model.InvestmentEntry;
-import pl.oszczednosci.app.domain.model.InvestmentOperation;
-import pl.oszczednosci.app.domain.model.InvestmentOperationType;
-import pl.oszczednosci.app.domain.model.InvestmentSubcategory;
-import pl.oszczednosci.app.domain.model.InvestmentType;
-import pl.oszczednosci.app.domain.model.PortfolioUser;
-import pl.oszczednosci.app.application.port.out.InvestmentEntryRepository;
+import pl.oszczednosci.app.application.port.out.Clock;
+import pl.oszczednosci.app.application.port.out.IdGenerator;
 import pl.oszczednosci.app.application.port.out.InvestmentOperationRepository;
+import pl.oszczednosci.app.domain.model.*;
 
-public final class InvestmentOperationUseCase implements CreateInvestmentOperationUseCase, ListInvestmentOperationsUseCase, DeleteInvestmentOperationUseCase {
-    private static final int SCALE = 2;
+public final class InvestmentOperationUseCase implements CreateInvestmentOperationUseCase,
+        ListInvestmentOperationsUseCase, DeleteInvestmentOperationUseCase {
     private final InvestmentOperationRepository operationRepository;
-    private final InvestmentEntryRepository entryRepository;
     private final Clock clock;
     private final IdGenerator ids;
 
-    public InvestmentOperationUseCase(InvestmentOperationRepository operationRepository,
-            InvestmentEntryRepository entryRepository, Clock clock, IdGenerator ids) {
-        this.operationRepository = operationRepository; this.entryRepository = entryRepository;
-        this.clock = clock; this.ids = ids;
+    public InvestmentOperationUseCase(InvestmentOperationRepository operationRepository, Clock clock, IdGenerator ids) {
+        this.operationRepository = operationRepository;
+        this.clock = clock;
+        this.ids = ids;
     }
 
     public InvestmentOperation create(CreateInvestmentOperationCommand request) {
@@ -48,14 +32,17 @@ public final class InvestmentOperationUseCase implements CreateInvestmentOperati
     }
 
     public List<InvestmentOperation> list(InvestmentFilter filter) {
-        PortfolioUser owner=filter.owner(); InvestmentType type=filter.type(); InvestmentSubcategory subcategory=filter.subcategory();
-        if (type != null && subcategory != null) AssetCategory.of(type, subcategory);
-        return operationRepository.findByOwner(owner).stream()
-                .filter(operation -> type == null || operation.getType() == type)
-                .filter(operation -> subcategory == null || operation.getSubcategory() == subcategory)
+        if (filter.type() != null && filter.subcategory() != null) {
+            AssetCategory.of(filter.type(), filter.subcategory());
+        }
+        return operationRepository.findByOwner(filter.owner()).stream()
+                .filter(operation -> filter.type() == null || operation.getType() == filter.type())
+                .filter(operation -> filter.subcategory() == null
+                        || operation.getSubcategory() == filter.subcategory())
                 .toList();
     }
 
-    public void delete(UUID id) { operationRepository.deleteById(id); }
-
+    public void delete(UUID id) {
+        operationRepository.deleteById(id);
+    }
 }

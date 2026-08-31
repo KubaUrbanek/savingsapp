@@ -659,7 +659,9 @@ function Home() {
       fetch('/api/users').then((response) => response.json()),
       fetch('/api/investment-types').then((response) => response.json())
     ])
-      .then(([loadedUsers, loadedTypes]) => {
+      .then(([usersResponse, typesResponse]) => {
+        const loadedUsers = usersResponse.values;
+        const loadedTypes = typesResponse.values;
         const firstType = loadedTypes[0] || '';
 
         setUsers(loadedUsers);

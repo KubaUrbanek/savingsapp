@@ -17,5 +17,4 @@ public record CreateInvestmentEntryRequest(
         @NotNull @DecimalMin(value = "0.01") @Digits(integer = 17, fraction = 2) BigDecimal valuePln,
         @NotNull LocalDate date
 ) {
- public pl.oszczednosci.app.application.port.in.CreateInvestmentEntryCommand toCommand() { return new pl.oszczednosci.app.application.port.in.CreateInvestmentEntryCommand(type, owner, subcategory, valuePln, date); }
 }

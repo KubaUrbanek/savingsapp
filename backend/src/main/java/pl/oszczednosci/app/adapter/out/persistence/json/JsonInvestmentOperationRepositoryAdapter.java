@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.UUID;
 
 import pl.oszczednosci.app.application.port.out.InvestmentOperationRepository;
+import pl.oszczednosci.app.application.exception.PersistenceException;
 import pl.oszczednosci.app.domain.model.InvestmentOperation;
 import pl.oszczednosci.app.domain.model.PortfolioUser;
 import tools.jackson.core.type.TypeReference;
@@ -50,7 +51,7 @@ public final class JsonInvestmentOperationRepositoryAdapter implements Investmen
     private List<InvestmentOperation> read() {
         if (Files.notExists(path)) return new ArrayList<>();
         try { return objectMapper.readValue(path.toFile(), LIST).stream().map(mapper::toDomain).collect(java.util.stream.Collectors.toCollection(ArrayList::new)); }
-        catch (DatabindException exception) { throw new IllegalStateException("Unable to read operations database: " + path, exception); }
+        catch (DatabindException exception) { throw new PersistenceException("Unable to read operations database: " + path, exception); }
     }
 
     private void write(List<InvestmentOperation> operations) {
@@ -60,6 +61,6 @@ public final class JsonInvestmentOperationRepositoryAdapter implements Investmen
             Path temporary = Files.createTempFile(parent, path.getFileName().toString(), ".tmp");
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(temporary.toFile(), operations.stream().map(mapper::toRecord).toList());
             Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        } catch (IOException exception) { throw new IllegalStateException("Unable to write operations database: " + path, exception); }
+        } catch (IOException exception) { throw new PersistenceException("Unable to write operations database: " + path, exception); }
     }
 }

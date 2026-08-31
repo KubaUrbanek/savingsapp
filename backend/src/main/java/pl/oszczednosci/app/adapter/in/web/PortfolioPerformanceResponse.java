@@ -14,5 +14,4 @@ public record PortfolioPerformanceResponse(
         String xirrStatus,
         BigDecimal monthlyResultPln,
         BigDecimal monthlyReturnRatePercent) {
- public static PortfolioPerformanceResponse from(pl.oszczednosci.app.application.port.in.PortfolioPerformanceResult p) { return new PortfolioPerformanceResponse(p.currentValuePln(),p.contributedCapitalPln(),p.nominalResultPln(),p.returnRatePercent(),p.feesPln(),p.taxesPln(),p.resultAfterFeesAndTaxesPln(),p.rateOfReturn().percent(),p.rateOfReturn().status().name(),p.monthlyResultPln(),p.monthlyReturnRatePercent()); }
 }
