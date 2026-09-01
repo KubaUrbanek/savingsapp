@@ -28,8 +28,8 @@ public final class JsonInvestmentEntryRepository implements InvestmentEntryRepos
     @Override public synchronized List<InvestmentEntry> matching(InvestmentEntryCriteria criteria) {
         return List.copyOf(store.snapshot().entries().stream()
                 .filter(v -> v.getOwner() == criteria.owner())
-                .filter(v -> criteria.type() == null || v.getType() == criteria.type())
-                .filter(v -> criteria.subcategory() == null || v.getSubcategory() == criteria.subcategory())
+                .filter(v -> criteria.type().map(type -> v.getType() == type).orElse(true))
+                .filter(v -> criteria.subcategory().map(subcategory -> v.getSubcategory() == subcategory).orElse(true))
                 .sorted(NEWEST_FIRST).toList());
     }
     @Override public synchronized DeleteResult delete(InvestmentEntryId id) {

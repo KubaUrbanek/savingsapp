@@ -14,9 +14,9 @@ public final class CalculatePortfolioPerformanceService implements CalculatePort
  public PortfolioPerformanceResult calculate(InvestmentFilter filter,LocalDate date){
   LocalDate effectiveDate=date==null?clock.today():date;
   if(filter.type()!=null && filter.subcategory()!=null) AssetCategory.of(filter.type(),filter.subcategory());
-  List<ValuationSnapshot> values=snapshots.matching(new InvestmentEntryCriteria(filter.owner(),filter.type(),filter.subcategory())).stream()
+  List<ValuationSnapshot> values=snapshots.matching(InvestmentEntryCriteria.matching(filter.owner(),filter.type(),filter.subcategory())).stream()
    .map(e->new ValuationSnapshot(AssetKey.from(e.category()),new ValuationDate(e.date()),e.value())).toList();
-  List<InvestmentOperation> cash=operations.matching(new InvestmentOperationCriteria(filter.owner(),filter.type(),filter.subcategory()));
+  List<InvestmentOperation> cash=operations.matching(InvestmentOperationCriteria.matching(filter.owner(),filter.type(),filter.subcategory()));
   return PortfolioPerformanceResult.from(calculator.calculate(new PortfolioHistory(values,cash),new ValuationDate(effectiveDate)));
  }
  private boolean matches(InvestmentType type,InvestmentSubcategory sub,InvestmentFilter f){return (f.type()==null||type==f.type())&&(f.subcategory()==null||sub==f.subcategory());}

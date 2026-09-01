@@ -37,7 +37,7 @@ public final class InvestmentOperationUseCase implements CreateInvestmentOperati
         if (filter.type() != null && filter.subcategory() != null) {
             AssetCategory.of(filter.type(), filter.subcategory());
         }
-        return operationRepository.matching(new InvestmentOperationCriteria(filter.owner(), filter.type(), filter.subcategory()));
+        return operationRepository.matching(InvestmentOperationCriteria.matching(filter.owner(), filter.type(), filter.subcategory()));
     }
 
     public void delete(UUID id) {
