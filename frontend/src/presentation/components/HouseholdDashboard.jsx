@@ -1,17 +1,18 @@
 import React from 'react';
 import { buildHouseholdOverview } from '../../domain/portfolio/household.js';
-import { DEFAULT_HOUSEHOLD_GOAL } from '../../domain/portfolio/constants.js';
 import { displayName, formatMoney, formatPercent, formatSignedMoney, formatUnsignedPercent, TYPE_LABELS } from '../viewModels/formatters.js';
 
-export function HouseholdDashboard({ entries, users, types, storage }) {
-  const [goal, setGoal] = React.useState(() => Number(storage.get('householdGoal', DEFAULT_HOUSEHOLD_GOAL)));
+export function HouseholdDashboard({ entries, users, types, preferences, onPreferenceError }) {
+  const [goal, setGoal] = React.useState(() => preferences.householdGoal());
   const { total, totalsByOwner, totalsByType, liquid, retirement, longTerm, latestMonth, goalProgress } = buildHouseholdOverview(entries, users, types, goal);
 
 
   function updateGoal(value) {
     const nextGoal = Number(value);
     setGoal(nextGoal);
-    if (nextGoal > 0) storage.set('householdGoal', nextGoal);
+    if (nextGoal > 0) {
+      try { preferences.changeHouseholdGoal(nextGoal); } catch (error) { onPreferenceError(error); }
+    }
   }
 
   return (

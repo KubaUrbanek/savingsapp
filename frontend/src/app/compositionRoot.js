@@ -13,7 +13,8 @@ import { FetchPortfolioQueryGateway } from '../infrastructure/http/FetchPortfoli
 import { FetchReferenceDataGateway } from '../infrastructure/http/FetchReferenceDataGateway.js';
 import { FetchDatabaseBackupGateway } from '../infrastructure/http/FetchDatabaseBackupGateway.js';
 import { FetchPortfolioCommandGateway } from '../infrastructure/http/FetchPortfolioCommandGateway.js';
-import { BrowserPortfolioStorage } from '../infrastructure/storage/BrowserPortfolioStorage.js';
+import { LocalStoragePreferenceRepository } from '../infrastructure/storage/LocalStoragePreferenceRepository.js';
+import { PreferenceController } from '../application/PreferenceController.js';
 
 export function createApplicationDependencies(browser = window) {
   const http = new FetchHttpClient(browser.fetch.bind(browser));
@@ -33,5 +34,6 @@ export function createApplicationDependencies(browser = window) {
     exportDatabaseBackup: new ExportDatabaseBackup(backups),
     importDatabaseBackup: new ImportDatabaseBackup(backups)
   });
-  return { useCases, storage: new BrowserPortfolioStorage(browser.localStorage) };
+  const preferences = new PreferenceController(new LocalStoragePreferenceRepository(() => browser.localStorage));
+  return { useCases, preferences };
 }
