@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 import pl.oszczednosci.app.application.port.in.*;
 import pl.oszczednosci.app.application.port.out.Clock;
+import pl.oszczednosci.app.application.port.out.DeleteResult;
 import pl.oszczednosci.app.application.port.out.IdGenerator;
 import pl.oszczednosci.app.application.port.out.InvestmentOperationRepository;
 import pl.oszczednosci.app.application.port.out.InvestmentOperationCriteria;
@@ -40,6 +41,8 @@ public final class InvestmentOperationUseCase implements CreateInvestmentOperati
     }
 
     public void delete(UUID id) {
-        operationRepository.delete(new InvestmentOperationId(id));
+        if (operationRepository.delete(new InvestmentOperationId(id)) == DeleteResult.NOT_FOUND) {
+            throw new InvestmentOperationNotFoundException(id);
+        }
     }
 }
