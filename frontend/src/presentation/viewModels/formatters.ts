@@ -1,0 +1,38 @@
+// @ts-nocheck
+export const TYPE_LABELS = {
+  OBLIGACJE: 'Obligacje',
+  GIELDA: 'Giełda',
+  IKE: 'IKE',
+  IKZE: 'IKZE',
+  KONTO_OSZCZEDNOSCIOWE: 'Konto oszczędnościowe',
+  KONTO_BANKOWE: 'Konto bankowe',
+  PPK: 'PPK',
+  PPO: 'PPO'
+};
+export const SUBCATEGORY_LABELS = {
+  ZLOTO: 'Złoto',
+  RYNKI_ROZWINIETE: 'Rynki rozwinięte',
+  RYNKI_ROZWIJAJACE_SIE: 'Rynki rozwijające się',
+  TRZYLETNIE: '3-letnie',
+  DZIESIECIOLETNIE: '10-letnie',
+  DWUNASTOLETNIE: '12-letnie'
+};
+export const GLOBAL_ASSET_LABELS = { BONDS: 'Obligacje', STOCKS: 'Akcje', GOLD: 'Złoto' };
+export const OPERATION_LABELS = { DEPOSIT: 'Wpłata', WITHDRAWAL: 'Wypłata', BUY: 'Zakup', SELL: 'Sprzedaż' };
+export const formatMoney = (value) =>
+  new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(Number(value));
+export const formatDateTime = (value) =>
+  new Intl.DateTimeFormat('pl-PL', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+export const displayName = (user) => user.charAt(0) + user.slice(1).toLowerCase();
+export const formatPercent = (value) =>
+  !Number.isFinite(value)
+    ? '—'
+    : `${value > 0 ? '+' : ''}${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 }).format(value)}%`;
+export const formatUnsignedPercent = (value) =>
+  !Number.isFinite(value) ? '—' : `${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 }).format(value)}%`;
+export const formatPercentagePoints = (value) =>
+  !Number.isFinite(value)
+    ? '—'
+    : `${value > 0 ? '+' : ''}${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 }).format(value)} pp`;
+export const formatSignedMoney = (value) => `${value > 0 ? '+' : ''}${formatMoney(value)}`;
+export const today = () => new Date().toISOString().slice(0, 10);
