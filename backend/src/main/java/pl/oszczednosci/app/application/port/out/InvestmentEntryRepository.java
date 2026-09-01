@@ -1,6 +1,14 @@
 package pl.oszczednosci.app.application.port.out;
-import java.util.*; import pl.oszczednosci.app.domain.model.*;
+
+import java.util.List;
+import java.util.Optional;
+import pl.oszczednosci.app.domain.model.InvestmentEntry;
+import pl.oszczednosci.app.domain.model.InvestmentEntryId;
+
+/** Application-owned vocabulary for loading and persisting investment entries. */
 public interface InvestmentEntryRepository {
- InvestmentEntry save(InvestmentEntry entry); Optional<InvestmentEntry> findById(UUID id); void deleteById(UUID id);
- List<InvestmentEntry> findByOwner(PortfolioUser owner);
+    InvestmentEntry save(InvestmentEntry entry);
+    Optional<InvestmentEntry> find(InvestmentEntryId id);
+    List<InvestmentEntry> matching(InvestmentEntryCriteria criteria);
+    DeleteResult delete(InvestmentEntryId id);
 }

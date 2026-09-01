@@ -6,16 +6,17 @@ import pl.oszczednosci.app.adapter.out.persistence.json.*; import pl.oszczednosc
 import pl.oszczednosci.app.application.usecase.*; import pl.oszczednosci.app.domain.service.*;
 @Configuration
 public class ApplicationConfiguration {
- @Bean JsonInvestmentEntryRepositoryAdapter entryAdapter(ObjectMapper mapper, @Value("${app.database.file:./backend/data/investment-entries.json}") Path path) { return new JsonInvestmentEntryRepositoryAdapter(mapper,path); }
- @Bean JsonInvestmentOperationRepositoryAdapter operationAdapter(ObjectMapper mapper, @Value("${app.operations.file:./backend/data/investment-operations.json}") Path path) { return new JsonInvestmentOperationRepositoryAdapter(mapper,path); }
+ @Bean JsonInvestmentStore investmentStore(ObjectMapper mapper, @Value("${app.database.file:./backend/data/investments.json}") Path path) { return new JsonInvestmentStore(mapper,path); }
+ @Bean JsonInvestmentEntryRepository entryRepository(JsonInvestmentStore store) { return new JsonInvestmentEntryRepository(store); }
+ @Bean JsonInvestmentOperationRepository operationRepository(JsonInvestmentStore store) { return new JsonInvestmentOperationRepository(store); }
  @Bean Clock clock(){ return Instant::now; }
  @Bean IdGenerator idGenerator(){ return UUID::randomUUID; }
  @Bean DefaultInvestmentTypePolicy defaultPolicy(){ return new DefaultInvestmentTypePolicy(); }
  @Bean InvestmentTypePolicyRegistry policyRegistry(DefaultInvestmentTypePolicy policy){ return new InvestmentTypePolicyRegistry(List.of(policy)); }
- @Bean InvestmentEntryUseCase investmentEntryUseCase(JsonInvestmentEntryRepositoryAdapter adapter, InvestmentTypePolicyRegistry policies, Clock clock, IdGenerator ids){ return new InvestmentEntryUseCase(adapter,adapter,policies,clock,ids); }
- @Bean InvestmentOperationUseCase investmentOperationUseCase(JsonInvestmentOperationRepositoryAdapter operations, Clock clock, IdGenerator ids){ return new InvestmentOperationUseCase(operations,clock,ids); }
+ @Bean InvestmentEntryUseCase investmentEntryUseCase(JsonInvestmentEntryRepository repository, JsonInvestmentStore store, InvestmentTypePolicyRegistry policies, Clock clock, IdGenerator ids){ return new InvestmentEntryUseCase(repository,store,policies,clock,ids); }
+ @Bean InvestmentOperationUseCase investmentOperationUseCase(JsonInvestmentOperationRepository operations, Clock clock, IdGenerator ids){ return new InvestmentOperationUseCase(operations,clock,ids); }
  @Bean RateOfReturnCalculator rateOfReturnCalculator(){ return new NumericalRateOfReturnCalculator(); }
  @Bean PortfolioPerformanceCalculator portfolioPerformanceCalculator(RateOfReturnCalculator rates){ return new PortfolioPerformanceCalculator(rates); }
- @Bean CalculatePortfolioPerformanceService calculatePortfolioPerformanceService(JsonInvestmentEntryRepositoryAdapter entries, JsonInvestmentOperationRepositoryAdapter operations, PortfolioPerformanceCalculator calculator, Clock clock){ return new CalculatePortfolioPerformanceService(entries,operations,calculator,clock); }
+ @Bean CalculatePortfolioPerformanceService calculatePortfolioPerformanceService(JsonInvestmentEntryRepository entries, JsonInvestmentOperationRepository operations, PortfolioPerformanceCalculator calculator, Clock clock){ return new CalculatePortfolioPerformanceService(entries,operations,calculator,clock); }
  @Bean ReferenceDataUseCase referenceDataUseCase(){ return new ReferenceDataUseCase(); }
 }
