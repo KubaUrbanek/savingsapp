@@ -23,6 +23,10 @@ final class JsonInvestmentRepositoryContractTest extends InvestmentRepositoryCon
 
     @BeforeEach void createAdapter() {
         file = directory.resolve("investments.json");
+        reloadAdapters();
+    }
+
+    @Override protected void reloadAdapters() {
         ObjectMapper mapper = new tools.jackson.databind.json.JsonMapper();
         store = new JsonInvestmentStore(mapper, file);
         entries = new JsonInvestmentEntryRepository(store);
