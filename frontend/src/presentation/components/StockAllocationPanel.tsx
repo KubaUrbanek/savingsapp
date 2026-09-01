@@ -15,9 +15,10 @@ import {
 export function StockAllocationPanel({ entries, onAddStockValue, preferences, onPreferenceError }) {
   const [virtualContribution, setVirtualContribution] = React.useState('');
   const [targetAllocations, setTargetAllocations] = React.useState(() => preferences.stockAllocation());
+  const contributionAmount = Number(virtualContribution || 0);
   const allocation = React.useMemo(
-    () => buildStockAllocation(entries, targetAllocations),
-    [entries, targetAllocations]
+    () => buildStockAllocation(entries, targetAllocations, contributionAmount),
+    [entries, targetAllocations, contributionAmount]
   );
   const targetAllocationTotal = allocationTotal(targetAllocations);
   const isAllocationValid = Math.abs(targetAllocationTotal - 100) < 0.001;
@@ -40,18 +41,7 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
   function resetTargetAllocations() {
     setTargetAllocations({ ...DEFAULT_STOCK_TARGET_ALLOCATIONS });
   }
-  const contributionAmount = Number(virtualContribution || 0);
-  const projectedTotal = allocation.total + contributionAmount;
-  const contributionRows = allocation.rows.map((row) => {
-    const targetValueAfterContribution = projectedTotal * (row.targetWeight / 100);
-    const amountToAdd = targetValueAfterContribution - row.currentValue;
-
-    return {
-      ...row,
-      targetValueAfterContribution,
-      amountToAdd
-    };
-  });
+  const contributionRows = allocation.rows;
   const contributionHasOverweight = contributionRows.some((row) => row.amountToAdd < -0.005);
   const totalPositiveContribution = contributionRows.reduce((sum, row) => sum + Math.max(row.amountToAdd, 0), 0);
   const underweightRows = allocation.rows

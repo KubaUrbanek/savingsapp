@@ -10,3 +10,9 @@ export {
   subcategoriesFor
 } from './classification.js';
 export { InvestmentEntry, InvestmentOperation } from './entities.js';
+export {
+  AllocationPlanningService,
+  RebalancingService,
+  HouseholdAggregationService,
+  TimeSeriesService
+} from './services/index.js';

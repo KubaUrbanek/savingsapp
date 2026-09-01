@@ -16,6 +16,12 @@ import { FetchDatabaseBackupGateway } from '../infrastructure/http/FetchDatabase
 import { FetchPortfolioCommandGateway } from '../infrastructure/http/FetchPortfolioCommandGateway.js';
 import { LocalStoragePreferenceRepository } from '../infrastructure/storage/LocalStoragePreferenceRepository.js';
 import { PreferenceController } from '../application/PreferenceController.js';
+import {
+  LoadGlobalAllocation,
+  LoadStockAllocation,
+  LoadHouseholdOverview,
+  LoadPortfolioTimeSeries
+} from '../application/queries/PortfolioPlanningQueries.js';
 
 export function createApplicationDependencies(browser = window) {
   const http = new FetchHttpClient(browser.fetch.bind(browser));
@@ -33,7 +39,20 @@ export function createApplicationDependencies(browser = window) {
     deleteInvestmentEntry: new DeleteInvestmentEntry(entries),
     deleteInvestmentOperation: new DeleteInvestmentOperation(operations),
     exportDatabaseBackup: new ExportDatabaseBackup(backups),
-    importDatabaseBackup: new ImportDatabaseBackup(backups)
+    importDatabaseBackup: new ImportDatabaseBackup(backups),
+    loadGlobalAllocation: new LoadGlobalAllocation(
+      entries,
+      new LocalStoragePreferenceRepository(() => browser.localStorage)
+    ),
+    loadStockAllocation: new LoadStockAllocation(
+      entries,
+      new LocalStoragePreferenceRepository(() => browser.localStorage)
+    ),
+    loadHouseholdOverview: new LoadHouseholdOverview(
+      entries,
+      new LocalStoragePreferenceRepository(() => browser.localStorage)
+    ),
+    loadPortfolioTimeSeries: new LoadPortfolioTimeSeries(entries)
   });
   const preferences = new PreferenceController(new LocalStoragePreferenceRepository(() => browser.localStorage));
   return { useCases, preferences };
