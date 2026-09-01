@@ -1,7 +1,7 @@
 import React from 'react';
 import { FALLBACK_USERS, HOUSEHOLD_VIEW, subcategoriesFor } from '../../domain/portfolio/constants.js';
 import { buildCurrentSnapshot } from '../../domain/portfolio/snapshot.js';
-import { calculateOperation } from '../../domain/portfolio/operations.js';
+import { usePortfolioCommands } from '../hooks/usePortfolioCommands.js';
 import { GlobalAllocationPanel } from '../components/GlobalAllocationPanel.jsx';
 import { StockAllocationPanel } from '../components/StockAllocationPanel.jsx';
 import { SummaryChart } from '../components/SummaryChart.jsx';
@@ -10,7 +10,8 @@ import { displayName, formatDateTime, formatMoney, formatPercent, formatSignedMo
 
 export function Home({ dependencies }) {
   const [users, setUsers] = React.useState(FALLBACK_USERS);
-  const { portfolio, storage } = dependencies;
+  const { useCases, storage } = dependencies;
+  const portfolio = usePortfolioCommands(useCases);
   const [selectedUser, setSelectedUser] = React.useState(() => storage.get('selectedUser', FALLBACK_USERS[0]));
   const [types, setTypes] = React.useState([]);
   const [entries, setEntries] = React.useState([]);
@@ -28,7 +29,7 @@ export function Home({ dependencies }) {
   const fetchEntriesForView = React.useCallback((params = {}) => {
     const owners = isHouseholdView ? users : [selectedUser];
     return Promise.all(owners.map((owner) => {
-      return portfolio.investmentsForOwners([owner], params);
+      return portfolio.loadPortfolio({ owners: [owner], filters: params });
     })).then((results) => results.flat());
   }, [isHouseholdView, selectedUser, users]);
 
@@ -45,15 +46,15 @@ export function Home({ dependencies }) {
 
   const loadOperations = React.useCallback(() => {
     const params = { owner: selectedUser, type: typeFilter || undefined, subcategory: typeFilter && subcategoryFilter || undefined };
-    return portfolio.loadActivity(params).then(([loadedOperations, loadedPerformance]) => {
-      setOperations(loadedOperations);
-      setPerformance(loadedPerformance);
+    return portfolio.loadPortfolioPerformance(params).then((result) => {
+      setOperations(result.operations);
+      setPerformance(result.performance);
     });
   }, [selectedUser, typeFilter, subcategoryFilter]);
 
   React.useEffect(() => {
     portfolio.loadReferenceData()
-      .then(([loadedUsers, loadedTypes]) => {
+      .then(({ users: loadedUsers, types: loadedTypes }) => {
         const firstType = loadedTypes[0] || '';
 
         setUsers(loadedUsers);
@@ -99,7 +100,7 @@ export function Home({ dependencies }) {
     setError('');
     setStatus('Przygotowywanie eksportu...');
 
-    portfolio.exportDatabase()
+    portfolio.exportDatabaseBackup()
       .then((blob) => {
         const downloadUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -132,7 +133,7 @@ export function Home({ dependencies }) {
     setError('');
     setStatus('Importowanie bazy danych...');
 
-    portfolio.importDatabase(file)
+    portfolio.importDatabaseBackup(file)
       .then(() => {
         setStatus('Zaimportowano bazę danych i odświeżono widok.');
         return Promise.all([loadEntries(), loadGraphEntries()]);
@@ -152,7 +153,7 @@ export function Home({ dependencies }) {
   }
 
   function deleteEntry(id) {
-    portfolio.deleteInvestment(id)
+    portfolio.deleteInvestmentEntry(id)
       .then(() => {
         setStatus('Usunięto wpis.');
         return Promise.all([loadEntries(), loadGraphEntries()]);
@@ -169,25 +170,23 @@ export function Home({ dependencies }) {
     const previousValue = Number(latest?.valuePln || 0);
     const isValuation = operationForm.operationType === 'VALUATION';
     const amount = Number(operationForm.amountPln || 0);
-    const nextValue = calculateOperation(previousValue, operationForm.operationType, amount, operationForm.currentValuePln);
-    const entryPayload = { type: operationForm.type, owner: selectedUser, subcategory, valuePln: nextValue, date: operationForm.date };
-    const operationPayload = {
+    const change = {
       operationType: operationForm.operationType,
       type: operationForm.type,
       owner: selectedUser,
       subcategory,
       amountPln: amount,
+      currentValuePln: operationForm.currentValuePln,
       date: operationForm.date
     };
     setError(''); setStatus('Zapisywanie…');
-    const saveOperation = isValuation ? Promise.resolve() : portfolio.saveOperation(operationPayload);
-    saveOperation.then(() => portfolio.saveInvestment(entryPayload))
-      .then(() => { setOperationForm((current) => ({ ...current, amountPln: '', currentValuePln: '' })); setStatus(isValuation ? 'Zapisano aktualną wycenę.' : `Zapisano operację. Nowy stan: ${formatMoney(nextValue)}.`); return Promise.all([loadEntries(), loadGraphEntries(), loadOperations()]); })
+    portfolio.recordPortfolioChange({ change, previousValue })
+      .then(({ nextValue }) => { setOperationForm((current) => ({ ...current, amountPln: '', currentValuePln: '' })); setStatus(isValuation ? 'Zapisano aktualną wycenę.' : `Zapisano operację. Nowy stan: ${formatMoney(nextValue)}.`); return Promise.all([loadEntries(), loadGraphEntries(), loadOperations()]); })
       .catch((fetchError) => { setStatus(''); setError(fetchError.message); });
   }
 
   function deleteOperation(id) {
-    portfolio.deleteOperation(id).then(loadOperations)
+    portfolio.deleteInvestmentOperation(id).then(loadOperations)
       .catch((fetchError) => setError(fetchError.message));
   }
 
