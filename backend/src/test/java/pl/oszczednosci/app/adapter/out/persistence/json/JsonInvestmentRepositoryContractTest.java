@@ -89,4 +89,17 @@ final class JsonInvestmentRepositoryContractTest extends InvestmentRepositoryCon
         assertThat(exported.get("entries").size()).isOne();
         assertThat(exported.get("operations").isArray()).isTrue();
     }
+
+    @Test void unsupportedBackupVersionDoesNotReplaceLiveAggregates() throws Exception {
+        entries.save(entry(UUID.randomUUID(), LocalDate.of(2025, 1, 1), Instant.EPOCH));
+        operations.save(operation(UUID.randomUUID(), LocalDate.of(2025, 1, 1), Instant.EPOCH));
+        byte[] before = store.exportBackup();
+        ObjectMapper mapper = new tools.jackson.databind.json.JsonMapper();
+        var incompatible = (tools.jackson.databind.node.ObjectNode) mapper.readTree(before);
+        incompatible.put("formatVersion", InvestmentBackup.CURRENT_FORMAT_VERSION + 1);
+
+        assertThatThrownBy(() -> store.importBackup(mapper.writeValueAsBytes(incompatible)))
+                .isInstanceOf(MalformedImportException.class);
+        assertThat(store.exportBackup()).isEqualTo(before);
+    }
 }

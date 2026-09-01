@@ -152,6 +152,6 @@ public final class JsonInvestmentStore implements InvestmentUnitOfWork, Investme
     }
 
     private static InvestmentBackup emptyBackup() {
-        return new InvestmentBackup(InvestmentBackup.CURRENT_FORMAT_VERSION, List.of(), List.of());
+        return InvestmentBackup.empty();
     }
 }

@@ -2,6 +2,7 @@ package pl.oszczednosci.app.application.usecase;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import pl.oszczednosci.app.application.port.in.*;
 import pl.oszczednosci.app.application.port.out.Clock;
@@ -37,7 +38,7 @@ public final class InvestmentOperationUseCase implements CreateInvestmentOperati
         if (filter.type() != null && filter.subcategory() != null) {
             AssetCategory.of(filter.type(), filter.subcategory());
         }
-        return operationRepository.matching(InvestmentOperationCriteria.matching(filter.owner(), filter.type(), filter.subcategory()));
+        return operationRepository.matching(new InvestmentOperationCriteria(filter.owner(), Optional.ofNullable(filter.type()), Optional.ofNullable(filter.subcategory())));
     }
 
     public void delete(UUID id) {

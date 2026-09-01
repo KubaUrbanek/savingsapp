@@ -14,8 +14,12 @@ public record InvestmentEntryCriteria(PortfolioUser owner, Optional<InvestmentTy
                 .orElseThrow(() -> new IllegalArgumentException("subcategory is required"));
     }
 
-    public static InvestmentEntryCriteria matching(PortfolioUser owner, InvestmentType type,
+    public static InvestmentEntryCriteria allFor(PortfolioUser owner) {
+        return new InvestmentEntryCriteria(owner, Optional.empty(), Optional.empty());
+    }
+
+    public static InvestmentEntryCriteria forAsset(PortfolioUser owner, InvestmentType type,
             InvestmentSubcategory subcategory) {
-        return new InvestmentEntryCriteria(owner, Optional.ofNullable(type), Optional.ofNullable(subcategory));
+        return new InvestmentEntryCriteria(owner, Optional.of(type), Optional.of(subcategory));
     }
 }
