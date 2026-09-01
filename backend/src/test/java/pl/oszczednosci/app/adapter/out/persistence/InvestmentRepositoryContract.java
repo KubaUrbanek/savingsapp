@@ -94,9 +94,9 @@ public abstract class InvestmentRepositoryContract {
                 InvestmentType.GIELDA, InvestmentSubcategory.RYNKI_ROZWINIETE)))
                 .extracting(InvestmentOperation::getId).containsExactly(operationId);
         assertThat(entries().matching(InvestmentEntryCriteria.forAsset(PortfolioUser.JAKUB,
-                InvestmentType.GIELDA, InvestmentSubcategory.POLSKA))).isEmpty();
+                InvestmentType.GIELDA, InvestmentSubcategory.RYNKI_ROZWIJAJACE_SIE))).isEmpty();
         assertThat(operations().matching(InvestmentOperationCriteria.forAsset(PortfolioUser.JAKUB,
-                InvestmentType.GIELDA, InvestmentSubcategory.POLSKA))).isEmpty();
+                InvestmentType.GIELDA, InvestmentSubcategory.RYNKI_ROZWIJAJACE_SIE))).isEmpty();
     }
 
     @Test void malformedImportRollsBackTheCompleteStore() {
