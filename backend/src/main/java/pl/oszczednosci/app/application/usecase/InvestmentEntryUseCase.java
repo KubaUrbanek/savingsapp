@@ -3,7 +3,7 @@ import java.util.*;
 import pl.oszczednosci.app.application.port.in.*; import pl.oszczednosci.app.application.port.out.*;
 import pl.oszczednosci.app.domain.model.*;
 public final class InvestmentEntryUseCase implements CreateInvestmentEntryUseCase, UpdateInvestmentEntryUseCase,
- ListInvestmentEntriesUseCase, DeleteInvestmentEntryUseCase, ImportInvestmentEntriesUseCase, ExportInvestmentEntriesUseCase {
+ ListInvestmentEntriesUseCase, DeleteInvestmentEntryUseCase, ImportInvestmentBackupUseCase, ExportInvestmentBackupUseCase {
  private final InvestmentEntryRepository repository; private final InvestmentBackupPort storage;
  private final Clock clock; private final IdGenerator ids;
  public InvestmentEntryUseCase(InvestmentEntryRepository repository, InvestmentBackupPort storage, Clock clock, IdGenerator ids) { this.repository=repository; this.storage=storage; this.clock=clock; this.ids=ids; }
@@ -15,6 +15,6 @@ public final class InvestmentEntryUseCase implements CreateInvestmentEntryUseCas
    throw new InvestmentEntryNotFoundException(id);
   }
  }
- public byte[] exportDatabase(){return storage.exportBackup();}
- public void importDatabase(ImportInvestmentEntriesCommand command){storage.importBackup(command.contents());}
+ public byte[] exportBackup(){return storage.exportBackup();}
+ public void importBackup(ImportInvestmentBackupCommand command){storage.importBackup(command.contents());}
 }
