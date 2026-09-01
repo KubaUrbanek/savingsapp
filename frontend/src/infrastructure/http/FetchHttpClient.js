@@ -8,8 +8,8 @@ export class FetchHttpClient {
     const search = new URLSearchParams(Object.entries(query).filter(([, value]) => value !== '' && value != null));
     return `${this.baseUrl}${path}${search.size ? `?${search}` : ''}`;
   }
-  json(path, { query, method = 'GET', body } = {}) {
-    const options = { method, headers: body === undefined ? undefined : { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) };
+  json(path, { query, method = 'GET', body, signal } = {}) {
+    const options = { method, signal, headers: body === undefined ? undefined : { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) };
     return this.request(path, { query, options, responseType: 'json' });
   }
   blob(path) { return this.request(path, { responseType: 'blob' }); }
@@ -17,7 +17,10 @@ export class FetchHttpClient {
   async request(path, { query, options, responseType } = {}) {
     let response;
     try { response = await this.fetch(this.url(path, query), options); }
-    catch (error) { throw new HttpError('Nie można połączyć się z serwerem.', undefined, error); }
+    catch (error) {
+      if (error?.name === 'AbortError') throw error;
+      throw new HttpError('Nie można połączyć się z serwerem.', undefined, error);
+    }
     if (!response.ok) {
       let detail;
       try { detail = await response.json(); } catch { detail = null; }
