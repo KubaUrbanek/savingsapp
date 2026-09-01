@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import pl.oszczednosci.app.application.exception.*;
 import pl.oszczednosci.app.domain.model.InvestmentEntryNotFoundException;
+import pl.oszczednosci.app.domain.model.InvestmentOperationNotFoundException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -28,8 +29,8 @@ public class ApiExceptionHandler {
         return response(HttpStatus.BAD_REQUEST, "VALIDATION_ERROR", exception.getMessage(), Map.of());
     }
 
-    @ExceptionHandler(InvestmentEntryNotFoundException.class)
-    ResponseEntity<ApiErrorResponse> notFound(InvestmentEntryNotFoundException exception) {
+    @ExceptionHandler({InvestmentEntryNotFoundException.class, InvestmentOperationNotFoundException.class})
+    ResponseEntity<ApiErrorResponse> notFound(RuntimeException exception) {
         return response(HttpStatus.NOT_FOUND, "NOT_FOUND", exception.getMessage(), Map.of());
     }
 
