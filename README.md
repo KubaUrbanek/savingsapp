@@ -28,17 +28,17 @@ Oszczednosci is a monorepo for a savings and investment tracking application. It
 
 The backend exposes these routes under `/api`:
 
-| Method | Path | Description |
-| --- | --- | --- |
-| `GET` | `/api/hello` | Returns a sample greeting and timestamp. |
-| `GET` | `/api/status` | Returns basic service health/status information. |
-| `GET` | `/api/investment-types` | Returns the supported investment type enum values. |
-| `GET` | `/api/investments` | Lists investment entries. Accepts an optional `type` query parameter. |
-| `POST` | `/api/investments` | Creates an investment entry from a validated JSON request body. |
-| `DELETE` | `/api/investments/{id}` | Deletes an investment entry by UUID. |
-| `GET/POST` | `/api/investment-operations` | Lists or records portfolio cash flows and trades. |
-| `DELETE` | `/api/investment-operations/{id}` | Deletes an operation by UUID. |
-| `GET` | `/api/portfolio-performance` | Calculates performance for an owner and optional asset filters. |
+| Method     | Path                              | Description                                                           |
+| ---------- | --------------------------------- | --------------------------------------------------------------------- |
+| `GET`      | `/api/hello`                      | Returns a sample greeting and timestamp.                              |
+| `GET`      | `/api/status`                     | Returns basic service health/status information.                      |
+| `GET`      | `/api/investment-types`           | Returns the supported investment type enum values.                    |
+| `GET`      | `/api/investments`                | Lists investment entries. Accepts an optional `type` query parameter. |
+| `POST`     | `/api/investments`                | Creates an investment entry from a validated JSON request body.       |
+| `DELETE`   | `/api/investments/{id}`           | Deletes an investment entry by UUID.                                  |
+| `GET/POST` | `/api/investment-operations`      | Lists or records portfolio cash flows and trades.                     |
+| `DELETE`   | `/api/investment-operations/{id}` | Deletes an operation by UUID.                                         |
+| `GET`      | `/api/portfolio-performance`      | Calculates performance for an owner and optional asset filters.       |
 
 ## Project structure
 
@@ -51,9 +51,10 @@ The backend exposes these routes under `/api`:
 │   └── pom.xml                          # Backend Maven build
 ├── frontend
 │   ├── src                              # React application source
+│   ├── ARCHITECTURE.md                  # Frontend boundaries and contribution guide
 │   ├── index.html                       # Vite HTML entry point
 │   ├── package.json                     # Frontend scripts and dependencies
-│   └── vite.config.js                   # Vite build/proxy configuration
+│   └── vite.config.ts                   # Vite build/proxy configuration
 ├── pom.xml                              # Root Maven aggregator
 ├── .gitignore                           # Ignored generated/local files
 └── README.md
@@ -87,7 +88,6 @@ Open the application at:
 http://localhost:8080
 ```
 
-
 ## Docker build and run
 
 Build a self-contained container image from the repository root:
@@ -113,7 +113,6 @@ The image stores runtime investment data at `/app/data/investment-entries.json` 
 ```bash
 docker run --rm -p 8080:8080 -e JAVA_OPTS="-Xmx512m" -v oszczednosci-data:/app/data oszczednosci-app
 ```
-
 
 ### Docker secrets/config tree
 
@@ -151,12 +150,22 @@ http://localhost:5173
 
 The Vite dev server proxies `/api` requests to `http://localhost:8080`.
 
+Before changing frontend features, read the [frontend architecture guide](frontend/ARCHITECTURE.md). It defines the layer boundaries, Dependency Rule, portfolio language, validation and error conventions, implementation workflow, and required tests. From `frontend/`, use these checks during development:
+
+```bash
+npm run test
+npm run typecheck
+npm run lint
+npm run format:check
+npm run build
+```
+
 ## Frontend and backend integration
 
-`frontend/vite.config.js` builds the React app into:
+`frontend/vite.config.ts` builds the React app into:
 
 ```text
-../backend/src/main/resources/static
+../backend/target/generated-resources/static
 ```
 
 During `mvn clean package`, `backend/pom.xml` runs the frontend build before packaging the Spring Boot JAR. This means production deployment does not require a separate static web server for the React app.
