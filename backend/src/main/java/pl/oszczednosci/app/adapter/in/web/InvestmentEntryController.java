@@ -16,13 +16,13 @@ public class InvestmentEntryController {
     private final UpdateInvestmentEntryUseCase update;
     private final ListInvestmentEntriesUseCase list;
     private final DeleteInvestmentEntryUseCase delete;
-    private final ImportInvestmentEntriesUseCase importer;
-    private final ExportInvestmentEntriesUseCase exporter;
+    private final ImportInvestmentBackupUseCase importer;
+    private final ExportInvestmentBackupUseCase exporter;
     private final InvestmentWebMapper mapper;
 
     public InvestmentEntryController(CreateInvestmentEntryUseCase create, UpdateInvestmentEntryUseCase update,
             ListInvestmentEntriesUseCase list, DeleteInvestmentEntryUseCase delete,
-            ImportInvestmentEntriesUseCase importer, ExportInvestmentEntriesUseCase exporter,
+            ImportInvestmentBackupUseCase importer, ExportInvestmentBackupUseCase exporter,
             InvestmentWebMapper mapper) {
         this.create = create; this.update = update; this.list = list; this.delete = delete;
         this.importer = importer; this.exporter = exporter; this.mapper = mapper;
@@ -48,15 +48,15 @@ public class InvestmentEntryController {
     public void delete(@PathVariable UUID id) { delete.delete(id); }
 
     @GetMapping(value = "/database/export", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<byte[]> exportDatabase() {
+    public ResponseEntity<byte[]> exportBackup() {
         return ResponseEntity.ok().header(HttpHeaders.CONTENT_DISPOSITION,
-                ContentDisposition.attachment().filename("investment-entries-database.json").build().toString())
-                .body(exporter.exportDatabase());
+                ContentDisposition.attachment().filename("investments-backup.json").build().toString())
+                .body(exporter.exportBackup());
     }
 
     @PostMapping(value = "/database/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void importDatabase(@RequestParam("file") MultipartFile file) throws IOException {
-        importer.importDatabase(ImportInvestmentEntriesCommand.from(file.getInputStream()));
+    public void importBackup(@RequestParam("file") MultipartFile file) throws IOException {
+        importer.importBackup(ImportInvestmentBackupCommand.from(file.getInputStream()));
     }
 }

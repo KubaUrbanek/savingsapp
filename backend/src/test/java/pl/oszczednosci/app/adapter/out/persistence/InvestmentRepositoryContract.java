@@ -3,7 +3,13 @@ package pl.oszczednosci.app.adapter.out.persistence;
 import static org.assertj.core.api.Assertions.*;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
+import pl.oszczednosci.app.application.exception.MalformedImportException;
+import pl.oszczednosci.app.application.exception.PersistenceException;
 import pl.oszczednosci.app.application.port.out.*;
 import pl.oszczednosci.app.domain.model.*;
 
@@ -11,6 +17,8 @@ import pl.oszczednosci.app.domain.model.*;
 public abstract class InvestmentRepositoryContract {
     protected abstract InvestmentEntryRepository entries();
     protected abstract InvestmentOperationRepository operations();
+    protected abstract InvestmentBackupPort backups();
+    protected abstract void makeStorageMalformed() throws Exception;
 
     protected abstract InvestmentEntry entry(UUID id, java.time.LocalDate date, java.time.Instant created);
     protected abstract InvestmentOperation operation(UUID id, java.time.LocalDate date, java.time.Instant created);
@@ -40,5 +48,59 @@ public abstract class InvestmentRepositoryContract {
         assertThatThrownBy(() -> result.clear()).isInstanceOf(UnsupportedOperationException.class);
         assertThat(operations().find(new InvestmentOperationId(id))).isPresent();
         assertThat(operations().delete(new InvestmentOperationId(UUID.randomUUID()))).isEqualTo(DeleteResult.NOT_FOUND);
+        assertThat(operations().delete(new InvestmentOperationId(id))).isEqualTo(DeleteResult.DELETED);
+        assertThat(operations().find(new InvestmentOperationId(id))).isEmpty();
+    }
+
+    @Test void backupReplacementIncludesBothAggregateTypes() {
+        UUID retainedEntry = UUID.randomUUID();
+        UUID retainedOperation = UUID.randomUUID();
+        entries().save(entry(retainedEntry, java.time.LocalDate.parse("2025-01-01"), java.time.Instant.EPOCH));
+        operations().save(operation(retainedOperation, java.time.LocalDate.parse("2025-01-01"), java.time.Instant.EPOCH));
+        byte[] backup = backups().exportBackup();
+
+        entries().save(entry(UUID.randomUUID(), java.time.LocalDate.parse("2025-02-01"), java.time.Instant.EPOCH));
+        operations().delete(new InvestmentOperationId(retainedOperation));
+        backups().importBackup(backup);
+
+        assertThat(entries().matching(InvestmentEntryCriteria.matching(PortfolioUser.JAKUB, null, null)))
+                .extracting(InvestmentEntry::getId).containsExactly(retainedEntry);
+        assertThat(operations().matching(InvestmentOperationCriteria.matching(PortfolioUser.JAKUB, null, null)))
+                .extracting(InvestmentOperation::getId).containsExactly(retainedOperation);
+    }
+
+    @Test void malformedImportRollsBackTheCompleteStore() {
+        entries().save(entry(UUID.randomUUID(), java.time.LocalDate.parse("2025-01-01"), java.time.Instant.EPOCH));
+        operations().save(operation(UUID.randomUUID(), java.time.LocalDate.parse("2025-01-01"), java.time.Instant.EPOCH));
+        byte[] before = backups().exportBackup();
+
+        assertThatThrownBy(() -> backups().importBackup("not-a-backup".getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                .isInstanceOf(MalformedImportException.class);
+        assertThat(backups().exportBackup()).isEqualTo(before);
+    }
+
+    @Test void malformedLiveStorageIsReported() throws Exception {
+        makeStorageMalformed();
+        assertThatThrownBy(() -> entries().matching(
+                InvestmentEntryCriteria.matching(PortfolioUser.JAKUB, null, null)))
+                .isInstanceOf(PersistenceException.class);
+    }
+
+    @Test void concurrentEntryAndOperationAccessDoesNotLoseUpdates() throws Exception {
+        int count = 20;
+        try (ExecutorService executor = Executors.newFixedThreadPool(8)) {
+            List<Callable<Void>> tasks = java.util.stream.IntStream.range(0, count).<Callable<Void>>mapToObj(index -> () -> {
+                entries().save(entry(UUID.randomUUID(), java.time.LocalDate.of(2025, 1, 1),
+                        java.time.Instant.ofEpochSecond(index + 1)));
+                operations().save(operation(UUID.randomUUID(), java.time.LocalDate.of(2025, 1, 1),
+                        java.time.Instant.ofEpochSecond(index + 1)));
+                return null;
+            }).toList();
+            for (Future<Void> future : executor.invokeAll(tasks)) {
+                future.get();
+            }
+        }
+        assertThat(entries().matching(InvestmentEntryCriteria.matching(PortfolioUser.JAKUB, null, null))).hasSize(count);
+        assertThat(operations().matching(InvestmentOperationCriteria.matching(PortfolioUser.JAKUB, null, null))).hasSize(count);
     }
 }

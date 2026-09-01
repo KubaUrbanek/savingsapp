@@ -30,6 +30,8 @@ final class JsonInvestmentRepositoryContractTest extends InvestmentRepositoryCon
     }
     @Override protected InvestmentEntryRepository entries() { return entries; }
     @Override protected InvestmentOperationRepository operations() { return operations; }
+    @Override protected InvestmentBackupPort backups() { return store; }
+    @Override protected void makeStorageMalformed() throws Exception { Files.writeString(file, "not-json"); }
     @Override protected InvestmentEntry entry(UUID id, LocalDate date, Instant created) {
         return InvestmentEntry.create(new InvestmentEntryId(id), AssetCategory.of(InvestmentType.GIELDA,
                 InvestmentSubcategory.RYNKI_ROZWINIETE), PortfolioOwner.of(PortfolioUser.JAKUB),
@@ -40,23 +42,6 @@ final class JsonInvestmentRepositoryContractTest extends InvestmentRepositoryCon
                 AssetCategory.of(InvestmentType.GIELDA, InvestmentSubcategory.RYNKI_ROZWINIETE),
                 PortfolioOwner.of(PortfolioUser.JAKUB), Money.positive(BigDecimal.TEN), Money.zeroOrPositive(BigDecimal.ZERO),
                 Money.zeroOrPositive(BigDecimal.ZERO), date, "contract", created);
-    }
-
-    @Test void malformedStorageIsReported() throws Exception {
-        Files.writeString(file, "not-json");
-        assertThatThrownBy(store::snapshot).isInstanceOf(PersistenceException.class);
-    }
-
-    @Test void invalidImportRollsBackBothAggregates() {
-        UUID entryId = UUID.randomUUID(); UUID operationId = UUID.randomUUID();
-        entries.save(entry(entryId, LocalDate.now(), Instant.now()));
-        operations.save(operation(operationId, LocalDate.now(), Instant.now()));
-        byte[] before = store.exportBackup();
-        assertThatThrownBy(() -> store.importBackup("{\"formatVersion\":1,\"entries\":[]}".getBytes()))
-                .isInstanceOf(MalformedImportException.class);
-        assertThat(store.exportBackup()).isEqualTo(before);
-        assertThat(entries.find(new InvestmentEntryId(entryId))).isPresent();
-        assertThat(operations.find(new InvestmentOperationId(operationId))).isPresent();
     }
 
     @Test void duplicateAggregateIdentifiersInvalidateTheCompleteImport() throws Exception {
@@ -70,20 +55,6 @@ final class JsonInvestmentRepositoryContractTest extends InvestmentRepositoryCon
         assertThatThrownBy(() -> store.importBackup(mapper.writeValueAsBytes(document)))
                 .isInstanceOf(MalformedImportException.class);
         assertThat(store.exportBackup()).isEqualTo(before);
-    }
-
-    @Test void concurrentAggregateWritesDoNotLoseUpdates() throws Exception {
-        int count = 20;
-        try (ExecutorService executor = Executors.newFixedThreadPool(8)) {
-            var tasks = java.util.stream.IntStream.range(0, count).<Callable<Void>>mapToObj(i -> () -> {
-                entries.save(entry(UUID.randomUUID(), LocalDate.of(2025, 1, 1), Instant.ofEpochSecond(i + 1)));
-                operations.save(operation(UUID.randomUUID(), LocalDate.of(2025, 1, 1), Instant.ofEpochSecond(i + 1)));
-                return null;
-            }).toList();
-            for (Future<Void> future : executor.invokeAll(tasks)) future.get();
-        }
-        assertThat(store.snapshot().entries()).hasSize(count);
-        assertThat(store.snapshot().operations()).hasSize(count);
     }
 
     @Test void independentlyConstructedAdaptersCoordinateAccessToTheSameDocument() throws Exception {
