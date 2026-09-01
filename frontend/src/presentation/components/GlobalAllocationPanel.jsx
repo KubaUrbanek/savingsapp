@@ -1,17 +1,17 @@
 import React from 'react';
 import { DEFAULT_GLOBAL_TARGET_ALLOCATIONS, GLOBAL_ASSET_CLASSES } from '../../domain/portfolio/constants.js';
-import { buildGlobalAllocation, normalizeGlobalAllocations } from '../../domain/portfolio/allocation.js';
+import { buildGlobalAllocation } from '../../domain/portfolio/allocation.js';
 import { formatMoney, formatPercent, formatSignedMoney, formatUnsignedPercent, formatPercentagePoints, SUBCATEGORY_LABELS, GLOBAL_ASSET_LABELS } from '../viewModels/formatters.js';
 
-export function GlobalAllocationPanel({ entries, storage }) {
-  const [targets, setTargets] = React.useState(() => normalizeGlobalAllocations(storage.getJson('globalAllocations', DEFAULT_GLOBAL_TARGET_ALLOCATIONS)));
+export function GlobalAllocationPanel({ entries, preferences, onPreferenceError }) {
+  const [targets, setTargets] = React.useState(() => preferences.globalAllocation());
   const { investedTotal, cashTotal, contributionOnlyTotal, rows } = React.useMemo(() => buildGlobalAllocation(entries, targets), [entries, targets]);
   const targetTotal = GLOBAL_ASSET_CLASSES.reduce((sum, assetClass) => sum + Number(targets[assetClass] || 0), 0);
   const isValid = Math.abs(targetTotal - 100) < 0.001;
 
   React.useEffect(() => {
-    storage.setJson('globalAllocations', targets);
-  }, [targets]);
+    try { preferences.changeGlobalAllocation(targets); } catch (error) { onPreferenceError(error); }
+  }, [targets, preferences, onPreferenceError]);
 
 
 

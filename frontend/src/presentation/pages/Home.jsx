@@ -12,9 +12,9 @@ import { PortfolioChangeValidationFailure } from '../../application/portfolio/Re
 
 export function Home({ dependencies }) {
   const [users, setUsers] = React.useState(FALLBACK_USERS);
-  const { useCases, storage } = dependencies;
+  const { useCases, preferences } = dependencies;
   const portfolio = usePortfolioCommands(useCases);
-  const [selectedUser, setSelectedUser] = React.useState(() => storage.get('selectedUser', FALLBACK_USERS[0]));
+  const [selectedUser, setSelectedUser] = React.useState(() => preferences.selectedOwner());
   const [types, setTypes] = React.useState([]);
   const [entries, setEntries] = React.useState([]);
   const [graphEntries, setGraphEntries] = React.useState([]);
@@ -78,7 +78,7 @@ export function Home({ dependencies }) {
   }, []);
 
   React.useEffect(() => {
-    storage.set('selectedUser', selectedUser);
+    try { preferences.selectOwner(selectedUser); } catch (preferenceError) { setError(preferenceError.message); }
     setStatus('');
     Promise.all([loadEntries(), loadGraphEntries(), loadOperations()]).catch((fetchError) => setError(fetchError.message));
   }, [selectedUser, typeFilter, subcategoryFilter, loadEntries, loadGraphEntries, loadOperations]);
@@ -228,7 +228,7 @@ export function Home({ dependencies }) {
         </div>}
       </section>
 
-      {isHouseholdView ? <HouseholdDashboard entries={graphEntries} users={users} types={types} storage={storage} /> : <>
+      {isHouseholdView ? <HouseholdDashboard entries={graphEntries} users={users} types={types} preferences={preferences} onPreferenceError={(preferenceError) => setError(preferenceError.message)} /> : <>
       <section className="dashboardGrid">
         <article className="panel summaryPanel">
           <p className="eyebrow">Aktualny widok</p><h2>{displayName(selectedUser)} — {typeFilter ? TYPE_LABELS[typeFilter] : 'wszystkie inwestycje'}</h2><p className="totalValue">{formatMoney(totalValue)}</p>
@@ -247,9 +247,9 @@ export function Home({ dependencies }) {
       </section>
       <section className="panel entriesPanel operationList"><div className="entriesHeader"><h2>Historia wpłat i wypłat</h2></div>{operations.length === 0 ? <p>Brak przepływów dla wybranego aktywa.</p> : operations.map((operation) => <div className="entryRow" key={operation.id}><div><strong>{OPERATION_LABELS[operation.operationType]}</strong><span>{TYPE_LABELS[operation.type]}{operation.subcategory ? ` · ${SUBCATEGORY_LABELS[operation.subcategory]}` : ''} · {operation.date}</span><small>{operation.note}</small></div><strong>{formatMoney(operation.amountPln)}</strong><button type="button" onClick={() => deleteOperation(operation.id)}>Usuń</button></div>)}</section>
 
-      <GlobalAllocationPanel entries={graphEntries} storage={storage} />
+      <GlobalAllocationPanel entries={graphEntries} preferences={preferences} onPreferenceError={(preferenceError) => setError(preferenceError.message)} />
 
-      {types.includes('GIELDA') && <StockAllocationPanel entries={graphEntries} onAddStockValue={prepareStockEntry} storage={storage} />}
+      {types.includes('GIELDA') && <StockAllocationPanel entries={graphEntries} onAddStockValue={prepareStockEntry} preferences={preferences} onPreferenceError={(preferenceError) => setError(preferenceError.message)} />}
       </>}
 
       <SummaryChart entries={graphEntries} types={types} />

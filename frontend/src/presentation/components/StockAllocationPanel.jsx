@@ -1,18 +1,18 @@
 import React from 'react';
 import { DEFAULT_STOCK_TARGET_ALLOCATIONS, STOCK_SUBCATEGORIES } from '../../domain/portfolio/constants.js';
-import { allocationTotal, buildStockAllocation, normalizeStockAllocations } from '../../domain/portfolio/allocation.js';
+import { allocationTotal, buildStockAllocation } from '../../domain/portfolio/allocation.js';
 import { formatMoney, formatPercent, formatSignedMoney, formatUnsignedPercent, formatPercentagePoints, SUBCATEGORY_LABELS, GLOBAL_ASSET_LABELS } from '../viewModels/formatters.js';
 
-export function StockAllocationPanel({ entries, onAddStockValue, storage }) {
+export function StockAllocationPanel({ entries, onAddStockValue, preferences, onPreferenceError }) {
   const [virtualContribution, setVirtualContribution] = React.useState('');
-  const [targetAllocations, setTargetAllocations] = React.useState(() => normalizeStockAllocations(storage.getJson('stockAllocations', DEFAULT_STOCK_TARGET_ALLOCATIONS)));
+  const [targetAllocations, setTargetAllocations] = React.useState(() => preferences.stockAllocation());
   const allocation = React.useMemo(() => buildStockAllocation(entries, targetAllocations), [entries, targetAllocations]);
   const targetAllocationTotal = allocationTotal(targetAllocations);
   const isAllocationValid = Math.abs(targetAllocationTotal - 100) < 0.001;
 
   React.useEffect(() => {
-    storage.setJson('stockAllocations', targetAllocations);
-  }, [targetAllocations]);
+    try { preferences.changeStockAllocation(targetAllocations); } catch (error) { onPreferenceError(error); }
+  }, [targetAllocations, preferences, onPreferenceError]);
 
   function changeTargetAllocation(subcategory, value) {
     setTargetAllocations((current) => ({
@@ -22,7 +22,7 @@ export function StockAllocationPanel({ entries, onAddStockValue, storage }) {
   }
 
   function resetTargetAllocations() {
-    setTargetAllocations(normalizeStockAllocations(DEFAULT_STOCK_TARGET_ALLOCATIONS));
+    setTargetAllocations({ ...DEFAULT_STOCK_TARGET_ALLOCATIONS });
   }
   const contributionAmount = Number(virtualContribution || 0);
   const projectedTotal = allocation.total + contributionAmount;
