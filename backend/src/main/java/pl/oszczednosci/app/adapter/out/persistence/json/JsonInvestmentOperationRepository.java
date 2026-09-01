@@ -27,8 +27,8 @@ public final class JsonInvestmentOperationRepository implements InvestmentOperat
     @Override public synchronized List<InvestmentOperation> matching(InvestmentOperationCriteria criteria) {
         return List.copyOf(store.snapshot().operations().stream()
                 .filter(v -> v.getOwner() == criteria.owner())
-                .filter(v -> criteria.type() == null || v.getType() == criteria.type())
-                .filter(v -> criteria.subcategory() == null || v.getSubcategory() == criteria.subcategory())
+                .filter(v -> criteria.type().map(type -> v.getType() == type).orElse(true))
+                .filter(v -> criteria.subcategory().map(subcategory -> v.getSubcategory() == subcategory).orElse(true))
                 .sorted(NEWEST_FIRST).toList());
     }
     @Override public synchronized DeleteResult delete(InvestmentOperationId id) {
