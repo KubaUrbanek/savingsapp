@@ -1,5 +1,6 @@
 import React from 'react';
-import { FALLBACK_USERS, HOUSEHOLD_VIEW, subcategoriesFor } from '../../domain/portfolio/constants.js';
+import { FALLBACK_USERS, subcategoriesFor } from '../../domain/portfolio/constants.js';
+import { HouseholdPortfolio, OwnerPortfolio, PortfolioScopeKind } from '../../application/PortfolioScope.js';
 import { buildCurrentSnapshot } from '../../domain/portfolio/snapshot.js';
 import { usePortfolioCommands } from '../hooks/usePortfolioCommands.js';
 import { GlobalAllocationPanel } from '../components/GlobalAllocationPanel.jsx';
@@ -14,7 +15,7 @@ export function Home({ dependencies }) {
   const [users, setUsers] = React.useState(FALLBACK_USERS);
   const { useCases, preferences } = dependencies;
   const portfolio = usePortfolioCommands(useCases);
-  const [selectedUser, setSelectedUser] = React.useState(() => preferences.selectedOwner());
+  const [portfolioScope, setPortfolioScope] = React.useState(() => OwnerPortfolio(preferences.selectedOwner()));
   const [types, setTypes] = React.useState([]);
   const [entries, setEntries] = React.useState([]);
   const [graphEntries, setGraphEntries] = React.useState([]);
@@ -27,14 +28,12 @@ export function Home({ dependencies }) {
   const [performance, setPerformance] = React.useState(null);
   const [operationForm, setOperationForm] = React.useState({ operationType: 'DEPOSIT', type: '', subcategory: '', amountPln: '', currentValuePln: '', date: today() });
   const importInputRef = React.useRef(null);
-  const isHouseholdView = selectedUser === HOUSEHOLD_VIEW;
+  const isHouseholdView = portfolioScope.kind === PortfolioScopeKind.HOUSEHOLD;
+  const selectedOwner = isHouseholdView ? null : portfolioScope.ownerId;
 
   const fetchEntriesForView = React.useCallback((params = {}) => {
-    const owners = isHouseholdView ? users : [selectedUser];
-    return Promise.all(owners.map((owner) => {
-      return portfolio.loadPortfolio({ owners: [owner], filters: params });
-    })).then((results) => results.flat());
-  }, [isHouseholdView, selectedUser, users]);
+    return portfolio.loadPortfolio({ scope: portfolioScope, filters: params });
+  }, [portfolioScope]);
 
   const loadGraphEntries = React.useCallback(() => {
     return fetchEntriesForView().then(setGraphEntries);
@@ -48,12 +47,17 @@ export function Home({ dependencies }) {
   }, [fetchEntriesForView, typeFilter, subcategoryFilter]);
 
   const loadOperations = React.useCallback(() => {
-    const params = { owner: selectedUser, type: typeFilter || undefined, subcategory: typeFilter && subcategoryFilter || undefined };
-    return portfolio.loadPortfolioPerformance(params).then((result) => {
+    if (isHouseholdView) {
+      setOperations([]);
+      setPerformance(null);
+      return Promise.resolve();
+    }
+    const filters = { type: typeFilter || undefined, subcategory: typeFilter && subcategoryFilter || undefined };
+    return portfolio.loadPortfolioPerformance({ scope: portfolioScope, filters }).then((result) => {
       setOperations(result.operations);
       setPerformance(result.performance);
     });
-  }, [selectedUser, typeFilter, subcategoryFilter]);
+  }, [portfolioScope, isHouseholdView, typeFilter, subcategoryFilter]);
 
   React.useEffect(() => {
     portfolio.loadReferenceData()
@@ -70,18 +74,20 @@ export function Home({ dependencies }) {
           subcategory: subcategoriesFor(current.type || firstType)[0] || ''
         }));
 
-        if (!loadedUsers.includes(selectedUser) && selectedUser !== HOUSEHOLD_VIEW) {
-          setSelectedUser(loadedUsers[0]);
-        }
+        setPortfolioScope((current) => current.kind === PortfolioScopeKind.HOUSEHOLD
+          ? HouseholdPortfolio(loadedUsers)
+          : OwnerPortfolio(loadedUsers.includes(current.ownerId) ? current.ownerId : loadedUsers[0]));
       })
       .catch((fetchError) => setError(fetchError.message));
   }, []);
 
   React.useEffect(() => {
-    try { preferences.selectOwner(selectedUser); } catch (preferenceError) { setError(preferenceError.message); }
+    if (!isHouseholdView) {
+      try { preferences.selectOwner(selectedOwner); } catch (preferenceError) { setError(preferenceError.message); }
+    }
     setStatus('');
     Promise.all([loadEntries(), loadGraphEntries(), loadOperations()]).catch((fetchError) => setError(fetchError.message));
-  }, [selectedUser, typeFilter, subcategoryFilter, loadEntries, loadGraphEntries, loadOperations]);
+  }, [portfolioScope, typeFilter, subcategoryFilter, loadEntries, loadGraphEntries, loadOperations]);
 
   const currentEntries = buildCurrentSnapshot(graphEntries);
   const currentEntriesForView = typeFilter ? currentEntries.filter((entry) => entry.type === typeFilter) : currentEntries;
@@ -166,7 +172,7 @@ export function Home({ dependencies }) {
 
   function submitOperation(event) {
     event.preventDefault();
-    const command = mapPortfolioChangeForm(operationForm, selectedUser, currentEntries);
+    const command = mapPortfolioChangeForm(operationForm, selectedOwner, currentEntries);
     setError(''); setFieldErrors({}); setStatus('Zapisywanie…');
     portfolio.recordPortfolioChange(command)
       .then(({ nextValue, kind, atomic }) => {
@@ -199,11 +205,14 @@ export function Home({ dependencies }) {
         <div className="filterGroup">
           <p className="filterLabel">Czyj portfel wyświetlić?</p>
           <div className="userSwitcher" aria-label="Wybór użytkownika">
-            {[...users, HOUSEHOLD_VIEW].map((user) => (
-              <button className={user === selectedUser ? 'userPill active' : 'userPill'} key={user} type="button" onClick={() => setSelectedUser(user)}>
-                <span className="userAvatar" aria-hidden="true">{user === HOUSEHOLD_VIEW ? '⌂' : displayName(user).charAt(0)}</span>{displayName(user)}
+            {users.map((user) => (
+              <button className={!isHouseholdView && user === selectedOwner ? 'userPill active' : 'userPill'} key={user} type="button" onClick={() => setPortfolioScope(OwnerPortfolio(user))}>
+                <span className="userAvatar" aria-hidden="true">{displayName(user).charAt(0)}</span>{displayName(user)}
               </button>
             ))}
+            <button className={isHouseholdView ? 'userPill active' : 'userPill'} type="button" onClick={() => setPortfolioScope(HouseholdPortfolio(users))}>
+              <span className="userAvatar" aria-hidden="true">⌂</span>Razem
+            </button>
           </div>
         </div>
         {!isHouseholdView && <div className="filterGroup">
@@ -231,7 +240,7 @@ export function Home({ dependencies }) {
       {isHouseholdView ? <HouseholdDashboard entries={graphEntries} users={users} types={types} preferences={preferences} onPreferenceError={(preferenceError) => setError(preferenceError.message)} /> : <>
       <section className="dashboardGrid">
         <article className="panel summaryPanel">
-          <p className="eyebrow">Aktualny widok</p><h2>{displayName(selectedUser)} — {typeFilter ? TYPE_LABELS[typeFilter] : 'wszystkie inwestycje'}</h2><p className="totalValue">{formatMoney(totalValue)}</p>
+          <p className="eyebrow">Aktualny widok</p><h2>{displayName(selectedOwner)} — {typeFilter ? TYPE_LABELS[typeFilter] : 'wszystkie inwestycje'}</h2><p className="totalValue">{formatMoney(totalValue)}</p>
           <div className="summaryGrid">{types.map((type) => <div className="summaryCard" key={type}><span>{TYPE_LABELS[type] || type}</span><strong>{formatMoney(totalsByType[type] || 0)}</strong></div>)}</div>
           {performance && <div className="performanceGrid compactPerformance"><div><span>Wynik w tym miesiącu</span><strong className={Number(performance.monthlyResultPln) >= 0 ? 'positiveText' : 'negativeText'}>{formatSignedMoney(performance.monthlyResultPln)}</strong></div><div><span>Miesięczna stopa zwrotu</span><strong>{formatPercent(performance.monthlyReturnRatePercent == null ? NaN : Number(performance.monthlyReturnRatePercent))}</strong></div><div><span>Łączny wynik inwestycji</span><strong>{formatSignedMoney(performance.nominalResultPln)}</strong></div></div>}
         </article>
@@ -255,7 +264,7 @@ export function Home({ dependencies }) {
       <SummaryChart entries={graphEntries} types={types} />
 
       {!isHouseholdView && <section className="panel entriesPanel">
-        <div className="entriesHeader"><h2>Historia wycen: {displayName(selectedUser)}</h2></div>
+        <div className="entriesHeader"><h2>Historia wycen: {displayName(selectedOwner)}</h2></div>
         {graphEntries.length === 0 ? <p>Brak wpisów dla wybranej osoby.</p> : (
           <div className="entryList">
             {graphEntries.map((entry) => <div className="entryRow" key={entry.id}>

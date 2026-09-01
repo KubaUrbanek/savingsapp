@@ -4,7 +4,7 @@ export const GLOBAL_ASSET_LABELS = { BONDS: 'Obligacje', STOCKS: 'Akcje', GOLD: 
 export const OPERATION_LABELS = { DEPOSIT: 'Wpłata', WITHDRAWAL: 'Wypłata', BUY: 'Zakup', SELL: 'Sprzedaż' };
 export const formatMoney = (value) => new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(Number(value));
 export const formatDateTime = (value) => new Intl.DateTimeFormat('pl-PL', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
-export const displayName = (user) => user === 'RAZEM' ? 'Razem' : user.charAt(0) + user.slice(1).toLowerCase();
+export const displayName = (user) => user.charAt(0) + user.slice(1).toLowerCase();
 export const formatPercent = (value) => !Number.isFinite(value) ? '—' : `${value > 0 ? '+' : ''}${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 }).format(value)}%`;
 export const formatUnsignedPercent = (value) => !Number.isFinite(value) ? '—' : `${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 }).format(value)}%`;
 export const formatPercentagePoints = (value) => !Number.isFinite(value) ? '—' : `${value > 0 ? '+' : ''}${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 }).format(value)} pp`;
