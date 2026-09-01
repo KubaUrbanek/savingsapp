@@ -7,6 +7,8 @@ import { StockAllocationPanel } from '../components/StockAllocationPanel.jsx';
 import { SummaryChart } from '../components/SummaryChart.jsx';
 import { HouseholdDashboard } from '../components/HouseholdDashboard.jsx';
 import { displayName, formatDateTime, formatMoney, formatPercent, formatSignedMoney, OPERATION_LABELS, SUBCATEGORY_LABELS, TYPE_LABELS, today } from '../viewModels/formatters.js';
+import { mapPortfolioChangeForm } from '../mappers/portfolioChangeFormMapper.js';
+import { PortfolioChangeValidationFailure } from '../../application/portfolio/RecordPortfolioChange.js';
 
 export function Home({ dependencies }) {
   const [users, setUsers] = React.useState(FALLBACK_USERS);
@@ -20,6 +22,7 @@ export function Home({ dependencies }) {
   const [subcategoryFilter, setSubcategoryFilter] = React.useState('');
   const [status, setStatus] = React.useState('');
   const [error, setError] = React.useState('');
+  const [fieldErrors, setFieldErrors] = React.useState({});
   const [operations, setOperations] = React.useState([]);
   const [performance, setPerformance] = React.useState(null);
   const [operationForm, setOperationForm] = React.useState({ operationType: 'DEPOSIT', type: '', subcategory: '', amountPln: '', currentValuePln: '', date: today() });
@@ -163,26 +166,20 @@ export function Home({ dependencies }) {
 
   function submitOperation(event) {
     event.preventDefault();
-    if (!operationForm.type) { setError('Wybierz aktywo.'); return; }
-    const choices = subcategoriesFor(operationForm.type);
-    const subcategory = choices.length ? operationForm.subcategory : null;
-    const latest = currentEntries.find((entry) => entry.type === operationForm.type && (entry.subcategory || null) === subcategory);
-    const previousValue = Number(latest?.valuePln || 0);
-    const isValuation = operationForm.operationType === 'VALUATION';
-    const amount = Number(operationForm.amountPln || 0);
-    const change = {
-      operationType: operationForm.operationType,
-      type: operationForm.type,
-      owner: selectedUser,
-      subcategory,
-      amountPln: amount,
-      currentValuePln: operationForm.currentValuePln,
-      date: operationForm.date
-    };
-    setError(''); setStatus('Zapisywanie…');
-    portfolio.recordPortfolioChange({ change, previousValue })
-      .then(({ nextValue }) => { setOperationForm((current) => ({ ...current, amountPln: '', currentValuePln: '' })); setStatus(isValuation ? 'Zapisano aktualną wycenę.' : `Zapisano operację. Nowy stan: ${formatMoney(nextValue)}.`); return Promise.all([loadEntries(), loadGraphEntries(), loadOperations()]); })
-      .catch((fetchError) => { setStatus(''); setError(fetchError.message); });
+    const command = mapPortfolioChangeForm(operationForm, selectedUser, currentEntries);
+    setError(''); setFieldErrors({}); setStatus('Zapisywanie…');
+    portfolio.recordPortfolioChange(command)
+      .then(({ nextValue, kind, atomic }) => {
+        setOperationForm((current) => ({ ...current, amountPln: '', currentValuePln: '' }));
+        const saved = kind === 'VALUATION' ? 'Zapisano aktualną wycenę.' : `Zapisano operację. Nowy stan: ${formatMoney(nextValue)}.`;
+        setStatus(atomic ? saved : `${saved} Operacja i wycena zostały zapisane oddzielnie.`);
+        return Promise.all([loadEntries(), loadGraphEntries(), loadOperations()]);
+      })
+      .catch((fetchError) => {
+        setStatus('');
+        if (fetchError instanceof PortfolioChangeValidationFailure) setFieldErrors({ [fetchError.field]: fetchError.message });
+        else setError(fetchError.message);
+      });
   }
 
   function deleteOperation(id) {
@@ -240,10 +237,10 @@ export function Home({ dependencies }) {
         </article>
         <form className="panel formPanel unifiedForm" onSubmit={submitOperation}>
           <p className="eyebrow">Jedno miejsce do aktualizacji</p><h2>Co zmieniło się w portfelu?</h2><p className="formHint">Wpłata i wypłata automatycznie zmienią stan. „Aktualna wycena” zapisuje zmianę rynku bez przepływu pieniędzy.</p>
-          <label>Rodzaj zmiany<select value={operationForm.operationType} onChange={(event) => setOperationForm({ ...operationForm, operationType: event.target.value })}><option value="DEPOSIT">Wpłata — zwiększ stan</option><option value="WITHDRAWAL">Wypłata — zmniejsz stan</option><option value="VALUATION">Aktualna wycena — policz zysk lub stratę</option></select></label>
+          <label>Rodzaj zmiany<select value={operationForm.operationType} onChange={(event) => setOperationForm({ ...operationForm, operationType: event.target.value })}><option value="DEPOSIT">Wpłata — zwiększ stan</option><option value="WITHDRAWAL">Wypłata — zmniejsz stan</option><option value="VALUATION">Aktualna wycena — policz zysk lub stratę</option><option value="BUY">Kupno — zwiększ stan</option><option value="SELL">Sprzedaż — zmniejsz stan</option></select></label>
           <label>Aktywo<select required value={operationForm.type} onChange={(event) => { const type = event.target.value; setOperationForm({ ...operationForm, type, subcategory: subcategoriesFor(type)[0] || '' }); }}>{types.map((type) => <option key={type} value={type}>{TYPE_LABELS[type] || type}</option>)}</select></label>
           {subcategoriesFor(operationForm.type).length > 0 && <label>Podkategoria<select required value={operationForm.subcategory} onChange={(event) => setOperationForm({ ...operationForm, subcategory: event.target.value })}>{subcategoriesFor(operationForm.type).map((value) => <option key={value} value={value}>{SUBCATEGORY_LABELS[value]}</option>)}</select></label>}
-          {operationForm.operationType === 'VALUATION' ? <label>Aktualna wartość w PLN<input type="number" min="0" step="0.01" required value={operationForm.currentValuePln} onChange={(event) => setOperationForm({ ...operationForm, currentValuePln: event.target.value })} /></label> : <label>Kwota w PLN<input type="number" min="0.01" step="0.01" required value={operationForm.amountPln} onChange={(event) => setOperationForm({ ...operationForm, amountPln: event.target.value })} /></label>}
+          {operationForm.operationType === 'VALUATION' ? <label>Aktualna wartość w PLN<input type="number" min="0" step="0.01" required value={operationForm.currentValuePln} onChange={(event) => setOperationForm({ ...operationForm, currentValuePln: event.target.value })} />{fieldErrors.currentValuePln && <span className="error">{fieldErrors.currentValuePln}</span>}</label> : <label>Kwota w PLN<input type="number" min="0.01" step="0.01" required value={operationForm.amountPln} onChange={(event) => setOperationForm({ ...operationForm, amountPln: event.target.value })} />{fieldErrors.amountPln && <span className="error">{fieldErrors.amountPln}</span>}</label>}
           <label>Data<input type="date" required value={operationForm.date} onChange={(event) => setOperationForm({ ...operationForm, date: event.target.value })} /></label>
           <button className="button primaryButton" type="submit" disabled={!operationForm.type}>Zapisz zmianę</button>{status && <p className="success">{status}</p>}{error && <p className="error">Nie udało się zapisać: {error}</p>}
         </form>
