@@ -2,7 +2,8 @@ import React from 'react';
 import { FALLBACK_USERS, subcategoriesFor } from '../../domain/portfolio/constants.js';
 import { HouseholdPortfolio, OwnerPortfolio, PortfolioScopeKind } from '../../application/PortfolioScope.js';
 import { buildCurrentSnapshot } from '../../domain/portfolio/snapshot.js';
-import { usePortfolioCommands } from '../hooks/usePortfolioCommands.js';
+import { usePortfolioController } from '../portfolio/hooks/usePortfolioController.js';
+import { dataFrom } from '../portfolio/hooks/queryState.js';
 import { GlobalAllocationPanel } from '../components/GlobalAllocationPanel.jsx';
 import { StockAllocationPanel } from '../components/StockAllocationPanel.jsx';
 import { SummaryChart } from '../components/SummaryChart.jsx';
@@ -12,82 +13,54 @@ import { mapPortfolioChangeForm } from '../mappers/portfolioChangeFormMapper.js'
 import { PortfolioChangeValidationFailure } from '../../application/portfolio/RecordPortfolioChange.js';
 
 export function Home({ dependencies }) {
-  const [users, setUsers] = React.useState(FALLBACK_USERS);
   const { useCases, preferences } = dependencies;
-  const portfolio = usePortfolioCommands(useCases);
   const [portfolioScope, setPortfolioScope] = React.useState(() => OwnerPortfolio(preferences.selectedOwner()));
-  const [types, setTypes] = React.useState([]);
-  const [entries, setEntries] = React.useState([]);
-  const [graphEntries, setGraphEntries] = React.useState([]);
   const [typeFilter, setTypeFilter] = React.useState('');
   const [subcategoryFilter, setSubcategoryFilter] = React.useState('');
   const [status, setStatus] = React.useState('');
   const [error, setError] = React.useState('');
   const [fieldErrors, setFieldErrors] = React.useState({});
-  const [operations, setOperations] = React.useState([]);
-  const [performance, setPerformance] = React.useState(null);
   const [operationForm, setOperationForm] = React.useState({ operationType: 'DEPOSIT', type: '', subcategory: '', amountPln: '', currentValuePln: '', date: today() });
   const importInputRef = React.useRef(null);
   const isHouseholdView = portfolioScope.kind === PortfolioScopeKind.HOUSEHOLD;
   const selectedOwner = isHouseholdView ? null : portfolioScope.ownerId;
-
-  const fetchEntriesForView = React.useCallback((params = {}) => {
-    return portfolio.loadPortfolio({ scope: portfolioScope, filters: params });
-  }, [portfolioScope]);
-
-  const loadGraphEntries = React.useCallback(() => {
-    return fetchEntriesForView().then(setGraphEntries);
-  }, [fetchEntriesForView]);
-
-  const loadEntries = React.useCallback(() => {
-    const params = {};
-    if (typeFilter) params.type = typeFilter;
-    if (typeFilter && subcategoryFilter) params.subcategory = subcategoryFilter;
-    return fetchEntriesForView(params).then(setEntries);
-  }, [fetchEntriesForView, typeFilter, subcategoryFilter]);
-
-  const loadOperations = React.useCallback(() => {
-    if (isHouseholdView) {
-      setOperations([]);
-      setPerformance(null);
-      return Promise.resolve();
-    }
-    const filters = { type: typeFilter || undefined, subcategory: typeFilter && subcategoryFilter || undefined };
-    return portfolio.loadPortfolioPerformance({ scope: portfolioScope, filters }).then((result) => {
-      setOperations(result.operations);
-      setPerformance(result.performance);
-    });
-  }, [portfolioScope, isHouseholdView, typeFilter, subcategoryFilter]);
+  const controller = usePortfolioController(useCases, portfolioScope, { type: typeFilter, subcategory: subcategoryFilter });
+  const referenceData = dataFrom(controller.referenceData, { users: FALLBACK_USERS, types: [] });
+  const { users, types } = referenceData;
+  const graphEntries = dataFrom(controller.snapshot, []);
+  const operations = dataFrom(controller.operations, []);
+  const performance = dataFrom(controller.performance, null);
 
   React.useEffect(() => {
-    portfolio.loadReferenceData()
-      .then(({ users: loadedUsers, types: loadedTypes }) => {
-        const firstType = loadedTypes[0] || '';
+    if (controller.referenceData.status === 'success') {
+      const { users: loadedUsers, types: loadedTypes } = controller.referenceData.data;
+      const firstType = loadedTypes[0] || '';
+      setTypeFilter((current) => current || firstType);
 
-        setUsers(loadedUsers);
-        setTypes(loadedTypes);
-        setTypeFilter(firstType);
+      setOperationForm((current) => ({
+        ...current,
+        type: current.type || firstType,
+        subcategory: subcategoriesFor(current.type || firstType)[0] || ''
+      }));
 
-        setOperationForm((current) => ({
-          ...current,
-          type: current.type || firstType,
-          subcategory: subcategoriesFor(current.type || firstType)[0] || ''
-        }));
-
-        setPortfolioScope((current) => current.kind === PortfolioScopeKind.HOUSEHOLD
-          ? HouseholdPortfolio(loadedUsers)
-          : OwnerPortfolio(loadedUsers.includes(current.ownerId) ? current.ownerId : loadedUsers[0]));
-      })
-      .catch((fetchError) => setError(fetchError.message));
-  }, []);
+      setPortfolioScope((current) => current.kind === PortfolioScopeKind.HOUSEHOLD
+        ? HouseholdPortfolio(loadedUsers)
+        : OwnerPortfolio(loadedUsers.includes(current.ownerId) ? current.ownerId : loadedUsers[0]));
+    }
+  }, [controller.referenceData.status]);
 
   React.useEffect(() => {
     if (!isHouseholdView) {
       try { preferences.selectOwner(selectedOwner); } catch (preferenceError) { setError(preferenceError.message); }
     }
     setStatus('');
-    Promise.all([loadEntries(), loadGraphEntries(), loadOperations()]).catch((fetchError) => setError(fetchError.message));
-  }, [portfolioScope, typeFilter, subcategoryFilter, loadEntries, loadGraphEntries, loadOperations]);
+  }, [portfolioScope, selectedOwner, isHouseholdView, preferences]);
+
+  React.useEffect(() => {
+    const failed = [controller.referenceData, controller.entries, controller.snapshot, controller.operations, controller.performance]
+      .find((state) => state.status === 'failure');
+    if (failed) setError(failed.error.message);
+  }, [controller.referenceData, controller.entries, controller.snapshot, controller.operations, controller.performance]);
 
   const currentEntries = buildCurrentSnapshot(graphEntries);
   const currentEntriesForView = typeFilter ? currentEntries.filter((entry) => entry.type === typeFilter) : currentEntries;
@@ -109,7 +82,7 @@ export function Home({ dependencies }) {
     setError('');
     setStatus('Przygotowywanie eksportu...');
 
-    portfolio.exportDatabaseBackup()
+    controller.commands.exportDatabaseBackup()
       .then((blob) => {
         const downloadUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -142,10 +115,9 @@ export function Home({ dependencies }) {
     setError('');
     setStatus('Importowanie bazy danych...');
 
-    portfolio.importDatabaseBackup(file)
+    controller.commands.importDatabaseBackup(file)
       .then(() => {
         setStatus('Zaimportowano bazę danych i odświeżono widok.');
-        return Promise.all([loadEntries(), loadGraphEntries()]);
       })
       .catch((fetchError) => {
         setStatus('');
@@ -162,10 +134,9 @@ export function Home({ dependencies }) {
   }
 
   function deleteEntry(id) {
-    portfolio.deleteInvestmentEntry(id)
+    controller.commands.deleteInvestmentEntry(id)
       .then(() => {
         setStatus('Usunięto wpis.');
-        return Promise.all([loadEntries(), loadGraphEntries()]);
       })
       .catch((fetchError) => setError(fetchError.message));
   }
@@ -174,12 +145,11 @@ export function Home({ dependencies }) {
     event.preventDefault();
     const command = mapPortfolioChangeForm(operationForm, selectedOwner, currentEntries);
     setError(''); setFieldErrors({}); setStatus('Zapisywanie…');
-    portfolio.recordPortfolioChange(command)
+    controller.commands.recordPortfolioChange(command)
       .then(({ nextValue, kind, atomic }) => {
         setOperationForm((current) => ({ ...current, amountPln: '', currentValuePln: '' }));
         const saved = kind === 'VALUATION' ? 'Zapisano aktualną wycenę.' : `Zapisano operację. Nowy stan: ${formatMoney(nextValue)}.`;
         setStatus(atomic ? saved : `${saved} Operacja i wycena zostały zapisane oddzielnie.`);
-        return Promise.all([loadEntries(), loadGraphEntries(), loadOperations()]);
       })
       .catch((fetchError) => {
         setStatus('');
@@ -189,7 +159,7 @@ export function Home({ dependencies }) {
   }
 
   function deleteOperation(id) {
-    portfolio.deleteInvestmentOperation(id).then(loadOperations)
+    controller.commands.deleteInvestmentOperation(id)
       .catch((fetchError) => setError(fetchError.message));
   }
 
