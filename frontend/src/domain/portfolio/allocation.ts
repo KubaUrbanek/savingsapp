@@ -7,6 +7,8 @@ import {
 } from './constants.js';
 import { globalAssetClass } from './classification.js';
 import { buildCurrentSnapshot, isNewerEntry } from './snapshot.js';
+import { AllocationPlanningService } from './services/AllocationPlanningService.js';
+import { RebalancingService } from './services/RebalancingService.js';
 
 export function normalizeStockAllocations(weights) {
   return STOCK_SUBCATEGORIES.reduce((result, key) => {
@@ -26,67 +28,8 @@ export function normalizeGlobalAllocations(weights) {
 }
 export { globalAssetClass } from './classification.js';
 export function buildGlobalAllocation(entries, targets) {
-  const values = buildCurrentSnapshot(entries).reduce((result, entry) => {
-    const key = globalAssetClass(entry);
-    result[key] = (result[key] || 0) + Number(entry.valuePln);
-    return result;
-  }, {});
-  const investedTotal = GLOBAL_ASSET_CLASSES.reduce((sum, key) => sum + (values[key] || 0), 0);
-  const requiredFinalTotal = GLOBAL_ASSET_CLASSES.reduce((minimum, key) => {
-    const weight = Number(targets[key] || 0),
-      value = values[key] || 0;
-    return weight === 0 ? (value > 0 ? Infinity : minimum) : Math.max(minimum, value / (weight / 100));
-  }, investedTotal);
-  const rows = GLOBAL_ASSET_CLASSES.map((assetClass) => {
-    const currentValue = values[assetClass] || 0,
-      targetWeight = Number(targets[assetClass] || 0);
-    const currentWeight = investedTotal ? (currentValue / investedTotal) * 100 : 0;
-    return {
-      assetClass,
-      currentValue,
-      currentWeight,
-      targetWeight,
-      deviation: currentWeight - targetWeight,
-      rebalanceAmount: (investedTotal * targetWeight) / 100 - currentValue,
-      contributionAmount: Number.isFinite(requiredFinalTotal)
-        ? Math.max(0, (requiredFinalTotal * targetWeight) / 100 - currentValue)
-        : null
-    };
-  });
-  return {
-    values,
-    investedTotal,
-    cashTotal: values.CASH || 0,
-    requiredFinalTotal,
-    contributionOnlyTotal: requiredFinalTotal - investedTotal,
-    rows
-  };
+  return RebalancingService.global(AllocationPlanningService.global(entries, targets));
 }
-export function buildStockAllocation(entries, targets) {
-  const latest = Object.fromEntries(STOCK_SUBCATEGORIES.map((key) => [key, null]));
-  entries
-    .filter((entry) => entry.type === 'GIELDA' && STOCK_SUBCATEGORIES.includes(entry.subcategory))
-    .forEach((entry) => {
-      if (isNewerEntry(entry, latest[entry.subcategory])) latest[entry.subcategory] = entry;
-    });
-  const total = Object.values(latest).reduce((sum, entry) => sum + Number(entry?.valuePln || 0), 0);
-  return {
-    total,
-    rows: STOCK_SUBCATEGORIES.map((subcategory) => {
-      const currentValue = Number(latest[subcategory]?.valuePln || 0),
-        targetWeight = targets[subcategory];
-      const targetValue = (total * targetWeight) / 100,
-        difference = targetValue - currentValue;
-      return {
-        subcategory,
-        currentValue,
-        targetWeight,
-        targetValue,
-        difference,
-        divergencePercent: targetValue > 0 ? (difference / targetValue) * 100 : null,
-        currentWeight: total > 0 ? (currentValue / total) * 100 : 0,
-        latestDate: latest[subcategory]?.date || null
-      };
-    })
-  };
+export function buildStockAllocation(entries, targets, contribution = 0) {
+  return RebalancingService.stocks(AllocationPlanningService.stocks(entries, targets), contribution);
 }
