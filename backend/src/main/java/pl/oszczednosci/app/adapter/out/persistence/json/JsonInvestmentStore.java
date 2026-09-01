@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
@@ -38,12 +39,18 @@ public final class JsonInvestmentStore implements InvestmentUnitOfWork, Investme
     }
 
     @Override public void replaceAll(InvestmentBackup backup) {
-        locked(() -> write(Objects.requireNonNull(backup, "backup is required")));
+        InvestmentBackup validated = Objects.requireNonNull(backup, "backup is required");
+        validate(validated);
+        locked(() -> write(validated));
     }
 
     @Override public void update(java.util.function.UnaryOperator<InvestmentBackup> change) {
         Objects.requireNonNull(change, "change is required");
-        locked(() -> write(Objects.requireNonNull(change.apply(read()), "change must return a backup")));
+        locked(() -> {
+            InvestmentBackup changed = Objects.requireNonNull(change.apply(read()), "change must return a backup");
+            validate(changed);
+            write(changed);
+        });
     }
 
     @Override public byte[] exportBackup() {
@@ -89,9 +96,23 @@ public final class JsonInvestmentStore implements InvestmentUnitOfWork, Investme
 
     private InvestmentBackup backup(List<InvestmentEntryJsonRecord> entries,
             List<InvestmentOperationJsonRecord> operations) {
-        return new InvestmentBackup(InvestmentBackup.CURRENT_FORMAT_VERSION,
+        InvestmentBackup backup = new InvestmentBackup(InvestmentBackup.CURRENT_FORMAT_VERSION,
                 entries.stream().map(entryMapper::toDomain).toList(),
                 operations.stream().map(operationMapper::toDomain).toList());
+        validate(backup);
+        return backup;
+    }
+
+    /** Validate collection-wide invariants, not merely the shape of each JSON record. */
+    private void validate(InvestmentBackup backup) {
+        var entryIds = new HashSet<>();
+        if (!backup.entries().stream().allMatch(entry -> entryIds.add(entry.id()))) {
+            throw new IllegalArgumentException("Backup contains duplicate investment entry identifiers");
+        }
+        var operationIds = new HashSet<>();
+        if (!backup.operations().stream().allMatch(operation -> operationIds.add(operation.id()))) {
+            throw new IllegalArgumentException("Backup contains duplicate investment operation identifiers");
+        }
     }
 
     private void write(InvestmentBackup backup) {

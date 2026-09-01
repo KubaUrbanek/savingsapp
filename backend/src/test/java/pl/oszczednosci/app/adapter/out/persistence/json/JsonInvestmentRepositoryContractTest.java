@@ -59,6 +59,19 @@ final class JsonInvestmentRepositoryContractTest extends InvestmentRepositoryCon
         assertThat(operations.find(new InvestmentOperationId(operationId))).isPresent();
     }
 
+    @Test void duplicateAggregateIdentifiersInvalidateTheCompleteImport() throws Exception {
+        entries.save(entry(UUID.randomUUID(), LocalDate.now(), Instant.now()));
+        byte[] before = store.exportBackup();
+        ObjectMapper mapper = new tools.jackson.databind.json.JsonMapper();
+        var document = mapper.readTree(before);
+        var entriesNode = (tools.jackson.databind.node.ArrayNode) document.get("entries");
+        entriesNode.add(entriesNode.get(0).deepCopy());
+
+        assertThatThrownBy(() -> store.importBackup(mapper.writeValueAsBytes(document)))
+                .isInstanceOf(MalformedImportException.class);
+        assertThat(store.exportBackup()).isEqualTo(before);
+    }
+
     @Test void concurrentAggregateWritesDoNotLoseUpdates() throws Exception {
         int count = 20;
         try (ExecutorService executor = Executors.newFixedThreadPool(8)) {
