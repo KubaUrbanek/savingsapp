@@ -72,4 +72,33 @@ final class JsonInvestmentRepositoryContractTest extends InvestmentRepositoryCon
         assertThat(store.snapshot().entries()).hasSize(count);
         assertThat(store.snapshot().operations()).hasSize(count);
     }
+
+    @Test void independentlyConstructedAdaptersCoordinateAccessToTheSameDocument() throws Exception {
+        int count = 30;
+        JsonInvestmentStore otherStore = new JsonInvestmentStore(new tools.jackson.databind.json.JsonMapper(), file);
+        JsonInvestmentEntryRepository otherEntries = new JsonInvestmentEntryRepository(otherStore);
+        try (ExecutorService executor = Executors.newFixedThreadPool(8)) {
+            var tasks = java.util.stream.IntStream.range(0, count).<Callable<Void>>mapToObj(i -> () -> {
+                InvestmentEntryRepository repository = i % 2 == 0 ? entries : otherEntries;
+                repository.save(entry(UUID.randomUUID(), LocalDate.of(2025, 1, 1), Instant.ofEpochSecond(i + 1)));
+                return null;
+            }).toList();
+            for (Future<Void> future : executor.invokeAll(tasks)) future.get();
+        }
+        assertThat(store.snapshot().entries()).hasSize(count);
+        assertThat(otherStore.snapshot().entries()).hasSize(count);
+    }
+
+    @Test void exportingLegacyStorageAlwaysProducesTheCurrentBackupSchema() throws Exception {
+        entries.save(entry(UUID.randomUUID(), LocalDate.of(2025, 1, 1), Instant.EPOCH));
+        ObjectMapper mapper = new tools.jackson.databind.json.JsonMapper();
+        var currentDocument = mapper.readTree(store.exportBackup());
+        Files.write(file, mapper.writeValueAsBytes(currentDocument.get("entries")));
+
+        var exported = mapper.readTree(store.exportBackup());
+
+        assertThat(exported.get("formatVersion").asInt()).isEqualTo(InvestmentBackup.CURRENT_FORMAT_VERSION);
+        assertThat(exported.get("entries").size()).isOne();
+        assertThat(exported.get("operations").isArray()).isTrue();
+    }
 }
