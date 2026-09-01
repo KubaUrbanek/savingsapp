@@ -13,6 +13,4 @@ export const GLOBAL_ASSET_CLASSES = ['BONDS', 'STOCKS', 'GOLD'];
 export const DEFAULT_GLOBAL_TARGET_ALLOCATIONS = { BONDS: 50, STOCKS: 30, GOLD: 20 };
 export const CASH_TYPES = ['KONTO_OSZCZEDNOSCIOWE', 'KONTO_BANKOWE', 'PPO', 'PPK'];
 
-export function subcategoriesFor(type) {
-  return SUBCATEGORIES_BY_TYPE[type] || [];
-}
+export { subcategoriesFor } from './classification.js';

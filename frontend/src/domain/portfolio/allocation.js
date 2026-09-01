@@ -1,4 +1,5 @@
-import { CASH_TYPES, DEFAULT_GLOBAL_TARGET_ALLOCATIONS, DEFAULT_STOCK_TARGET_ALLOCATIONS, GLOBAL_ASSET_CLASSES, STOCK_SUBCATEGORIES } from './constants.js';
+import { DEFAULT_GLOBAL_TARGET_ALLOCATIONS, DEFAULT_STOCK_TARGET_ALLOCATIONS, GLOBAL_ASSET_CLASSES, STOCK_SUBCATEGORIES } from './constants.js';
+import { globalAssetClass } from './classification.js';
 import { buildCurrentSnapshot, isNewerEntry } from './snapshot.js';
 
 export function normalizeStockAllocations(weights) {
@@ -16,12 +17,7 @@ export function normalizeGlobalAllocations(weights) {
     return result;
   }, {});
 }
-export function globalAssetClass(entry) {
-  if (CASH_TYPES.includes(entry.type)) return 'CASH';
-  if (entry.type === 'OBLIGACJE') return 'BONDS';
-  if (entry.subcategory === 'ZLOTO') return 'GOLD';
-  return ['GIELDA', 'IKE', 'IKZE'].includes(entry.type) ? 'STOCKS' : 'CASH';
-}
+export { globalAssetClass } from './classification.js';
 export function buildGlobalAllocation(entries, targets) {
   const values = buildCurrentSnapshot(entries).reduce((result, entry) => {
     const key = globalAssetClass(entry); result[key] = (result[key] || 0) + Number(entry.valuePln); return result;
