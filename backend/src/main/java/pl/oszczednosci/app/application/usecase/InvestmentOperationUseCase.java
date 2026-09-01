@@ -7,6 +7,7 @@ import pl.oszczednosci.app.application.port.in.*;
 import pl.oszczednosci.app.application.port.out.Clock;
 import pl.oszczednosci.app.application.port.out.IdGenerator;
 import pl.oszczednosci.app.application.port.out.InvestmentOperationRepository;
+import pl.oszczednosci.app.application.port.out.InvestmentOperationCriteria;
 import pl.oszczednosci.app.domain.model.*;
 
 public final class InvestmentOperationUseCase implements CreateInvestmentOperationUseCase,
@@ -35,14 +36,10 @@ public final class InvestmentOperationUseCase implements CreateInvestmentOperati
         if (filter.type() != null && filter.subcategory() != null) {
             AssetCategory.of(filter.type(), filter.subcategory());
         }
-        return operationRepository.findByOwner(filter.owner()).stream()
-                .filter(operation -> filter.type() == null || operation.getType() == filter.type())
-                .filter(operation -> filter.subcategory() == null
-                        || operation.getSubcategory() == filter.subcategory())
-                .toList();
+        return operationRepository.matching(new InvestmentOperationCriteria(filter.owner(), filter.type(), filter.subcategory()));
     }
 
     public void delete(UUID id) {
-        operationRepository.deleteById(id);
+        operationRepository.delete(new InvestmentOperationId(id));
     }
 }

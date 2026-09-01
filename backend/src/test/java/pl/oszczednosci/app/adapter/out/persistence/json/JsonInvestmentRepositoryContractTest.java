@@ -1,0 +1,75 @@
+package pl.oszczednosci.app.adapter.out.persistence.json;
+
+import static org.assertj.core.api.Assertions.*;
+import java.math.BigDecimal;
+import java.nio.file.*;
+import java.time.*;
+import java.util.UUID;
+import java.util.concurrent.*;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.io.TempDir;
+import pl.oszczednosci.app.adapter.out.persistence.InvestmentRepositoryContract;
+import pl.oszczednosci.app.application.exception.*;
+import pl.oszczednosci.app.application.port.out.*;
+import pl.oszczednosci.app.domain.model.*;
+import tools.jackson.databind.ObjectMapper;
+
+final class JsonInvestmentRepositoryContractTest extends InvestmentRepositoryContract {
+    @TempDir Path directory;
+    private Path file;
+    private JsonInvestmentStore store;
+    private JsonInvestmentEntryRepository entries;
+    private JsonInvestmentOperationRepository operations;
+
+    @BeforeEach void createAdapter() {
+        file = directory.resolve("investments.json");
+        ObjectMapper mapper = new tools.jackson.databind.json.JsonMapper();
+        store = new JsonInvestmentStore(mapper, file);
+        entries = new JsonInvestmentEntryRepository(store);
+        operations = new JsonInvestmentOperationRepository(store);
+    }
+    @Override protected InvestmentEntryRepository entries() { return entries; }
+    @Override protected InvestmentOperationRepository operations() { return operations; }
+    @Override protected InvestmentEntry entry(UUID id, LocalDate date, Instant created) {
+        return InvestmentEntry.create(new InvestmentEntryId(id), AssetCategory.of(InvestmentType.GIELDA,
+                InvestmentSubcategory.RYNKI_ROZWINIETE), PortfolioOwner.of(PortfolioUser.JAKUB),
+                Money.positive(new BigDecimal("123.45")), date, created);
+    }
+    @Override protected InvestmentOperation operation(UUID id, LocalDate date, Instant created) {
+        return InvestmentOperation.create(new InvestmentOperationId(id), InvestmentOperationType.DEPOSIT,
+                AssetCategory.of(InvestmentType.GIELDA, InvestmentSubcategory.RYNKI_ROZWINIETE),
+                PortfolioOwner.of(PortfolioUser.JAKUB), Money.positive(BigDecimal.TEN), Money.zeroOrPositive(BigDecimal.ZERO),
+                Money.zeroOrPositive(BigDecimal.ZERO), date, "contract", created);
+    }
+
+    @Test void malformedStorageIsReported() throws Exception {
+        Files.writeString(file, "not-json");
+        assertThatThrownBy(store::snapshot).isInstanceOf(PersistenceException.class);
+    }
+
+    @Test void invalidImportRollsBackBothAggregates() {
+        UUID entryId = UUID.randomUUID(); UUID operationId = UUID.randomUUID();
+        entries.save(entry(entryId, LocalDate.now(), Instant.now()));
+        operations.save(operation(operationId, LocalDate.now(), Instant.now()));
+        byte[] before = store.exportBackup();
+        assertThatThrownBy(() -> store.importBackup("{\"formatVersion\":1,\"entries\":[]}".getBytes()))
+                .isInstanceOf(MalformedImportException.class);
+        assertThat(store.exportBackup()).isEqualTo(before);
+        assertThat(entries.find(new InvestmentEntryId(entryId))).isPresent();
+        assertThat(operations.find(new InvestmentOperationId(operationId))).isPresent();
+    }
+
+    @Test void concurrentAggregateWritesDoNotLoseUpdates() throws Exception {
+        int count = 20;
+        try (ExecutorService executor = Executors.newFixedThreadPool(8)) {
+            var tasks = java.util.stream.IntStream.range(0, count).<Callable<Void>>mapToObj(i -> () -> {
+                entries.save(entry(UUID.randomUUID(), LocalDate.of(2025, 1, 1), Instant.ofEpochSecond(i + 1)));
+                operations.save(operation(UUID.randomUUID(), LocalDate.of(2025, 1, 1), Instant.ofEpochSecond(i + 1)));
+                return null;
+            }).toList();
+            for (Future<Void> future : executor.invokeAll(tasks)) future.get();
+        }
+        assertThat(store.snapshot().entries()).hasSize(count);
+        assertThat(store.snapshot().operations()).hasSize(count);
+    }
+}
