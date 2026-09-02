@@ -10,7 +10,6 @@ import jakarta.validation.constraints.Size;
 import pl.oszczednosci.app.domain.model.InvestmentOperationType;
 import pl.oszczednosci.app.domain.model.InvestmentSubcategory;
 import pl.oszczednosci.app.domain.model.InvestmentType;
-import pl.oszczednosci.app.domain.model.OwnerId;
 
 public record CreateInvestmentOperationRequest(
         @NotNull InvestmentOperationType operationType,

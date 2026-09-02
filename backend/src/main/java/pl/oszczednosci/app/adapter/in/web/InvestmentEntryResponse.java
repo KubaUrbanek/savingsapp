@@ -7,7 +7,6 @@ import java.util.UUID;
 
 import pl.oszczednosci.app.domain.model.InvestmentSubcategory;
 import pl.oszczednosci.app.domain.model.InvestmentType;
-import pl.oszczednosci.app.domain.model.OwnerId;
 
 public record InvestmentEntryResponse(
         UUID id,

@@ -8,7 +8,6 @@ import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 import pl.oszczednosci.app.domain.model.InvestmentSubcategory;
 import pl.oszczednosci.app.domain.model.InvestmentType;
-import pl.oszczednosci.app.domain.model.OwnerId;
 
 public record CreateInvestmentEntryRequest(
         @NotNull InvestmentType type,
