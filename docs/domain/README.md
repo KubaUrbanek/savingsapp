@@ -1,108 +1,56 @@
-# Domain README
+# Savings and investment domain
 
-This document describes the business/domain capabilities currently present in the Oszczednosci savings and investment tracking application.
+This is the product-level description of the implemented backend. See [`backend/ARCHITECTURE.md`](../../backend/ARCHITECTURE.md) for contributor rules.
 
-## Product purpose
+## Vocabulary, categories, and owners
 
-Oszczednosci is a savings and investment tracker. Its current domain focuses on recording dated investment entries in Polish zloty (PLN), making them available through an HTTP API, and serving a React single-page application from the same Spring Boot application.
+An **investment entry** is a dated PLN valuation snapshot for one asset category and portfolio owner; it is not a deposit or trade. An **investment operation** is a separately recorded movement or trade. The configured owner IDs are `jakub` and `zosia`. Owner is required for writes, lists, and performance queries; legacy external values `JAKUB` and `ZOSIA` normalize to lowercase.
 
-## Investment entry domain
+An asset category is a type plus a compatible subcategory:
 
-An investment entry represents one saved or invested amount at a specific date.
-
-Entries are valuation snapshots only. Money movements and trades are represented by separate investment operations, so a higher valuation is not automatically treated as investment profit.
-
-## Investment operations and performance
-
-An operation records a `DEPOSIT`, `WITHDRAWAL`, `BUY`, or `SELL` for an investment type and optional subcategory. It contains the gross PLN amount, optional fee and tax, business date, owner, and an optional note. Operations never replace valuation snapshots.
-
-The performance endpoint combines the latest valuation snapshot for each asset with external cash flows. It reports current value, net contributed capital (deposits minus withdrawals), nominal result, simple return rate, fees, taxes, result after costs, and annualized XIRR. Purchases and sales remain useful transaction history but are not treated as external portfolio cash flows for XIRR. A result can be calculated for the complete owner portfolio, an investment type, or an individual subcategory.
-
-### Entry attributes
-
-Each investment entry contains:
-
-| Attribute | Description |
+| Type | Subcategory rule |
 | --- | --- |
-| `id` | A UUID generated for every entry. |
-| `type` | The investment category. Currently supported values are `BOND`, `STOCK`, and `SAVINGS`. |
-| `valuePln` | The entry value in PLN, stored with two decimal places. |
-| `date` | The business date assigned to the entry. |
-| `createdAt` | The timestamp when the entry was persisted. |
+| `OBLIGACJE` | requires `TRZYLETNIE`, `DZIESIECIOLETNIE`, or `DWUNASTOLETNIE` |
+| `GIELDA`, `IKE`, `IKZE` | requires `ZLOTO`, `RYNKI_ROZWINIETE`, or `RYNKI_ROZWIJAJACE_SIE` |
+| `KONTO_OSZCZEDNOSCIOWE`, `KONTO_BANKOWE`, `PPK`, `PPO` | must not have a subcategory |
 
-### Supported investment types
+## Entries, operations, and filters
 
-The application currently supports these investment types:
+An entry contains generated UUID `id`, `type`, required `owner`, conditional `subcategory`, positive `valuePln`, business `date`, generated `createdAt`, and nullable `updatedAt`. PLN values use two decimal places and half-up rounding; HTTP input accepts up to 17 integer and two fractional digits and at least `0.01`. Create sets creation time. Update preserves ID and creation time and sets an update time that cannot precede creation. Entries can be deleted; a missing update/delete target returns `404`.
 
-- `BOND` — bond investments.
-- `STOCK` — stock investments.
-- `SAVINGS` — savings holdings.
+An operation contains a generated UUID, `DEPOSIT`, `WITHDRAWAL`, `BUY`, or `SELL`, category, owner, positive gross amount, non-negative fee and tax (default zero), date, optional trimmed note of at most 250 characters, and creation time. Operations can be created, listed, and deleted.
 
-The API exposes the supported values so clients can build type selectors without hard-coding the enum list.
+Entry and operation lists require `owner`; optional `type` and/or `subcategory` narrow results. A supplied pair must be compatible. Results sort by business date descending and creation time descending.
 
-### Creation rules
+## Performance
 
-When an entry is created:
+Performance uses an optional valuation date (UTC today by default), the latest snapshot on or before it for each asset, and operations through that date. It returns current value, net contributed capital, nominal result and simple return, fees, taxes, result after costs, XIRR and status, and current-month result and return. Queries may cover an owner's portfolio or filter by type and/or subcategory.
 
-- `type` is required and must be one of the supported investment types.
-- `valuePln` is required, must be at least `0.01`, and can contain up to 17 integer digits and 2 fractional digits.
-- `date` is required.
-- The backend normalizes the PLN value to exactly two decimal places using half-up rounding.
-- The entry receives a generated UUID.
-- `createdAt` is set automatically when the entry is first persisted.
+Deposits add and withdrawals subtract from contributed capital. For XIRR, a deposit including fee is outgoing; every other operation is incoming after fee and tax; non-zero current value is the final flow. Thus `BUY` and `SELL` are included as XIRR flows in the implementation. Status is `CALCULATED`, `ZERO_CASH_FLOWS`, `SAME_DAY_FLOWS`, `NO_SIGN_CHANGE`, `MULTIPLE_ROOTS`, or `CONVERGENCE_FAILURE`.
 
-### Listing and filtering rules
+## HTTP API
 
-Investment entries can be listed in two ways:
+Portfolio query endpoints require `owner` unless stated otherwise.
 
-- All entries, ordered by `date` descending and then `createdAt` descending.
-- Entries filtered by a single investment `type`, using the same ordering.
-
-### Deletion rules
-
-Entries can be deleted by UUID. A successful delete request returns no response body.
-
-## Seeded domain data
-
-The database migrations create the `investment_entries` table and seed initial bond entries. The seeded records demonstrate the investment entry model with `BOND` values dated January 15, 2026, March 10, 2026, and June 1, 2026.
-
-## Domain API capabilities
-
-The backend exposes the following domain-oriented API endpoints under `/api`:
-
-| Method | Path | Functionality |
+| Method | Path | Behavior |
 | --- | --- | --- |
-| `GET` | `/api/investment-types` | Returns all supported investment type names. |
-| `GET` | `/api/investments` | Lists investment entries, optionally filtered with `?type=BOND`, `?type=STOCK`, or `?type=SAVINGS`. |
-| `POST` | `/api/investments` | Creates a validated investment entry. |
-| `DELETE` | `/api/investments/{id}` | Deletes an investment entry by UUID. |
+| `GET` | `/api/investment-types` | Lists investment types. |
+| `GET` | `/api/investment-subcategories?type=...` | Lists compatible subcategories. |
+| `GET` | `/api/investment-operation-types` | Lists operation types. |
+| `GET` | `/api/users` | Lists configured owners. |
+| `GET`, `POST` | `/api/investments` | Lists filtered entries or creates one. |
+| `PUT`, `DELETE` | `/api/investments/{id}` | Updates or deletes an entry. |
+| `GET`, `POST` | `/api/investment-operations` | Lists filtered operations or creates one. |
+| `DELETE` | `/api/investment-operations/{id}` | Deletes an operation. |
+| `GET` | `/api/portfolio-performance?owner=...&type=...&subcategory=...&valuationDate=...` | Calculates performance. |
+| `GET` | `/api/database/export` | Downloads the complete JSON backup. |
+| `POST` | `/api/database/import` | Replaces data from multipart field `file` (maximum 5 MiB). |
+| `GET` | `/api/hello`, `/api/status` | Connectivity and service metadata. |
 
-The app also exposes non-domain operational/demo endpoints:
+Create returns `201`; successful deletes and import return `204`. Validation/malformed import returns structured `400`, missing aggregates `404`, and persistence errors a sanitized `500`.
 
-| Method | Path | Functionality |
-| --- | --- | --- |
-| `GET` | `/api/hello` | Returns a sample backend greeting with a timestamp. |
-| `GET` | `/api/status` | Returns basic service status metadata. |
+## Persistence and backup scope
 
-## User-facing web functionality
+The live store is JSON at `app.database.file` (default `./backend/data/investment-entries.json`), not H2/JPA/Flyway. A missing file is an empty store. Mutations use a JVM-wide per-path lock, read-modify-write the versioned document, write a temporary file, and atomically replace the live file. Separate entry and operation repositories share this unit of work and preserve the untouched collection.
 
-The React single-page application currently provides:
-
-- A home page at `/` that demonstrates backend connectivity by fetching `/api/hello`.
-- An about page at `/about` that explains client-side routing support.
-- A not-found page for unknown client-side routes, with a link back to the home page.
-- Top navigation between the home and about pages.
-
-## Persistence and runtime behavior
-
-- Data is stored in an H2 database file configured for PostgreSQL compatibility mode.
-- Flyway owns schema creation and seed data migrations.
-- Hibernate validates the schema instead of generating it automatically.
-- The H2 console is enabled at `/h2-console` for local inspection.
-- API CORS is configured for the Vite development server origins `http://localhost:5173` and `http://127.0.0.1:5173`.
-
-## Packaging and delivery functionality
-
-- The repository is a Maven monorepo with a Spring Boot backend and a Vite/React frontend.
-- The backend build installs Node/npm, runs the frontend build, copies the generated SPA assets into Spring Boot static resources, and packages the app as a single executable JAR.
-- Spring MVC forwards non-API, extensionless browser routes to `index.html`, so refreshing or directly opening SPA routes works in production.
+Export includes `formatVersion`, **all entries**, and **all operations** in one consistent document. Import validates version, required collections, domain rules, and unique IDs before replacing both collections; it does not merge. Legacy top-level entry arrays load as entries with no operations. Configuration-backed owners are not backed up. The backend also serves the built React SPA, forwards non-API extensionless routes, and permits local Vite CORS origins on port 5173.
