@@ -79,6 +79,33 @@ describe('AppRouter', () => {
     expect(amount).toHaveFocus();
   });
 
+  it('keeps validation feedback associated when the conditional valuation input is shown', async () => {
+    const validationError = new PortfolioChangeValidationFailure(
+      'currentValuePln',
+      'Podaj aktualną wartość aktywa.',
+      'INVALID_CURRENT_VALUE'
+    );
+    render(
+      <AppRouter
+        dependencies={dependencies({ recordPortfolioChange: { execute: async () => Promise.reject(validationError) } })}
+      />
+    );
+
+    await screen.findByLabelText('Kwota w PLN');
+    fireEvent.change(screen.getByLabelText('Rodzaj zmiany'), { target: { value: 'VALUATION' } });
+
+    const currentValue = screen.getByLabelText('Aktualna wartość w PLN');
+    expect(currentValue).toHaveAttribute('id', 'portfolio-change-current-value');
+    fireEvent.change(currentValue, { target: { value: '100' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
+
+    const message = await screen.findByText(validationError.message);
+    expect(message).toHaveAttribute('id', 'portfolio-change-current-value-error');
+    expect(currentValue).toHaveAttribute('aria-invalid', 'true');
+    expect(currentValue).toHaveAttribute('aria-describedby', message.id);
+    expect(currentValue).toHaveFocus();
+  });
+
   it('focuses the accessible error summary for a non-field failure', async () => {
     render(
       <AppRouter
