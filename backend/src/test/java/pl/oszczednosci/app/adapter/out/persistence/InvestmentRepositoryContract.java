@@ -34,7 +34,7 @@ public abstract class InvestmentRepositoryContract {
         entries().save(replacement);
         reloadAdapters();
         List<InvestmentEntry> result = entries().matching(
-                InvestmentEntryCriteria.allFor(PortfolioUser.JAKUB));
+                InvestmentEntryCriteria.allFor(OwnerId.of("jakub")));
         assertThat(result).hasSize(2).extracting(InvestmentEntry::getId).first().isEqualTo(olderId);
         assertThatThrownBy(() -> result.clear()).isInstanceOf(UnsupportedOperationException.class);
         assertThat(entries().find(new InvestmentEntryId(olderId))).hasValueSatisfying(reloaded ->
@@ -51,7 +51,7 @@ public abstract class InvestmentRepositoryContract {
         operations().save(replacement);
         reloadAdapters();
         List<InvestmentOperation> result = operations().matching(
-                InvestmentOperationCriteria.allFor(PortfolioUser.JAKUB));
+                InvestmentOperationCriteria.allFor(OwnerId.of("jakub")));
         assertThat(result).hasSize(1).first().extracting(InvestmentOperation::getDate)
                 .isEqualTo(java.time.LocalDate.parse("2025-02-01"));
         assertThatThrownBy(() -> result.clear()).isInstanceOf(UnsupportedOperationException.class);
@@ -73,9 +73,9 @@ public abstract class InvestmentRepositoryContract {
         operations().delete(new InvestmentOperationId(retainedOperation));
         backups().importBackup(backup);
 
-        assertThat(entries().matching(InvestmentEntryCriteria.allFor(PortfolioUser.JAKUB)))
+        assertThat(entries().matching(InvestmentEntryCriteria.allFor(OwnerId.of("jakub"))))
                 .extracting(InvestmentEntry::getId).containsExactly(retainedEntry);
-        assertThat(operations().matching(InvestmentOperationCriteria.allFor(PortfolioUser.JAKUB)))
+        assertThat(operations().matching(InvestmentOperationCriteria.allFor(OwnerId.of("jakub"))))
                 .extracting(InvestmentOperation::getId).containsExactly(retainedOperation);
     }
 
@@ -87,16 +87,16 @@ public abstract class InvestmentRepositoryContract {
 
         assertThat(entries().find(new InvestmentEntryId(UUID.randomUUID()))).isEmpty();
         assertThat(operations().find(new InvestmentOperationId(UUID.randomUUID()))).isEmpty();
-        assertThat(entries().matching(InvestmentEntryCriteria.forAsset(PortfolioUser.JAKUB,
+        assertThat(entries().matching(InvestmentEntryCriteria.forAsset(OwnerId.of("jakub"),
                 InvestmentType.GIELDA, InvestmentSubcategory.RYNKI_ROZWINIETE)))
                 .extracting(InvestmentEntry::getId).containsExactly(entryId);
-        assertThat(operations().matching(InvestmentOperationCriteria.forAsset(PortfolioUser.JAKUB,
+        assertThat(operations().matching(InvestmentOperationCriteria.forAsset(OwnerId.of("jakub"),
                 InvestmentType.GIELDA, InvestmentSubcategory.RYNKI_ROZWINIETE)))
                 .extracting(InvestmentOperation::getId).containsExactly(operationId);
-        assertThat(entries().matching(InvestmentEntryCriteria.forAsset(PortfolioUser.JAKUB,
-                InvestmentType.GIELDA, InvestmentSubcategory.POLSKA))).isEmpty();
-        assertThat(operations().matching(InvestmentOperationCriteria.forAsset(PortfolioUser.JAKUB,
-                InvestmentType.GIELDA, InvestmentSubcategory.POLSKA))).isEmpty();
+        assertThat(entries().matching(InvestmentEntryCriteria.forAsset(OwnerId.of("jakub"),
+                InvestmentType.GIELDA, InvestmentSubcategory.RYNKI_ROZWIJAJACE_SIE))).isEmpty();
+        assertThat(operations().matching(InvestmentOperationCriteria.forAsset(OwnerId.of("jakub"),
+                InvestmentType.GIELDA, InvestmentSubcategory.RYNKI_ROZWIJAJACE_SIE))).isEmpty();
     }
 
     @Test void malformedImportRollsBackTheCompleteStore() {
@@ -112,7 +112,7 @@ public abstract class InvestmentRepositoryContract {
     @Test void malformedLiveStorageIsReported() throws Exception {
         makeStorageMalformed();
         assertThatThrownBy(() -> entries().matching(
-                InvestmentEntryCriteria.allFor(PortfolioUser.JAKUB)))
+                InvestmentEntryCriteria.allFor(OwnerId.of("jakub"))))
                 .isInstanceOf(PersistenceException.class);
     }
 
@@ -130,7 +130,7 @@ public abstract class InvestmentRepositoryContract {
                 future.get();
             }
         }
-        assertThat(entries().matching(InvestmentEntryCriteria.allFor(PortfolioUser.JAKUB))).hasSize(count);
-        assertThat(operations().matching(InvestmentOperationCriteria.allFor(PortfolioUser.JAKUB))).hasSize(count);
+        assertThat(entries().matching(InvestmentEntryCriteria.allFor(OwnerId.of("jakub")))).hasSize(count);
+        assertThat(operations().matching(InvestmentOperationCriteria.allFor(OwnerId.of("jakub")))).hasSize(count);
     }
 }

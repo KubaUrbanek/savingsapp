@@ -10,12 +10,12 @@ import jakarta.validation.constraints.Size;
 import pl.oszczednosci.app.domain.model.InvestmentOperationType;
 import pl.oszczednosci.app.domain.model.InvestmentSubcategory;
 import pl.oszczednosci.app.domain.model.InvestmentType;
-import pl.oszczednosci.app.domain.model.PortfolioUser;
+import pl.oszczednosci.app.domain.model.OwnerId;
 
 public record CreateInvestmentOperationRequest(
         @NotNull InvestmentOperationType operationType,
         @NotNull InvestmentType type,
-        @NotNull PortfolioUser owner,
+        @NotNull String owner,
         InvestmentSubcategory subcategory,
         @NotNull @DecimalMin("0.01") @Digits(integer = 17, fraction = 2) BigDecimal amountPln,
         @DecimalMin("0.00") @Digits(integer = 17, fraction = 2) BigDecimal feePln,

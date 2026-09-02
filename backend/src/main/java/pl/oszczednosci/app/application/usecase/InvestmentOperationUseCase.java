@@ -27,7 +27,7 @@ public final class InvestmentOperationUseCase implements CreateInvestmentOperati
     public InvestmentOperation create(CreateInvestmentOperationCommand request) {
         InvestmentOperation operation = InvestmentOperation.create(new InvestmentOperationId(ids.nextId()),
                 request.operationType(), AssetCategory.of(request.type(), request.subcategory()),
-                PortfolioOwner.of(request.owner()), Money.positive(request.amountPln()),
+                request.owner(), Money.positive(request.amountPln()),
                 Money.zeroOrPositive(request.feePln() == null ? BigDecimal.ZERO : request.feePln()),
                 Money.zeroOrPositive(request.taxPln() == null ? BigDecimal.ZERO : request.taxPln()),
                 request.date(), request.note(), clock.now());

@@ -38,13 +38,13 @@ final class JsonInvestmentRepositoryContractTest extends InvestmentRepositoryCon
     @Override protected void makeStorageMalformed() throws Exception { Files.writeString(file, "not-json"); }
     @Override protected InvestmentEntry entry(UUID id, LocalDate date, Instant created) {
         return InvestmentEntry.create(new InvestmentEntryId(id), AssetCategory.of(InvestmentType.GIELDA,
-                InvestmentSubcategory.RYNKI_ROZWINIETE), PortfolioOwner.of(PortfolioUser.JAKUB),
+                InvestmentSubcategory.RYNKI_ROZWINIETE), OwnerId.of("jakub"),
                 Money.positive(new BigDecimal("123.45")), date, created);
     }
     @Override protected InvestmentOperation operation(UUID id, LocalDate date, Instant created) {
         return InvestmentOperation.create(new InvestmentOperationId(id), InvestmentOperationType.DEPOSIT,
                 AssetCategory.of(InvestmentType.GIELDA, InvestmentSubcategory.RYNKI_ROZWINIETE),
-                PortfolioOwner.of(PortfolioUser.JAKUB), Money.positive(BigDecimal.TEN), Money.zeroOrPositive(BigDecimal.ZERO),
+                OwnerId.of("jakub"), Money.positive(BigDecimal.TEN), Money.zeroOrPositive(BigDecimal.ZERO),
                 Money.zeroOrPositive(BigDecimal.ZERO), date, "contract", created);
     }
 
@@ -88,6 +88,31 @@ final class JsonInvestmentRepositoryContractTest extends InvestmentRepositoryCon
         assertThat(exported.get("formatVersion").asInt()).isEqualTo(InvestmentBackup.CURRENT_FORMAT_VERSION);
         assertThat(exported.get("entries").size()).isOne();
         assertThat(exported.get("operations").isArray()).isTrue();
+    }
+
+    @Test void legacyOwnerNamesAreReadAndRewrittenAsStableIds() throws Exception {
+        entries.save(entry(UUID.randomUUID(), LocalDate.of(2025, 1, 1), Instant.EPOCH));
+        ObjectMapper mapper = new tools.jackson.databind.json.JsonMapper();
+        var legacy = mapper.readTree(store.exportBackup());
+        ((tools.jackson.databind.node.ObjectNode) legacy.get("entries").get(0)).put("owner", "JAKUB");
+        Files.write(file, mapper.writeValueAsBytes(legacy));
+
+        assertThat(entries.matching(InvestmentEntryCriteria.allFor(OwnerId.of("jakub")))).hasSize(1);
+        assertThat(mapper.readTree(store.exportBackup()).get("entries").get(0).get("owner").asText())
+                .isEqualTo("jakub");
+    }
+
+    @Test void criteriaNeverCrossOwnerBoundaries() {
+        InvestmentEntry jakub = entry(UUID.randomUUID(), LocalDate.of(2025, 1, 1), Instant.EPOCH);
+        InvestmentEntry zosia = InvestmentEntry.create(new InvestmentEntryId(UUID.randomUUID()), jakub.category(),
+                OwnerId.of("zosia"), Money.positive(BigDecimal.TEN), jakub.getDate(), Instant.EPOCH);
+        entries.save(jakub);
+        entries.save(zosia);
+
+        assertThat(entries.matching(InvestmentEntryCriteria.allFor(OwnerId.of("jakub"))))
+                .extracting(InvestmentEntry::getOwner).containsOnly(OwnerId.of("jakub"));
+        assertThat(entries.matching(InvestmentEntryCriteria.allFor(OwnerId.of("zosia"))))
+                .extracting(InvestmentEntry::getOwner).containsOnly(OwnerId.of("zosia"));
     }
 
     @Test void unsupportedBackupVersionDoesNotReplaceLiveAggregates() throws Exception {
