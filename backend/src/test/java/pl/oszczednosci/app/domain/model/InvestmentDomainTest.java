@@ -13,9 +13,20 @@ class InvestmentDomainTest {
 
     @Test void moneyOwnsPlnRoundingAndPositiveAmountRules() {
         assertThat(Money.positive(new BigDecimal("12.345")).amount()).isEqualByComparingTo("12.35");
+        assertThat(Money.zeroOrPositive(new BigDecimal("12.344")).amount()).isEqualByComparingTo("12.34");
+        assertThat(Money.zeroOrPositive(new BigDecimal("-0.004")).amount()).isEqualByComparingTo("0.00");
         assertThatThrownBy(() -> Money.positive(BigDecimal.ZERO)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> Money.positive(new BigDecimal("0.004"))).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Money.zeroOrPositive(new BigDecimal("-0.01"))).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> Money.positive(null)).isInstanceOf(NullPointerException.class);
+    }
+
+    @Test void moneyArithmeticRetainsPlnNormalization() {
+        Money ten = Money.positive(BigDecimal.TEN);
+
+        assertThat(ten.add(new Money(new BigDecimal("0.005"))).amount()).isEqualByComparingTo("10.01");
+        assertThat(ten.subtract(new Money(new BigDecimal("10.01"))).amount()).isEqualByComparingTo("-0.01");
+        assertThat(ten.negate().amount()).isEqualByComparingTo("-10.00");
     }
 
     @Test void incompatibleOrMissingSubcategoryCannotEnterCategory() {
