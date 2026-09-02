@@ -12,8 +12,8 @@ public class ReferenceDataWebMapper {
     public InvestmentSubcategoriesResponse toSubcategoriesResponse(List<InvestmentSubcategory> values) {
         return new InvestmentSubcategoriesResponse(names(values));
     }
-    public PortfolioUsersResponse toUsersResponse(List<PortfolioUser> values) {
-        return new PortfolioUsersResponse(names(values));
+    public PortfolioUsersResponse toUsersResponse(List<OwnerId> values) {
+        return new PortfolioUsersResponse(values.stream().map(OwnerId::value).toList());
     }
     public InvestmentOperationTypesResponse toOperationTypesResponse(List<InvestmentOperationType> values) {
         return new InvestmentOperationTypesResponse(names(values));

@@ -27,7 +27,7 @@ public final class JsonInvestmentEntryRepository implements InvestmentEntryRepos
     }
     @Override public synchronized List<InvestmentEntry> matching(InvestmentEntryCriteria criteria) {
         return List.copyOf(store.snapshot().entries().stream()
-                .filter(v -> v.getOwner() == criteria.owner())
+                .filter(v -> v.getOwner().equals(criteria.owner()))
                 .filter(v -> criteria.type().map(type -> v.getType() == type).orElse(true))
                 .filter(v -> criteria.subcategory().map(subcategory -> v.getSubcategory() == subcategory).orElse(true))
                 .sorted(NEWEST_FIRST).toList());

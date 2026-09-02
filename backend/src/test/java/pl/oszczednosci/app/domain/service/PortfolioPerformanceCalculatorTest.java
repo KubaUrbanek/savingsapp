@@ -15,5 +15,5 @@ class PortfolioPerformanceCalculatorTest {
   assertThat(p.resultAfterFeesAndTaxes().amount()).isEqualByComparingTo("94"); assertThat(p.monthlyResult().amount()).isEqualByComparingTo("100");
  }
  private ValuationSnapshot v(AssetKey k,String d,String n){return new ValuationSnapshot(k,new ValuationDate(LocalDate.parse(d)),m(n));}
- private InvestmentOperation o(InvestmentOperationType t,String d,String a,String f,String tax,AssetKey k){return InvestmentOperation.create(new InvestmentOperationId(UUID.randomUUID()),t,AssetCategory.of(k.type(),k.subcategory()),PortfolioOwner.of(PortfolioUser.JAKUB),m(a),m(f),m(tax),LocalDate.parse(d),null,Instant.EPOCH);}
+ private InvestmentOperation o(InvestmentOperationType t,String d,String a,String f,String tax,AssetKey k){return InvestmentOperation.create(new InvestmentOperationId(UUID.randomUUID()),t,AssetCategory.of(k.type(),k.subcategory()),OwnerId.of("jakub"),m(a),m(f),m(tax),LocalDate.parse(d),null,Instant.EPOCH);}
 }

@@ -6,6 +6,6 @@ import pl.oszczednosci.app.domain.model.*;
 public interface GetReferenceDataUseCase {
     List<InvestmentType> investmentTypes();
     List<InvestmentSubcategory> investmentSubcategories(InvestmentType type);
-    List<PortfolioUser> users();
+    List<OwnerId> users();
     List<InvestmentOperationType> operationTypes();
 }

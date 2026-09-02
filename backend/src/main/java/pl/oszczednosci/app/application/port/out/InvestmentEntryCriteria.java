@@ -3,9 +3,9 @@ package pl.oszczednosci.app.application.port.out;
 import java.util.Optional;
 import pl.oszczednosci.app.domain.model.InvestmentSubcategory;
 import pl.oszczednosci.app.domain.model.InvestmentType;
-import pl.oszczednosci.app.domain.model.PortfolioUser;
+import pl.oszczednosci.app.domain.model.OwnerId;
 
-public record InvestmentEntryCriteria(PortfolioUser owner, Optional<InvestmentType> type,
+public record InvestmentEntryCriteria(OwnerId owner, Optional<InvestmentType> type,
         Optional<InvestmentSubcategory> subcategory) {
     public InvestmentEntryCriteria {
         if (owner == null) throw new IllegalArgumentException("owner is required");
@@ -14,11 +14,11 @@ public record InvestmentEntryCriteria(PortfolioUser owner, Optional<InvestmentTy
                 .orElseThrow(() -> new IllegalArgumentException("subcategory is required"));
     }
 
-    public static InvestmentEntryCriteria allFor(PortfolioUser owner) {
+    public static InvestmentEntryCriteria allFor(OwnerId owner) {
         return new InvestmentEntryCriteria(owner, Optional.empty(), Optional.empty());
     }
 
-    public static InvestmentEntryCriteria forAsset(PortfolioUser owner, InvestmentType type,
+    public static InvestmentEntryCriteria forAsset(OwnerId owner, InvestmentType type,
             InvestmentSubcategory subcategory) {
         return new InvestmentEntryCriteria(owner, Optional.of(type), Optional.of(subcategory));
     }

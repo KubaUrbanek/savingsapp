@@ -7,5 +7,5 @@ import java.util.UUID;
 import pl.oszczednosci.app.domain.model.*;
 
 public record InvestmentOperationJsonRecord(UUID id, InvestmentOperationType operationType, InvestmentType type,
-        PortfolioUser owner, InvestmentSubcategory subcategory, BigDecimal amountPln, BigDecimal feePln,
+        String owner, InvestmentSubcategory subcategory, BigDecimal amountPln, BigDecimal feePln,
         BigDecimal taxPln, LocalDate date, String note, Instant createdAt) {}

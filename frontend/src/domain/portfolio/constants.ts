@@ -1,5 +1,5 @@
 // @ts-nocheck
-export const FALLBACK_USERS = ['JAKUB', 'ZOSIA'];
+export const FALLBACK_USERS = ['jakub', 'zosia'];
 export const DEFAULT_HOUSEHOLD_GOAL = 500000;
 export const SUBCATEGORIES_BY_TYPE = {
   OBLIGACJE: ['TRZYLETNIE', 'DZIESIECIOLETNIE', 'DWUNASTOLETNIE'],

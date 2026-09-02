@@ -39,12 +39,12 @@ class InvestmentDomainTest {
 
     @Test void entryRejectsEveryMissingRequiredValue() {
         AssetCategory category = AssetCategory.of(InvestmentType.KONTO_BANKOWE, null);
-        assertThatThrownBy(() -> InvestmentEntry.create(null, category, PortfolioOwner.of(PortfolioUser.JAKUB),
+        assertThatThrownBy(() -> InvestmentEntry.create(null, category, OwnerId.of("jakub"),
                 Money.positive(BigDecimal.ONE), LocalDate.now(), NOW)).isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> InvestmentEntry.create(new InvestmentEntryId(UUID.randomUUID()), category, null,
                 Money.positive(BigDecimal.ONE), LocalDate.now(), NOW)).isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> InvestmentEntry.create(new InvestmentEntryId(UUID.randomUUID()), category,
-                PortfolioOwner.of(PortfolioUser.JAKUB), null, LocalDate.now(), NOW)).isInstanceOf(NullPointerException.class);
+                OwnerId.of("jakub"), null, LocalDate.now(), NOW)).isInstanceOf(NullPointerException.class);
     }
 
     @Test void operationRejectsNegativeFeesTaxesAndZeroAmount() {
@@ -59,6 +59,6 @@ class InvestmentDomainTest {
 
     private InvestmentOperation operation(AssetCategory category, Money amount, Money fee, Money tax) {
         return InvestmentOperation.create(new InvestmentOperationId(UUID.randomUUID()), InvestmentOperationType.DEPOSIT,
-                category, PortfolioOwner.of(PortfolioUser.JAKUB), amount, fee, tax, LocalDate.now(), null, NOW);
+                category, OwnerId.of("jakub"), amount, fee, tax, LocalDate.now(), null, NOW);
     }
 }

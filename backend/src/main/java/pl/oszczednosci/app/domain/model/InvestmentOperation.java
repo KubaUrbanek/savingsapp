@@ -9,7 +9,7 @@ public final class InvestmentOperation {
     private final InvestmentOperationId id;
     private final InvestmentOperationType operationType;
     private final AssetCategory category;
-    private final PortfolioOwner owner;
+    private final OwnerId owner;
     private final Money amount;
     private final Money fee;
     private final Money tax;
@@ -18,7 +18,7 @@ public final class InvestmentOperation {
     private final Instant createdAt;
 
     private InvestmentOperation(InvestmentOperationId id, InvestmentOperationType operationType, AssetCategory category,
-            PortfolioOwner owner, Money amount, Money fee, Money tax, LocalDate date, String note, Instant createdAt) {
+            OwnerId owner, Money amount, Money fee, Money tax, LocalDate date, String note, Instant createdAt) {
         this.id = Objects.requireNonNull(id, "Investment operation id is required");
         this.operationType = Objects.requireNonNull(operationType, "Operation type is required");
         this.category = Objects.requireNonNull(category, "Asset category is required");
@@ -33,13 +33,13 @@ public final class InvestmentOperation {
     }
 
     public static InvestmentOperation create(InvestmentOperationId id, InvestmentOperationType operationType,
-            AssetCategory category, PortfolioOwner owner, Money amount, Money fee, Money tax, LocalDate date,
+            AssetCategory category, OwnerId owner, Money amount, Money fee, Money tax, LocalDate date,
             String note, Instant createdAt) {
         return new InvestmentOperation(id, operationType, category, owner, amount, fee, tax, date, note, createdAt);
     }
 
     public static InvestmentOperation reconstitute(InvestmentOperationId id, InvestmentOperationType operationType,
-            AssetCategory category, PortfolioOwner owner, Money amount, Money fee, Money tax, LocalDate date,
+            AssetCategory category, OwnerId owner, Money amount, Money fee, Money tax, LocalDate date,
             String note, Instant createdAt) {
         return new InvestmentOperation(id, operationType, category, owner, amount, fee, tax, date, note, createdAt);
     }
@@ -53,14 +53,14 @@ public final class InvestmentOperation {
 
     public InvestmentOperationId id() { return id; }
     public AssetCategory category() { return category; }
-    public PortfolioOwner owner() { return owner; }
+    public OwnerId owner() { return owner; }
     public Money amount() { return amount; }
     public Money fee() { return fee; }
     public Money tax() { return tax; }
     public java.util.UUID getId() { return id.value(); }
     public InvestmentOperationType getOperationType() { return operationType; }
     public InvestmentType getType() { return category.type(); }
-    public PortfolioUser getOwner() { return owner.value(); }
+    public OwnerId getOwner() { return owner; }
     public InvestmentSubcategory getSubcategory() { return category.subcategory(); }
     public java.math.BigDecimal getAmountPln() { return amount.amount(); }
     public java.math.BigDecimal getFeePln() { return fee.amount(); }

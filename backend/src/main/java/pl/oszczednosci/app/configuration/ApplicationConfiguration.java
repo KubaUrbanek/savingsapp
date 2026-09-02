@@ -1,9 +1,11 @@
 package pl.oszczednosci.app.configuration;
-import java.nio.file.Path; import java.time.Instant; import java.util.UUID;
+import java.nio.file.Path; import java.time.Instant; import java.util.List; import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value; import org.springframework.context.annotation.*;
 import tools.jackson.databind.ObjectMapper;
 import pl.oszczednosci.app.adapter.out.persistence.json.*; import pl.oszczednosci.app.application.port.out.*;
+import pl.oszczednosci.app.adapter.out.persistence.ConfiguredOwnerDirectory;
 import pl.oszczednosci.app.application.usecase.*; import pl.oszczednosci.app.domain.service.*;
+import pl.oszczednosci.app.domain.model.OwnerId;
 @Configuration
 public class ApplicationConfiguration {
  @Bean JsonInvestmentStore investmentStore(ObjectMapper mapper, @Value("${app.database.file:./backend/data/investments.json}") Path path) { return new JsonInvestmentStore(mapper,path); }
@@ -16,5 +18,6 @@ public class ApplicationConfiguration {
  @Bean RateOfReturnCalculator rateOfReturnCalculator(){ return new NumericalRateOfReturnCalculator(); }
  @Bean PortfolioPerformanceCalculator portfolioPerformanceCalculator(RateOfReturnCalculator rates){ return new PortfolioPerformanceCalculator(rates); }
  @Bean CalculatePortfolioPerformanceService calculatePortfolioPerformanceService(InvestmentEntryRepository entries, InvestmentOperationRepository operations, PortfolioPerformanceCalculator calculator, Clock clock){ return new CalculatePortfolioPerformanceService(entries,operations,calculator,clock); }
- @Bean ReferenceDataUseCase referenceDataUseCase(){ return new ReferenceDataUseCase(); }
+ @Bean OwnerDirectory ownerDirectory(){ return new ConfiguredOwnerDirectory(List.of(OwnerId.of("jakub"), OwnerId.of("zosia"))); }
+ @Bean ReferenceDataUseCase referenceDataUseCase(OwnerDirectory owners){ return new ReferenceDataUseCase(owners); }
 }
