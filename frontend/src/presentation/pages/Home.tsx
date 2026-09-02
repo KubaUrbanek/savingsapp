@@ -31,6 +31,9 @@ export function Home({ dependencies }) {
   const [status, setStatus] = React.useState('');
   const [error, setError] = React.useState('');
   const [fieldErrors, setFieldErrors] = React.useState({});
+  const fieldRefs = React.useRef({});
+  const errorSummaryRef = React.useRef(null);
+  const pendingErrorFocusRef = React.useRef(false);
   const [operationForm, setOperationForm] = React.useState({
     operationType: 'DEPOSIT',
     type: '',
@@ -51,6 +54,22 @@ export function Home({ dependencies }) {
   const graphEntries = dataFrom(controller.snapshot, []);
   const operations = dataFrom(controller.operations, []);
   const performance = dataFrom(controller.performance, null);
+  const reportError = React.useCallback((nextError) => {
+    setStatus('');
+    pendingErrorFocusRef.current = true;
+    setError(nextError.message);
+  }, []);
+
+  React.useEffect(() => {
+    const [invalidField] = Object.keys(fieldErrors);
+    if (invalidField) fieldRefs.current[invalidField]?.focus();
+  }, [fieldErrors]);
+
+  React.useEffect(() => {
+    if (!error || !pendingErrorFocusRef.current) return;
+    errorSummaryRef.current?.focus();
+    pendingErrorFocusRef.current = false;
+  }, [error]);
 
   React.useEffect(() => {
     if (controller.referenceData.status === 'success') {
@@ -77,11 +96,11 @@ export function Home({ dependencies }) {
       try {
         preferences.selectOwner(selectedOwner);
       } catch (preferenceError) {
-        setError(preferenceError.message);
+        reportError(preferenceError);
       }
     }
     setStatus('');
-  }, [portfolioScope, selectedOwner, isHouseholdView, preferences]);
+  }, [portfolioScope, selectedOwner, isHouseholdView, preferences, reportError]);
 
   React.useEffect(() => {
     const failed = [
@@ -91,13 +110,14 @@ export function Home({ dependencies }) {
       controller.operations,
       controller.performance
     ].find((state) => state.status === 'failure');
-    if (failed) setError(failed.error.message);
+    if (failed) reportError(failed.error);
   }, [
     controller.referenceData,
     controller.entries,
     controller.snapshot,
     controller.operations,
-    controller.performance
+    controller.performance,
+    reportError
   ]);
 
   const currentEntries = buildCurrentSnapshot(graphEntries);
@@ -109,7 +129,8 @@ export function Home({ dependencies }) {
     return totals;
   }, {});
   const totalValue = currentEntriesForView.reduce((sum, entry) => sum + Number(entry.valuePln), 0);
-  const filterSubcategories = subcategoriesFor(typeFilter);
+  const filterSubcategories = typeFilter ? subcategoriesFor(typeFilter) : [];
+  const operationSubcategories = operationForm.type ? subcategoriesFor(operationForm.type) : [];
 
   function changeType(nextType) {
     setTypeFilter(nextType);
@@ -135,8 +156,7 @@ export function Home({ dependencies }) {
         setStatus('Wyeksportowano bazę danych do pliku JSON.');
       })
       .catch((fetchError) => {
-        setStatus('');
-        setError(fetchError.message);
+        reportError(fetchError);
       });
   }
 
@@ -161,8 +181,7 @@ export function Home({ dependencies }) {
         setStatus('Zaimportowano bazę danych i odświeżono widok.');
       })
       .catch((fetchError) => {
-        setStatus('');
-        setError(fetchError.message);
+        reportError(fetchError);
       });
   }
 
@@ -187,7 +206,7 @@ export function Home({ dependencies }) {
       .then(() => {
         setStatus('Usunięto wpis.');
       })
-      .catch((fetchError) => setError(fetchError.message));
+      .catch(reportError);
   }
 
   function submitOperation(event) {
@@ -208,14 +227,14 @@ export function Home({ dependencies }) {
       })
       .catch((fetchError) => {
         setStatus('');
-        if (fetchError instanceof PortfolioChangeValidationFailure)
+        if (fetchError instanceof PortfolioChangeValidationFailure) {
           setFieldErrors({ [fetchError.field]: fetchError.message });
-        else setError(fetchError.message);
+        } else reportError(fetchError);
       });
   }
 
   function deleteOperation(id) {
-    controller.commands.deleteInvestmentOperation(id).catch((fetchError) => setError(fetchError.message));
+    controller.commands.deleteInvestmentOperation(id).catch(reportError);
   }
 
   return (
@@ -298,13 +317,22 @@ export function Home({ dependencies }) {
         )}
       </section>
 
+      <div className="formFeedback" aria-label="Informacje o operacjach">
+        <p className="success" role="status" aria-live="polite" aria-atomic="true">
+          {status}
+        </p>
+        <p ref={errorSummaryRef} className="error" role="alert" tabIndex={-1} aria-atomic="true">
+          {error}
+        </p>
+      </div>
+
       {isHouseholdView ? (
         <HouseholdDashboard
           entries={graphEntries}
           users={users}
           types={types}
           preferences={preferences}
-          onPreferenceError={(preferenceError) => setError(preferenceError.message)}
+          onPreferenceError={reportError}
         />
       ) : (
         <>
@@ -358,6 +386,12 @@ export function Home({ dependencies }) {
               <label>
                 Rodzaj zmiany
                 <select
+                  id="portfolio-change-operation-type"
+                  ref={(element) => {
+                    fieldRefs.current.operationType = element;
+                  }}
+                  aria-invalid={fieldErrors.operationType ? 'true' : undefined}
+                  aria-describedby={fieldErrors.operationType ? 'portfolio-change-operation-type-error' : undefined}
                   value={operationForm.operationType}
                   onChange={(event) => setOperationForm({ ...operationForm, operationType: event.target.value })}
                 >
@@ -367,10 +401,21 @@ export function Home({ dependencies }) {
                   <option value="BUY">Kupno — zwiększ stan</option>
                   <option value="SELL">Sprzedaż — zmniejsz stan</option>
                 </select>
+                {fieldErrors.operationType && (
+                  <span id="portfolio-change-operation-type-error" className="error">
+                    {fieldErrors.operationType}
+                  </span>
+                )}
               </label>
               <label>
                 Aktywo
                 <select
+                  id="portfolio-change-type"
+                  ref={(element) => {
+                    fieldRefs.current.type = element;
+                  }}
+                  aria-invalid={fieldErrors.type ? 'true' : undefined}
+                  aria-describedby={fieldErrors.type ? 'portfolio-change-type-error' : undefined}
                   required
                   value={operationForm.type}
                   onChange={(event) => {
@@ -384,27 +429,49 @@ export function Home({ dependencies }) {
                     </option>
                   ))}
                 </select>
+                {fieldErrors.type && (
+                  <span id="portfolio-change-type-error" className="error">
+                    {fieldErrors.type}
+                  </span>
+                )}
               </label>
-              {subcategoriesFor(operationForm.type).length > 0 && (
+              {operationSubcategories.length > 0 && (
                 <label>
                   Podkategoria
                   <select
+                    id="portfolio-change-subcategory"
+                    ref={(element) => {
+                      fieldRefs.current.subcategory = element;
+                    }}
+                    aria-invalid={fieldErrors.subcategory ? 'true' : undefined}
+                    aria-describedby={fieldErrors.subcategory ? 'portfolio-change-subcategory-error' : undefined}
                     required
                     value={operationForm.subcategory}
                     onChange={(event) => setOperationForm({ ...operationForm, subcategory: event.target.value })}
                   >
-                    {subcategoriesFor(operationForm.type).map((value) => (
+                    {operationSubcategories.map((value) => (
                       <option key={value} value={value}>
                         {SUBCATEGORY_LABELS[value]}
                       </option>
                     ))}
                   </select>
+                  {fieldErrors.subcategory && (
+                    <span id="portfolio-change-subcategory-error" className="error">
+                      {fieldErrors.subcategory}
+                    </span>
+                  )}
                 </label>
               )}
               {operationForm.operationType === 'VALUATION' ? (
                 <label>
                   Aktualna wartość w PLN
                   <input
+                    id="portfolio-change-current-value"
+                    ref={(element) => {
+                      fieldRefs.current.currentValuePln = element;
+                    }}
+                    aria-invalid={fieldErrors.currentValuePln ? 'true' : undefined}
+                    aria-describedby={fieldErrors.currentValuePln ? 'portfolio-change-current-value-error' : undefined}
                     type="number"
                     min="0"
                     step="0.01"
@@ -412,12 +479,22 @@ export function Home({ dependencies }) {
                     value={operationForm.currentValuePln}
                     onChange={(event) => setOperationForm({ ...operationForm, currentValuePln: event.target.value })}
                   />
-                  {fieldErrors.currentValuePln && <span className="error">{fieldErrors.currentValuePln}</span>}
+                  {fieldErrors.currentValuePln && (
+                    <span id="portfolio-change-current-value-error" className="error">
+                      {fieldErrors.currentValuePln}
+                    </span>
+                  )}
                 </label>
               ) : (
                 <label>
                   Kwota w PLN
                   <input
+                    id="portfolio-change-amount"
+                    ref={(element) => {
+                      fieldRefs.current.amountPln = element;
+                    }}
+                    aria-invalid={fieldErrors.amountPln ? 'true' : undefined}
+                    aria-describedby={fieldErrors.amountPln ? 'portfolio-change-amount-error' : undefined}
                     type="number"
                     min="0.01"
                     step="0.01"
@@ -425,23 +502,36 @@ export function Home({ dependencies }) {
                     value={operationForm.amountPln}
                     onChange={(event) => setOperationForm({ ...operationForm, amountPln: event.target.value })}
                   />
-                  {fieldErrors.amountPln && <span className="error">{fieldErrors.amountPln}</span>}
+                  {fieldErrors.amountPln && (
+                    <span id="portfolio-change-amount-error" className="error">
+                      {fieldErrors.amountPln}
+                    </span>
+                  )}
                 </label>
               )}
               <label>
                 Data
                 <input
+                  id="portfolio-change-date"
+                  ref={(element) => {
+                    fieldRefs.current.date = element;
+                  }}
+                  aria-invalid={fieldErrors.date ? 'true' : undefined}
+                  aria-describedby={fieldErrors.date ? 'portfolio-change-date-error' : undefined}
                   type="date"
                   required
                   value={operationForm.date}
                   onChange={(event) => setOperationForm({ ...operationForm, date: event.target.value })}
                 />
+                {fieldErrors.date && (
+                  <span id="portfolio-change-date-error" className="error">
+                    {fieldErrors.date}
+                  </span>
+                )}
               </label>
               <button className="button primaryButton" type="submit" disabled={!operationForm.type}>
                 Zapisz zmianę
               </button>
-              {status && <p className="success">{status}</p>}
-              {error && <p className="error">Nie udało się zapisać: {error}</p>}
             </form>
           </section>
           <section className="panel entriesPanel operationList">
@@ -471,18 +561,14 @@ export function Home({ dependencies }) {
             )}
           </section>
 
-          <GlobalAllocationPanel
-            entries={graphEntries}
-            preferences={preferences}
-            onPreferenceError={(preferenceError) => setError(preferenceError.message)}
-          />
+          <GlobalAllocationPanel entries={graphEntries} preferences={preferences} onPreferenceError={reportError} />
 
           {types.includes('GIELDA') && (
             <StockAllocationPanel
               entries={graphEntries}
               onAddStockValue={prepareStockEntry}
               preferences={preferences}
-              onPreferenceError={(preferenceError) => setError(preferenceError.message)}
+              onPreferenceError={reportError}
             />
           )}
         </>
