@@ -20,7 +20,6 @@ Oszczednosci is a monorepo for a savings and investment tracking application. It
 - Home page at `/`.
 - About page at `/about`.
 - Client-side fallback page for unknown routes.
-- Backend connectivity example that fetches `/api/hello`.
 - Development server with Vite at `http://localhost:5173`.
 - Development proxy for `/api` requests to the backend at `http://localhost:8080`.
 
@@ -30,8 +29,6 @@ The backend exposes these routes under `/api`:
 
 | Method     | Path                              | Description                                                           |
 | ---------- | --------------------------------- | --------------------------------------------------------------------- |
-| `GET`      | `/api/hello`                      | Returns a sample greeting and timestamp.                              |
-| `GET`      | `/api/status`                     | Returns basic service health/status information.                      |
 | `GET`      | `/api/investment-types`           | Returns the supported investment type enum values.                    |
 | `GET`      | `/api/investments`                | Lists investment entries. Accepts an optional `type` query parameter. |
 | `POST`     | `/api/investments`                | Creates an investment entry from a validated JSON request body.       |
@@ -39,6 +36,15 @@ The backend exposes these routes under `/api`:
 | `GET/POST` | `/api/investment-operations`      | Lists or records portfolio cash flows and trades.                     |
 | `DELETE`   | `/api/investment-operations/{id}` | Deletes an operation by UUID.                                         |
 | `GET`      | `/api/portfolio-performance`      | Calculates performance for an owner and optional asset filters.       |
+
+The domain API uses HTTP Basic authentication. Read operations accept either the
+configured reader or administrator account; writes, deletes, imports, and exports
+require the administrator role. Configure credentials with `APP_READER_USERNAME`,
+`APP_READER_PASSWORD`, `APP_ADMIN_USERNAME`, and `APP_ADMIN_PASSWORD`.
+
+Operational health is exposed separately at `GET /actuator/health` and does not
+require domain API authentication. The former demo `/api/hello` and custom
+`/api/status` endpoints are not part of the application.
 
 ## Project structure
 
@@ -116,9 +122,9 @@ docker run --rm -p 8080:8080 -e JAVA_OPTS="-Xmx512m" -v oszczednosci-data:/app/d
 
 ### Docker secrets/config tree
 
-The application maps a `MASTER_PASSWORD` value from the Spring environment into the internal `app.security.master-password` property. This supports Docker config-tree secrets by importing a directory whose file names become property names.
-
-For example, create a secret file named `MASTER_PASSWORD` in the mounted config-tree directory and start the container with:
+Credentials can be supplied as environment variables or through Spring config-tree
+secrets. For example, create files matching the `APP_*` credential variable names
+in the mounted config-tree directory and start the container with:
 
 ```yaml
 services:
@@ -130,7 +136,11 @@ services:
       SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
 ```
 
-At runtime, Spring Boot reads `/run/secrets/MASTER_PASSWORD` and makes it available as `MASTER_PASSWORD`; `application.properties` then maps it to `app.security.master-password` for application code.
+At runtime, Spring Boot maps these values into the authentication adapter. When
+credentials are omitted, random passwords are generated, so an unconfigured
+production instance does not silently expose the domain API. Cross-origin browser
+access is denied by default; set `APP_CORS_ALLOWED_ORIGINS` to a comma-separated
+list of trusted HTTP(S) origins when a separately hosted frontend requires it.
 
 ## Development workflow
 
