@@ -746,6 +746,16 @@ select {
   color: #a83232;
 }
 
+.mobileAllocationList {
+  display: none;
+}
+
+.mobileAllocationCard,
+.mobileAllocationCard dd {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .rebalanceHint {
   display: flex;
   flex-wrap: wrap;
@@ -1165,9 +1175,17 @@ nav a:hover {
 }
 
 .subtypeTab {
-  min-height: 38px;
+  min-height: 44px;
   padding: 7px 14px;
   box-shadow: none;
+}
+
+.userPill,
+.typeTab,
+.subtypeTab {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .panel {
@@ -1387,6 +1405,37 @@ select:focus {
   .databasePanel {
     grid-template-columns: 1fr;
   }
+
+  .globalAllocationTable,
+  .stockTable {
+    display: none;
+  }
+
+  .mobileAllocationList {
+    display: grid;
+    gap: 16px;
+  }
+
+  .mobileAllocationCard {
+    padding: 16px;
+    border: 1px solid #d9e6dd;
+    border-radius: 14px;
+    background: #fff;
+  }
+
+  .mobileAllocationCard h3 { margin: 0; color: var(--green-900); font-size: 1.05rem; }
+  .mobileRecordMeta { margin: 4px 0 0; color: var(--muted); font-size: .85rem; font-weight: 700; }
+  .mobileAllocationCard dl { display: grid; gap: 0; margin: 12px 0 0; }
+  .mobileAllocationCard dl > div {
+    display: grid;
+    grid-template-columns: minmax(112px, .8fr) minmax(0, 1.2fr);
+    gap: 16px;
+    padding: 12px 0;
+    border-top: 1px solid #e5ede7;
+  }
+  .mobileAllocationCard dt { color: var(--muted); font-size: .78rem; font-weight: 850; }
+  .mobileAllocationCard dd { margin: 0; text-align: right; font-weight: 800; }
+  .mobileAllocationCard dd small { display: block; margin-top: 2px; color: var(--muted); }
 }
 
 @media (max-width: 640px) {
@@ -1433,19 +1482,16 @@ select:focus {
   .typeNav,
   .subtypeNav,
   .quickStockActions {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    margin-right: -19px;
-    padding-right: 19px;
-    padding-bottom: 5px;
-    scrollbar-width: thin;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .userPill,
   .typeTab,
   .subtypeTab,
   .quickStockActions button {
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-height: 44px;
   }
 
   .totalValue {
