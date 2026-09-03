@@ -249,3 +249,14 @@ Use verbs for use cases (`Load`, `Record`, `Delete`, `Import`), technology prefi
 - [ ] Are domain/use-case, adapter, component, and architecture tests present as applicable?
 - [ ] Do test, typecheck, lint, format, and production build commands pass?
 - [ ] Are this guide and project documentation still accurate after the change?
+
+## Stylesheet layers and naming
+
+`src/styles.css` is the single global stylesheet and is ordered from broadest to narrowest responsibility:
+
+1. **Semantic tokens and reset** define the preserved green palette plus purpose-based color, surface, border, spacing, radius, elevation, focus, and motion values. Component rules should consume these tokens when the value represents the same visual role; one-off illustration and data-visualization colors may remain local.
+2. **Application shell** uses `siteHeader`, `topbar`, `brand`, and `page`. Navigation element selectors must be descendants of `.siteHeader`; do not add unscoped `nav` or `nav a` rules.
+3. **Portfolio components** use descriptive camel-case classes such as `controlSurface`, `summaryPanel`, and `allocationEditor`. Form-element rules must be scoped to their owning component (`formPanel`, `graphControls`, `entriesHeader`, `allocationInputs`, or `goalPanel`) so informational routes such as About and NotFound retain neutral browser behavior.
+4. **Responsive overrides** live at the existing `860px` layout and `640px` compact breakpoints. Add a rule to the relevant existing breakpoint rather than creating a competing component definition. The final reduced-motion query remains the accessibility override for all animated elements.
+
+Keep selectors component-oriented and avoid generic element rules except for the intentional reset and document typography. Tokens are named by semantic role (`--color-success`, `--color-border`, `--radius-panel`) rather than by the component consuming them; aliases exist only for compatibility with established component rules and should not be expanded.
