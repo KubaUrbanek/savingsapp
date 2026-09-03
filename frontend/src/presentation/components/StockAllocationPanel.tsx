@@ -121,6 +121,7 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
               <div className={row.difference >= 0 ? 'stockRow buy' : 'stockRow trim'} role="row" key={row.subcategory}>
                 <div>
                   <strong>{SUBCATEGORY_LABELS[row.subcategory]}</strong>
+                  <small>{row.difference >= 0 ? '↑ Kup' : '↓ Ogranicz'}</small>
                   <small>{row.latestDate ? `Aktualizacja: ${row.latestDate}` : 'Brak wpisu'}</small>
                 </div>
                 <span>{formatMoney(row.currentValue)}</span>
@@ -137,6 +138,7 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
             {allocation.rows.map((row) => (
               <article className={`mobileAllocationCard ${row.difference >= 0 ? 'buy' : 'trim'}`} key={row.subcategory}>
                 <h3>{SUBCATEGORY_LABELS[row.subcategory]}</h3>
+                <p className="mobileRecordMeta">{row.difference >= 0 ? '↑ Kup' : '↓ Ogranicz'}</p>
                 <p className="mobileRecordMeta">{row.latestDate ? `Aktualizacja: ${row.latestDate}` : 'Brak wpisu'}</p>
                 <dl>
                   <div>
@@ -217,7 +219,9 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
                     key={row.subcategory}
                   >
                     <strong>{SUBCATEGORY_LABELS[row.subcategory]}</strong>
-                    <span>{formatSignedMoney(row.amountToAdd)}</span>
+                    <span>
+                      {row.amountToAdd >= 0 ? '↑ Kup' : '↓ Ogranicz'}: {formatSignedMoney(row.amountToAdd)}
+                    </span>
                     <span>{formatMoney(row.currentValue + Math.max(row.amountToAdd, 0))}</span>
                     <span>{row.targetWeight}%</span>
                   </div>

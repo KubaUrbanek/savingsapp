@@ -487,6 +487,14 @@ select {
   padding: 10px 2px 4px;
 }
 
+.chartTextSummary { margin: 14px 0 0; color: var(--muted); }
+.chartDataDisclosure { margin-top: 14px; }
+.chartDataDisclosure summary { width: fit-content; cursor: pointer; color: var(--green-900); font-weight: 700; }
+.chartDataDisclosure table { width: 100%; margin-top: 12px; border-collapse: collapse; }
+.chartDataDisclosure caption { padding-bottom: 8px; text-align: left; color: var(--muted); }
+.chartDataDisclosure th,
+.chartDataDisclosure td { padding: 8px; border-bottom: 1px solid var(--line); text-align: left; }
+
 .summaryChart {
   min-width: 720px;
   width: 100%;

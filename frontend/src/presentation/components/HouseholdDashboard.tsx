@@ -11,6 +11,7 @@ import {
 } from '../viewModels/formatters.js';
 
 export function HouseholdDashboard({ entries, users, types, preferences, onPreferenceError }) {
+  const goalDescriptionId = React.useId();
   const [goal, setGoal] = React.useState(() => preferences.householdGoal());
   const { total, totalsByOwner, totalsByType, liquid, retirement, longTerm, latestMonth, goalProgress } =
     buildHouseholdOverview(entries, users, types, goal);
@@ -37,6 +38,7 @@ export function HouseholdDashboard({ entries, users, types, preferences, onPrefe
           <p
             className={latestMonth?.changeAmount >= 0 ? 'householdChange positiveText' : 'householdChange negativeText'}
           >
+            {(latestMonth?.changeAmount || 0) >= 0 ? '↑ Zysk' : '↓ Strata'}:{' '}
             {formatSignedMoney(latestMonth?.changeAmount || 0)} ({formatPercent(latestMonth?.changePercent)}) miesiąc do
             miesiąca
           </p>
@@ -47,7 +49,7 @@ export function HouseholdDashboard({ entries, users, types, preferences, onPrefe
             const share = total > 0 ? (value / total) * 100 : 0;
             return (
               <div className="ownershipRow" key={user}>
-                <span className={`ownerDot owner${user}`} />
+                <span aria-hidden="true" className={`ownerDot owner${user}`} />
                 <div>
                   <strong>{displayName(user)}</strong>
                   <small>{formatUnsignedPercent(share)} majątku</small>
@@ -91,8 +93,16 @@ export function HouseholdDashboard({ entries, users, types, preferences, onPrefe
                     <span>{TYPE_LABELS[type] || type}</span>
                     <strong>{formatMoney(value)}</strong>
                   </div>
-                  <div className="progressTrack">
-                    <span style={{ width: `${share}%` }} />
+                  <div
+                    aria-label={`Udział: ${TYPE_LABELS[type] || type}`}
+                    aria-valuemax={100}
+                    aria-valuemin={0}
+                    aria-valuenow={Math.min(100, Math.max(0, share))}
+                    aria-valuetext={formatUnsignedPercent(share)}
+                    className="progressTrack"
+                    role="progressbar"
+                  >
+                    <span aria-hidden="true" style={{ width: `${Math.min(100, Math.max(0, share))}%` }} />
                   </div>
                   <small>{formatUnsignedPercent(share)}</small>
                 </div>
@@ -103,7 +113,17 @@ export function HouseholdDashboard({ entries, users, types, preferences, onPrefe
         <article className="panel goalPanel">
           <p className="eyebrow">Wspólny cel</p>
           <h2>Łączna realizacja celów</h2>
-          <div className="goalRing" style={{ '--progress': `${goalProgress * 3.6}deg` }}>
+          <div
+            aria-label="Realizacja wspólnego celu"
+            aria-describedby={goalDescriptionId}
+            aria-valuemax={100}
+            aria-valuemin={0}
+            aria-valuenow={Math.min(100, Math.max(0, goalProgress))}
+            aria-valuetext={formatUnsignedPercent(goalProgress)}
+            className="goalRing"
+            role="progressbar"
+            style={{ '--progress': `${Math.min(100, Math.max(0, goalProgress)) * 3.6}deg` }}
+          >
             <strong>{formatUnsignedPercent(goalProgress)}</strong>
             <span>zrealizowano</span>
           </div>
@@ -117,7 +137,7 @@ export function HouseholdDashboard({ entries, users, types, preferences, onPrefe
               onChange={(event) => updateGoal(event.target.value)}
             />
           </label>
-          <p>
+          <p id={goalDescriptionId}>
             {formatMoney(total)} z {formatMoney(goal)}
           </p>
         </article>
