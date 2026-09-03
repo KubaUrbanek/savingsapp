@@ -165,4 +165,118 @@ describe('AppRouter', () => {
     expect(alert).not.toHaveTextContent('Nie udało się zapisać');
     expect(alert).toHaveFocus();
   });
+
+  it('cancels operation deletion and returns focus to the originating button', async () => {
+    const deleteOperation = vi.fn();
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(
+      <AppRouter
+        dependencies={dependencies({
+          loadPortfolioPerformance: {
+            execute: async () => ({
+              operations: [
+                {
+                  id: 'operation-1',
+                  operationType: 'DEPOSIT',
+                  type: 'KONTO_BANKOWE',
+                  subcategory: '',
+                  date: '2026-08-31',
+                  amountPln: 1250,
+                  note: 'Test'
+                }
+              ],
+              performance: null
+            })
+          },
+          deleteInvestmentOperation: { execute: deleteOperation }
+        })}
+      />
+    );
+
+    const deleteButton = await screen.findByRole('button', { name: 'Usuń' });
+    deleteButton.focus();
+    fireEvent.click(deleteButton);
+
+    expect(deleteOperation).not.toHaveBeenCalled();
+    expect(deleteButton).toHaveFocus();
+    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/Typ rekordu: operacja/));
+    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/Aktywo: Konto bankowe/));
+    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/Data: 2026-08-31/));
+    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/Kwota: 1\s?250,00\s*zł/));
+  });
+
+  it('confirms valuation deletion with identifying context before invoking the command', async () => {
+    const deletion = deferred();
+    const deleteEntry = vi.fn(() => deletion.promise);
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const appDependencies = dependencies({
+      loadPortfolio: {
+        execute: async () => [
+          {
+            id: 'entry-1',
+            owner: 'jakub',
+            type: 'KONTO_BANKOWE',
+            subcategory: '',
+            date: '2026-09-01',
+            valuePln: 4321.5
+          }
+        ]
+      },
+      deleteInvestmentEntry: { execute: deleteEntry }
+    });
+    render(<AppRouter dependencies={appDependencies} />);
+
+    await waitFor(() => expect(appDependencies.preferences.selectOwner).toHaveBeenCalledTimes(2));
+    const buttons = await screen.findAllByRole('button', { name: 'Usuń' });
+    const deleteButton = buttons.at(-1)!;
+    deleteButton.focus();
+    fireEvent.click(deleteButton);
+
+    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/Typ rekordu: wpis wyceny/));
+    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/Wartość: 4\s?321,50\s*zł/));
+    expect(deleteEntry).toHaveBeenCalledOnce();
+    expect(deleteEntry).toHaveBeenCalledWith('entry-1');
+    expect(deleteButton).toHaveFocus();
+    deletion.resolve(undefined);
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Usunięto wpis'));
+  });
+
+  it('disables a confirmed delete while pending and prevents duplicate submissions', async () => {
+    const deletion = deferred();
+    const deleteOperation = vi.fn(() => deletion.promise);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(
+      <AppRouter
+        dependencies={dependencies({
+          loadPortfolioPerformance: {
+            execute: async () => ({
+              operations: [
+                {
+                  id: 'operation-1',
+                  operationType: 'WITHDRAWAL',
+                  type: 'KONTO_BANKOWE',
+                  date: '2026-09-01',
+                  amountPln: 50
+                }
+              ],
+              performance: null
+            })
+          },
+          deleteInvestmentOperation: { execute: deleteOperation }
+        })}
+      />
+    );
+
+    const deleteButton = await screen.findByRole('button', { name: 'Usuń' });
+    fireEvent.click(deleteButton);
+    fireEvent.click(deleteButton);
+
+    const pendingButton = await screen.findByRole('button', { name: 'Usuwanie…' });
+    expect(pendingButton).toHaveAttribute('aria-disabled', 'true');
+    expect(pendingButton).toHaveAttribute('aria-busy', 'true');
+    expect(deleteOperation).toHaveBeenCalledOnce();
+
+    deletion.resolve(undefined);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Usuń' })).not.toHaveAttribute('aria-disabled'));
+  });
 });
