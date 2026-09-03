@@ -157,28 +157,36 @@ describe('AppRouter', () => {
     const operation = deferred();
     const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
     const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
-    const appDependencies = dependencies({ exportDatabaseBackup: { execute: () => operation.promise } });
+    const exportDatabaseBackup = vi.fn(() => operation.promise);
+    const appDependencies = dependencies({ exportDatabaseBackup: { execute: exportDatabaseBackup } });
     render(<AppRouter dependencies={appDependencies} />);
 
     await screen.findByLabelText('Kwota w PLN');
     await waitFor(() => expect(appDependencies.preferences.selectOwner).toHaveBeenCalledTimes(2));
     fireEvent.click(screen.getByRole('button', { name: 'Eksportuj bazę' }));
+    const exportingButton = screen.getByRole('button', { name: 'Eksportowanie…' });
+    fireEvent.click(exportingButton);
+    expect(exportingButton).toBeDisabled();
+    expect(exportDatabaseBackup).toHaveBeenCalledOnce();
     const status = screen.getByRole('status');
     expect(status).toHaveAttribute('aria-live', 'polite');
     expect(status).toHaveTextContent('Przygotowywanie eksportu');
 
     operation.resolve(new Blob());
     await waitFor(() => expect(status).toHaveTextContent('Wyeksportowano bazę danych'));
+    expect(screen.getByRole('button', { name: 'Eksportuj bazę' })).toBeEnabled();
     createObjectURL.mockRestore();
     revokeObjectURL.mockRestore();
   });
 
   it('announces import failures without save-related wording and focuses the alert', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const operation = deferred();
+    const importDatabaseBackup = vi.fn(() => operation.promise);
     render(
       <AppRouter
         dependencies={dependencies({
-          importDatabaseBackup: { execute: async () => Promise.reject(new Error('Zły plik')) }
+          importDatabaseBackup: { execute: importDatabaseBackup }
         })}
       />
     );
@@ -187,12 +195,45 @@ describe('AppRouter', () => {
     const fileInput = document.querySelector('input[type="file"]');
     expect(fileInput).not.toBeNull();
     if (!fileInput) throw new Error('Import file input was not rendered.');
-    fireEvent.change(fileInput, { target: { files: [new File(['{}'], 'backup.json', { type: 'application/json' })] } });
+    const file = new File(['{}'], 'backup.json', { type: 'application/json' });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+    fireEvent.change(fileInput, { target: { files: [file] } });
+
+    expect(screen.getByRole('button', { name: 'Importowanie…' })).toBeDisabled();
+    expect(importDatabaseBackup).toHaveBeenCalledOnce();
+    operation.reject(new Error('Zły plik'));
 
     const alert = await screen.findByRole('alert');
     await waitFor(() => expect(alert).toHaveTextContent('Zły plik'));
     expect(alert).not.toHaveTextContent('Nie udało się zapisać');
     expect(alert).toHaveFocus();
+    expect(screen.getByRole('button', { name: 'Importuj i nadpisz' })).toBeEnabled();
+  });
+
+  it.each([
+    [
+      'resolved',
+      (operation: ReturnType<typeof deferred>) => operation.resolve({ nextValue: 10, kind: 'DEPOSIT', atomic: true })
+    ],
+    ['rejected', (operation: ReturnType<typeof deferred>) => operation.reject(new Error('Awaria zapisu'))]
+  ])('prevents duplicate saves and restores the form after a %s command', async (_outcome, settle) => {
+    const operation = deferred();
+    const recordPortfolioChange = vi.fn(() => operation.promise);
+    render(<AppRouter dependencies={dependencies({ recordPortfolioChange: { execute: recordPortfolioChange } })} />);
+
+    const amount = await screen.findByLabelText('Kwota w PLN');
+    fireEvent.change(amount, { target: { value: '10' } });
+    const form = amount.closest('form')!;
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+
+    expect(form).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('button', { name: 'Zapisywanie…' })).toBeDisabled();
+    expect(recordPortfolioChange).toHaveBeenCalledOnce();
+
+    settle(operation);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Zapisz zmianę' })).toBeEnabled());
+    expect(form).toHaveAttribute('aria-busy', 'false');
   });
 
   it('cancels operation deletion and returns focus to the originating button', async () => {
@@ -301,11 +342,55 @@ describe('AppRouter', () => {
     fireEvent.click(deleteButton);
 
     const pendingButton = await screen.findByRole('button', { name: 'Usuwanie…' });
-    expect(pendingButton).toHaveAttribute('aria-disabled', 'true');
-    expect(pendingButton).toHaveAttribute('aria-busy', 'true');
+    expect(pendingButton).toBeDisabled();
+    expect(pendingButton.closest('.entryRow')).toHaveAttribute('aria-busy', 'true');
     expect(deleteOperation).toHaveBeenCalledOnce();
 
     deletion.resolve(undefined);
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Usuń' })).not.toHaveAttribute('aria-disabled'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Usuń' })).toBeEnabled());
+  });
+
+  it('keeps unrelated rows usable and restores a delete control after rejection', async () => {
+    const deletion = deferred();
+    const deleteOperation = vi.fn(() => deletion.promise);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const appDependencies = dependencies({
+      loadPortfolioPerformance: {
+        execute: async () => ({
+          operations: [
+            {
+              id: 'operation-1',
+              operationType: 'DEPOSIT',
+              type: 'KONTO_BANKOWE',
+              date: '2026-09-01',
+              amountPln: 50
+            },
+            {
+              id: 'operation-2',
+              operationType: 'WITHDRAWAL',
+              type: 'KONTO_BANKOWE',
+              date: '2026-09-02',
+              amountPln: 25
+            }
+          ],
+          performance: null
+        })
+      },
+      deleteInvestmentOperation: { execute: deleteOperation }
+    });
+    render(<AppRouter dependencies={appDependencies} />);
+
+    await waitFor(() => expect(appDependencies.preferences.selectOwner).toHaveBeenCalledTimes(2));
+    const deleteButtons = await screen.findAllByRole('button', { name: 'Usuń' });
+    const firstDelete = deleteButtons[0]!;
+    const secondDelete = deleteButtons[1]!;
+    fireEvent.click(firstDelete);
+
+    expect(screen.getByRole('button', { name: 'Usuwanie…' })).toBeDisabled();
+    expect(secondDelete).toBeEnabled();
+    deletion.reject(new Error('Nie udało się usunąć'));
+
+    await waitFor(() => expect(firstDelete).toBeEnabled());
+    expect(secondDelete).toBeEnabled();
   });
 });

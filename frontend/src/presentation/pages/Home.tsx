@@ -43,6 +43,12 @@ export function Home({ dependencies }) {
     date: today()
   });
   const importInputRef = React.useRef(null);
+  const savingRef = React.useRef(false);
+  const importingRef = React.useRef(false);
+  const exportingRef = React.useRef(false);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [isImporting, setIsImporting] = React.useState(false);
+  const [isExporting, setIsExporting] = React.useState(false);
   const pendingDeletionsRef = React.useRef(new Set());
   const [pendingDeletions, setPendingDeletions] = React.useState([]);
   const isHouseholdView = portfolioScope.kind === PortfolioScopeKind.HOUSEHOLD;
@@ -141,6 +147,9 @@ export function Home({ dependencies }) {
   }
 
   function exportDatabase() {
+    if (exportingRef.current) return;
+    exportingRef.current = true;
+    setIsExporting(true);
     setError('');
     setStatus('Przygotowywanie eksportu...');
 
@@ -159,10 +168,15 @@ export function Home({ dependencies }) {
       })
       .catch((fetchError) => {
         reportError(fetchError);
+      })
+      .finally(() => {
+        exportingRef.current = false;
+        setIsExporting(false);
       });
   }
 
   function chooseImportFile() {
+    if (importingRef.current) return;
     importInputRef.current?.click();
   }
 
@@ -174,6 +188,9 @@ export function Home({ dependencies }) {
     const confirmed = window.confirm('Import nadpisze aktualną bazę danych. Czy na pewno chcesz kontynuować?');
     if (!confirmed) return;
 
+    if (importingRef.current) return;
+    importingRef.current = true;
+    setIsImporting(true);
     setError('');
     setStatus('Importowanie bazy danych...');
 
@@ -184,6 +201,10 @@ export function Home({ dependencies }) {
       })
       .catch((fetchError) => {
         reportError(fetchError);
+      })
+      .finally(() => {
+        importingRef.current = false;
+        setIsImporting(false);
       });
   }
 
@@ -253,7 +274,10 @@ export function Home({ dependencies }) {
 
   function submitOperation(event) {
     event.preventDefault();
+    if (savingRef.current) return;
     const command = mapPortfolioChangeForm(operationForm, selectedOwner, currentEntries);
+    savingRef.current = true;
+    setIsSaving(true);
     setError('');
     setFieldErrors({});
     setStatus('Zapisywanie…');
@@ -272,6 +296,10 @@ export function Home({ dependencies }) {
         if (fetchError instanceof PortfolioChangeValidationFailure) {
           setFieldErrors({ [fetchError.field]: fetchError.message });
         } else reportError(fetchError);
+      })
+      .finally(() => {
+        savingRef.current = false;
+        setIsSaving(false);
       });
   }
 
@@ -444,7 +472,7 @@ export function Home({ dependencies }) {
                 </div>
               )}
             </article>
-            <form className="panel formPanel unifiedForm" onSubmit={submitOperation}>
+            <form className="panel formPanel unifiedForm" onSubmit={submitOperation} aria-busy={isSaving}>
               <p className="eyebrow">Jedno miejsce do aktualizacji</p>
               <h2>Co zmieniło się w portfelu?</h2>
               <p className="formHint">
@@ -461,6 +489,7 @@ export function Home({ dependencies }) {
                   aria-invalid={fieldErrors.operationType ? 'true' : undefined}
                   aria-describedby={fieldErrors.operationType ? 'portfolio-change-operation-type-error' : undefined}
                   value={operationForm.operationType}
+                  disabled={isSaving}
                   onChange={(event) => setOperationForm({ ...operationForm, operationType: event.target.value })}
                 >
                   <option value="DEPOSIT">Wpłata — zwiększ stan</option>
@@ -486,6 +515,7 @@ export function Home({ dependencies }) {
                   aria-describedby={fieldErrors.type ? 'portfolio-change-type-error' : undefined}
                   required
                   value={operationForm.type}
+                  disabled={isSaving}
                   onChange={(event) => {
                     const type = event.target.value;
                     setOperationForm({ ...operationForm, type, subcategory: subcategoriesFor(type)[0] || '' });
@@ -515,6 +545,7 @@ export function Home({ dependencies }) {
                     aria-describedby={fieldErrors.subcategory ? 'portfolio-change-subcategory-error' : undefined}
                     required
                     value={operationForm.subcategory}
+                    disabled={isSaving}
                     onChange={(event) => setOperationForm({ ...operationForm, subcategory: event.target.value })}
                   >
                     {operationSubcategories.map((value) => (
@@ -545,6 +576,7 @@ export function Home({ dependencies }) {
                     step="0.01"
                     required
                     value={operationForm.currentValuePln}
+                    disabled={isSaving}
                     onChange={(event) => setOperationForm({ ...operationForm, currentValuePln: event.target.value })}
                   />
                   {fieldErrors.currentValuePln && (
@@ -568,6 +600,7 @@ export function Home({ dependencies }) {
                     step="0.01"
                     required
                     value={operationForm.amountPln}
+                    disabled={isSaving}
                     onChange={(event) => setOperationForm({ ...operationForm, amountPln: event.target.value })}
                   />
                   {fieldErrors.amountPln && (
@@ -589,6 +622,7 @@ export function Home({ dependencies }) {
                   type="date"
                   required
                   value={operationForm.date}
+                  disabled={isSaving}
                   onChange={(event) => setOperationForm({ ...operationForm, date: event.target.value })}
                 />
                 {fieldErrors.date && (
@@ -597,8 +631,8 @@ export function Home({ dependencies }) {
                   </span>
                 )}
               </label>
-              <button className="button primaryButton" type="submit" disabled={!operationForm.type}>
-                Zapisz zmianę
+              <button className="button primaryButton" type="submit" disabled={!operationForm.type || isSaving}>
+                {isSaving ? 'Zapisywanie…' : 'Zapisz zmianę'}
               </button>
             </form>
           </section>
@@ -610,7 +644,11 @@ export function Home({ dependencies }) {
               <p>Brak przepływów dla wybranego aktywa.</p>
             ) : (
               operations.map((operation) => (
-                <div className="entryRow" key={operation.id}>
+                <div
+                  className="entryRow"
+                  key={operation.id}
+                  aria-busy={pendingDeletions.includes(`operation:${operation.id}`)}
+                >
                   <div>
                     <strong>{OPERATION_LABELS[operation.operationType]}</strong>
                     <span>
@@ -623,8 +661,7 @@ export function Home({ dependencies }) {
                   <strong>{formatMoney(operation.amountPln)}</strong>
                   <button
                     type="button"
-                    aria-disabled={pendingDeletions.includes(`operation:${operation.id}`) || undefined}
-                    aria-busy={pendingDeletions.includes(`operation:${operation.id}`) || undefined}
+                    disabled={pendingDeletions.includes(`operation:${operation.id}`)}
                     onClick={(event) => deleteOperation(operation, event.currentTarget)}
                   >
                     {pendingDeletions.includes(`operation:${operation.id}`) ? 'Usuwanie…' : 'Usuń'}
@@ -659,7 +696,7 @@ export function Home({ dependencies }) {
           ) : (
             <div className="entryList">
               {graphEntries.map((entry) => (
-                <div className="entryRow" key={entry.id}>
+                <div className="entryRow" key={entry.id} aria-busy={pendingDeletions.includes(`entry:${entry.id}`)}>
                   <div>
                     <strong>{TYPE_LABELS[entry.type] || entry.type}</strong>
                     <span>
@@ -671,8 +708,7 @@ export function Home({ dependencies }) {
                   <div className="entryActions">
                     <button
                       type="button"
-                      aria-disabled={pendingDeletions.includes(`entry:${entry.id}`) || undefined}
-                      aria-busy={pendingDeletions.includes(`entry:${entry.id}`) || undefined}
+                      disabled={pendingDeletions.includes(`entry:${entry.id}`)}
                       onClick={(event) => deleteEntry(entry, event.currentTarget)}
                     >
                       {pendingDeletions.includes(`entry:${entry.id}`) ? 'Usuwanie…' : 'Usuń'}
@@ -695,17 +731,30 @@ export function Home({ dependencies }) {
           </p>
         </div>
         <div className="databaseActions">
-          <button className="button secondaryButton" type="button" onClick={exportDatabase}>
-            Eksportuj bazę
+          <button
+            className="button secondaryButton"
+            type="button"
+            onClick={exportDatabase}
+            disabled={isExporting}
+            aria-busy={isExporting}
+          >
+            {isExporting ? 'Eksportowanie…' : 'Eksportuj bazę'}
           </button>
-          <button className="button dangerButton" type="button" onClick={chooseImportFile}>
-            Importuj i nadpisz
+          <button
+            className="button dangerButton"
+            type="button"
+            onClick={chooseImportFile}
+            disabled={isImporting}
+            aria-busy={isImporting}
+          >
+            {isImporting ? 'Importowanie…' : 'Importuj i nadpisz'}
           </button>
           <input
             ref={importInputRef}
             className="visuallyHidden"
             type="file"
             accept="application/json,.json"
+            disabled={isImporting}
             onChange={importDatabase}
           />
         </div>
