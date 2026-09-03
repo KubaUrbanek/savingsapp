@@ -4,6 +4,7 @@ import { buildSummary } from '../../domain/portfolio/summary.js';
 import { mapTimeSeriesViewModel } from '../viewModels/portfolioViewModelMappers.js';
 
 export function SummaryChart({ entries, types }) {
+  const summaryId = React.useId();
   const [selectedType, setSelectedType] = React.useState('ALL');
   const [period, setPeriod] = React.useState('monthly');
   const filteredEntries = selectedType === 'ALL' ? entries : entries.filter((entry) => entry.type === selectedType);
@@ -16,6 +17,11 @@ export function SummaryChart({ entries, types }) {
   const innerHeight = chartHeight - padding.top - padding.bottom;
   const barGap = 14;
   const barWidth = points.length ? Math.max(18, (innerWidth - barGap * (points.length - 1)) / points.length) : 0;
+  const selectedTypeLabel =
+    viewModel.typeOptions.find((option) => option.value === selectedType)?.label || selectedType;
+  const periodLabel = period === 'yearly' ? 'rocznie' : 'miesięcznie';
+  const latestPoint = points.at(-1);
+  const changeSymbol = (latestPoint?.changeAmount || 0) >= 0 ? '↑' : '↓';
 
   return (
     <section className="panel graphPanel">
@@ -52,19 +58,38 @@ export function SummaryChart({ entries, types }) {
         </div>
         <div className={viewModel.changeClass}>
           <span>Zmiana kwotowa</span>
-          <strong>{viewModel.change}</strong>
+          <strong>
+            {changeSymbol} {viewModel.change}
+          </strong>
         </div>
         <div className={viewModel.percentClass}>
           <span>Zmiana procentowa</span>
-          <strong>{viewModel.changePercent}</strong>
+          <strong>
+            {changeSymbol} {viewModel.changePercent}
+          </strong>
         </div>
       </div>
+
+      <p id={summaryId} className="chartTextSummary">
+        {selectedTypeLabel}, {periodLabel}: aktualna suma {viewModel.total}, zmiana kwotowa {viewModel.change}, zmiana
+        procentowa {viewModel.changePercent}.
+      </p>
 
       {viewModel.rows.length === 0 ? (
         <p>Brak danych do narysowania wykresu dla wybranego zakresu.</p>
       ) : (
-        <div className="chartScroller" role="img" aria-label="Wykres słupkowy podsumowania inwestycji">
-          <svg className="summaryChart" viewBox={`0 0 ${chartWidth} ${chartHeight}`} preserveAspectRatio="none">
+        <div
+          className="chartScroller"
+          role="img"
+          aria-label="Wykres słupkowy podsumowania inwestycji"
+          aria-describedby={summaryId}
+        >
+          <svg
+            aria-hidden="true"
+            className="summaryChart"
+            viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+            preserveAspectRatio="none"
+          >
             <defs>
               <linearGradient id="barGradient" x1="0" x2="0" y1="0" y2="1">
                 <stop offset="0%" stopColor="#3f9d63" />
@@ -103,6 +128,34 @@ export function SummaryChart({ entries, types }) {
             })}
           </svg>
         </div>
+      )}
+      {viewModel.rows.length > 0 && (
+        <details className="chartDataDisclosure">
+          <summary>Pokaż dane wykresu</summary>
+          <table>
+            <caption>
+              Dane dla: {selectedTypeLabel}, {periodLabel}
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Okres</th>
+                <th scope="col">Wartość</th>
+                <th scope="col">Zmiana</th>
+              </tr>
+            </thead>
+            <tbody>
+              {viewModel.rows.map((point) => (
+                <tr key={point.key}>
+                  <th scope="row">{point.label}</th>
+                  <td>{point.valueLabel}</td>
+                  <td>
+                    {point.changeAmount >= 0 ? '↑' : '↓'} {point.changeLabel}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </details>
       )}
     </section>
   );
