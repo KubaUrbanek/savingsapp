@@ -1,12 +1,48 @@
 :root {
-  color: #17202a;
-  background: #f5f7f4;
+  color: #19241e;
+  background: #f4f7f3;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
   font-synthesis: none;
   line-height: 1.5;
   text-rendering: optimizeLegibility;
+  --color-text: #17231c;
+  --color-text-muted: #627068;
+  --color-success: #21753c;
+  --color-danger: #a83232;
+  --color-focus: rgb(72 168 109 / 30%);
+  --color-green-900: #123c28;
+  --color-green-700: #236b43;
+  --color-green-500: #48a86d;
+  --color-green-100: #e5f3e9;
+  --color-border: #dce6df;
+  --color-border-subtle: #e1e9e4;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f1f7f3;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 22px;
+  --space-6: 28px;
+  --radius-control: 10px;
+  --radius-panel: 20px;
+  --radius-pill: 999px;
+  --elevation-panel: 0 16px 45px rgb(25 58 38 / 8%);
+  --elevation-focus: 0 0 0 4px rgb(72 168 109 / 11%);
+  --motion-fast: 160ms ease;
+
+  /* Compatibility aliases for component rules while names migrate semantically. */
+  --ink: var(--color-text);
+  --muted: var(--color-text-muted);
+  --green-900: var(--color-green-900);
+  --green-700: var(--color-green-700);
+  --green-500: var(--color-green-500);
+  --green-100: var(--color-green-100);
+  --line: var(--color-border);
+  --surface: var(--color-surface);
+  --shadow: var(--elevation-panel);
 }
 
 * {
@@ -16,7 +52,11 @@
 body {
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
   margin: 0;
+  background:
+    radial-gradient(circle at 8% 0%, rgb(103 181 129 / 12%), transparent 25rem),
+    linear-gradient(180deg, #fbfdfb 0, #f4f7f3 38rem);
 }
 
 a {
@@ -28,9 +68,9 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  width: min(1120px, calc(100% - 32px));
+  width: min(1180px, calc(100% - 40px));
   margin: 0 auto;
-  padding: 22px 0;
+  padding: 14px 0;
 }
 
 .brand {
@@ -40,12 +80,16 @@ a {
   text-decoration: none;
 }
 
-nav {
+.siteHeader nav {
   display: flex;
   gap: 8px;
+  padding: 4px;
+  border: 1px solid #e4ebe6;
+  border-radius: 12px;
+  background: #f6f9f6;
 }
 
-nav a,
+.siteHeader nav a,
 .button {
   min-height: 40px;
   padding: 9px 14px;
@@ -56,29 +100,40 @@ nav a,
   text-decoration: none;
 }
 
-nav a.active,
-nav a:hover,
+.siteHeader nav a {
+  min-height: 38px;
+  padding: 8px 16px;
+  border-radius: 9px;
+  font-size: 0.9rem;
+}
+
+.siteHeader nav a.active,
+.siteHeader nav a:hover,
 .button {
   border-color: #9ac7a6;
   background: #e5f3e8;
   color: #133c23;
 }
 
+.siteHeader nav a.active,
+.siteHeader nav a:hover {
+  border-color: transparent;
+  background: var(--color-surface);
+  box-shadow: 0 3px 12px rgb(30 65 43 / 9%);
+  color: var(--color-green-900);
+}
+
 .page {
-  width: min(1120px, calc(100% - 32px));
+  width: min(1180px, calc(100% - 40px));
   margin: 0 auto;
-  padding: 44px 0 72px;
+  padding: 24px 0 80px;
 }
 
 .hero {
   display: grid;
-  gap: 18px;
-  max-width: 820px;
-  padding: 54px 0 38px;
-}
-
-.heroCompact {
-  max-width: 760px;
+  gap: 13px;
+  max-width: 920px;
+  padding: 54px 0 34px;
 }
 
 .eyebrow {
@@ -109,21 +164,27 @@ h2 {
 }
 
 .hero p:not(.eyebrow) {
-  max-width: 720px;
-  color: #4a594f;
-  font-size: 1.15rem;
+  max-width: 690px;
+  color: var(--color-text-muted);
+  font-size: clamp(1rem, 2vw, 1.16rem);
+  line-height: 1.65;
 }
 
 .panel {
   display: grid;
-  gap: 16px;
+  gap: 18px;
   max-width: 760px;
-  margin-top: 28px;
-  padding: 24px;
-  border: 1px solid #d4dfd7;
-  border-radius: 8px;
-  background: #ffffff;
-  box-shadow: 0 18px 50px rgb(21 38 28 / 8%);
+  margin-top: 0;
+  padding: 26px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface);
+  box-shadow: var(--elevation-panel);
+}
+
+.panel h2 {
+  font-size: 1.16rem;
+  line-height: 1.3;
 }
 
 pre {
@@ -137,7 +198,7 @@ pre {
 }
 
 .error {
-  color: #a83232;
+  color: var(--color-danger);
   font-weight: 700;
 }
 
@@ -159,7 +220,7 @@ pre {
 .userSwitcher {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--space-3);
   margin: 0 0 28px;
 }
 
@@ -167,7 +228,7 @@ pre {
   min-height: 48px;
   padding: 0 22px;
   border: 1px solid #9ac7a6;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: #ffffff;
   color: #183d26;
   cursor: pointer;
@@ -201,7 +262,7 @@ pre {
 .performanceGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .performanceGrid div {
@@ -209,7 +270,7 @@ pre {
   gap: 5px;
   padding: 16px;
   border-radius: 8px;
-  background: #f1f7f3;
+  background: var(--color-surface-muted);
 }
 
 .performanceGrid span {
@@ -225,7 +286,7 @@ pre {
 .inlineFields {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .totalValue {
@@ -238,7 +299,7 @@ pre {
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .summaryCard {
@@ -246,12 +307,15 @@ pre {
   gap: 6px;
   padding: 16px;
   border-radius: 10px;
-  background: #f1f7f3;
+  background: var(--color-surface-muted);
 }
 
 .summaryCard span,
 .entryRow span,
-label {
+.formPanel label,
+.graphControls label,
+.allocationInputs label,
+.goalPanel label {
   color: #59675e;
   font-size: 0.9rem;
   font-weight: 700;
@@ -266,15 +330,18 @@ label {
   gap: 8px;
 }
 
-input,
-select {
-  min-height: 44px;
+.formPanel :is(input, select),
+.graphControls select,
+.entriesHeader select,
+.allocationInputs input,
+.goalPanel input {
+  min-height: 48px;
   width: 100%;
-  padding: 9px 12px;
-  border: 1px solid #c7d7cc;
-  border-radius: 8px;
-  background: #ffffff;
-  color: #17202a;
+  padding: 10px 13px;
+  border: 1px solid #cedbd2;
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
   font: inherit;
 }
 
@@ -295,7 +362,7 @@ select {
 }
 
 .success {
-  color: #21753c;
+  color: var(--color-success);
   font-weight: 800;
 }
 
@@ -308,7 +375,7 @@ select {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .entriesHeader select {
@@ -322,7 +389,7 @@ select {
 
 .entryRow {
   padding: 14px 0;
-  border-top: 1px solid #e1e9e4;
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .entryRow div {
@@ -386,7 +453,7 @@ select {
   min-height: 42px;
   padding: 8px 14px;
   border: 1px solid #bdd6c5;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: #ffffff;
   color: #234532;
   cursor: pointer;
@@ -415,7 +482,7 @@ select {
 }
 
 .graphPanel {
-  gap: 22px;
+  gap: var(--space-5);
   overflow: hidden;
 }
 
@@ -434,7 +501,7 @@ select {
 .graphControls {
   display: grid;
   grid-template-columns: repeat(2, minmax(170px, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
   width: min(440px, 100%);
 }
 
@@ -447,7 +514,7 @@ select {
 .metricGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .metricCard {
@@ -472,14 +539,14 @@ select {
 
 .metricCard.positive strong,
 .positiveText {
-  fill: #21753c;
-  color: #21753c;
+  fill: var(--color-success);
+  color: var(--color-success);
 }
 
 .metricCard.negative strong,
 .negativeText {
-  fill: #a83232;
-  color: #a83232;
+  fill: var(--color-danger);
+  color: var(--color-danger);
 }
 
 .chartScroller {
@@ -652,21 +719,21 @@ select {
 .globalAllocationRow {
   display: grid;
   grid-template-columns: 1.15fr 1.4fr repeat(4, minmax(125px, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
   min-width: 900px;
   padding: 13px 16px;
   align-items: center;
 }
 
 .globalAllocationHeader {
-  background: #f1f7f3;
+  background: var(--color-surface-muted);
   color: #59675e;
   font-size: .76rem;
   font-weight: 900;
   text-transform: uppercase;
 }
 
-.globalAllocationRow + .globalAllocationRow { border-top: 1px solid #e1e9e4; }
+.globalAllocationRow + .globalAllocationRow { border-top: 1px solid var(--color-border-subtle); }
 .globalAllocationRow span { display: grid; }
 .globalAllocationRow small { color: #718078; font-weight: 700; }
 
@@ -718,14 +785,14 @@ select {
 .stockRow {
   display: grid;
   grid-template-columns: 1.25fr repeat(5, minmax(120px, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
   min-width: 860px;
   padding: 12px 16px;
   align-items: center;
 }
 
 .stockTableHeader {
-  background: #f1f7f3;
+  background: var(--color-surface-muted);
   color: #59675e;
   font-size: 0.78rem;
   font-weight: 900;
@@ -733,7 +800,7 @@ select {
 }
 
 .stockRow + .stockRow {
-  border-top: 1px solid #e1e9e4;
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .stockRow div {
@@ -747,11 +814,11 @@ select {
 }
 
 .stockRow.buy strong:last-of-type {
-  color: #21753c;
+  color: var(--color-success);
 }
 
 .stockRow.trim strong:last-of-type {
-  color: #a83232;
+  color: var(--color-danger);
 }
 
 .mobileAllocationList {
@@ -820,7 +887,7 @@ select {
 .contributionRow {
   display: grid;
   grid-template-columns: 1.3fr repeat(3, minmax(130px, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
   min-width: 640px;
   padding: 12px 14px;
   align-items: center;
@@ -835,17 +902,17 @@ select {
 }
 
 .contributionRow + .contributionRow {
-  border-top: 1px solid #e1e9e4;
+  border-top: 1px solid var(--color-border-subtle);
 }
 
 .contributionRow.buy span:first-of-type {
-  color: #21753c;
+  color: var(--color-success);
   font-weight: 900;
 }
 
 .contributionRow.trim span:first-of-type,
 .warningText {
-  color: #a83232;
+  color: var(--color-danger);
   font-weight: 800;
 }
 
@@ -872,7 +939,7 @@ select {
 .allocationInputs {
   display: grid;
   grid-template-columns: repeat(3, minmax(160px, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .allocationInputs label {
@@ -889,18 +956,18 @@ select {
 }
 
 .allocationStatus.valid span {
-  color: #21753c;
+  color: var(--color-success);
 }
 
 .allocationStatus.invalid span,
 .allocationStatus.invalid strong {
-  color: #a83232;
+  color: var(--color-danger);
 }
 
 .householdDashboard {
   display: grid;
-  gap: 22px;
-  margin-bottom: 28px;
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 
 .householdHero {
@@ -928,14 +995,14 @@ select {
 .ownerDot { width: 12px; height: 12px; border-radius: 50%; background: #7dd69a; }
 .ownerZOSIA { background: #f2c66d; }
 
-.householdMetricGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.householdMetricGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); }
 .householdMetric { display: grid; gap: 7px; padding: 22px; border: 1px solid var(--line); border-radius: 18px; background: #fff; box-shadow: var(--shadow); }
 .householdMetric span { color: var(--muted); font-size: .78rem; font-weight: 850; letter-spacing: .08em; text-transform: uppercase; }
 .householdMetric strong { color: var(--green-900); font-size: clamp(1.45rem, 3vw, 2.1rem); }
 .householdMetric small { color: var(--muted); }
 .householdMetric.retirement { background: #fff9eb; border-color: #eddfba; }
 
-.householdDetailsGrid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); gap: 22px; }
+.householdDetailsGrid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr); gap: var(--space-5); }
 .householdDetailsGrid .panel { max-width: none; margin: 0; }
 .assetPanel h2, .goalPanel h2 { margin-top: 5px; font-size: 1.25rem; }
 .assetList { display: grid; gap: 14px; margin-top: 7px; }
@@ -958,46 +1025,39 @@ select {
   .assetRow .progressTrack { grid-column: 1 / -1; grid-row: 2; }
 }
 
-/* Refined application shell */
-:root {
-  color: #19241e;
-  background: #f4f7f3;
-  --ink: #17231c;
-  --muted: #627068;
-  --green-900: #123c28;
-  --green-700: #236b43;
-  --green-500: #48a86d;
-  --green-100: #e5f3e9;
-  --line: #dce6df;
-  --surface: #ffffff;
-  --shadow: 0 16px 45px rgb(25 58 38 / 8%);
-}
-
-body {
-  background:
-    radial-gradient(circle at 8% 0%, rgb(103 181 129 / 12%), transparent 25rem),
-    linear-gradient(180deg, #fbfdfb 0, #f4f7f3 38rem);
-}
-
 button,
-input,
-select,
+.formPanel :is(input, select),
+.graphControls select,
+.entriesHeader select,
+.allocationInputs input,
+.goalPanel input,
 a {
   -webkit-tap-highlight-color: transparent;
 }
 
 button,
 a,
-input,
-select {
-  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+.formPanel :is(input, select),
+.graphControls select,
+.entriesHeader select,
+.allocationInputs input,
+.goalPanel input {
+  transition:
+    border-color var(--motion-fast),
+    background-color var(--motion-fast),
+    color var(--motion-fast),
+    box-shadow var(--motion-fast),
+    transform var(--motion-fast);
 }
 
 button:focus-visible,
 a:focus-visible,
-input:focus-visible,
-select:focus-visible {
-  outline: 3px solid rgb(72 168 109 / 30%);
+.formPanel :is(input, select):focus-visible,
+.graphControls select:focus-visible,
+.entriesHeader select:focus-visible,
+.allocationInputs input:focus-visible,
+.goalPanel input:focus-visible {
+  outline: 3px solid var(--color-focus);
   outline-offset: 3px;
 }
 
@@ -1009,11 +1069,6 @@ select:focus-visible {
   background: rgb(255 255 255 / 88%);
   box-shadow: 0 4px 20px rgb(26 57 38 / 4%);
   backdrop-filter: blur(16px);
-}
-
-.topbar {
-  width: min(1180px, calc(100% - 40px));
-  padding: 14px 0;
 }
 
 .brand {
@@ -1050,51 +1105,11 @@ select:focus-visible {
   text-transform: uppercase;
 }
 
-nav {
-  padding: 4px;
-  border: 1px solid #e4ebe6;
-  border-radius: 12px;
-  background: #f6f9f6;
-}
-
-nav a {
-  min-height: 38px;
-  padding: 8px 16px;
-  border-radius: 9px;
-  font-size: 0.9rem;
-}
-
-nav a.active,
-nav a:hover {
-  border-color: transparent;
-  background: #fff;
-  box-shadow: 0 3px 12px rgb(30 65 43 / 9%);
-  color: var(--green-900);
-}
-
-.page {
-  width: min(1180px, calc(100% - 40px));
-  padding: 24px 0 80px;
-}
-
-.hero {
-  gap: 13px;
-  max-width: 920px;
-  padding: 54px 0 34px;
-}
-
 .hero h1 {
   max-width: 850px;
   font-size: clamp(2.65rem, 6vw, 5.35rem);
   line-height: 0.98;
   letter-spacing: -0.055em;
-}
-
-.hero p:not(.eyebrow) {
-  max-width: 690px;
-  color: var(--muted);
-  font-size: clamp(1rem, 2vw, 1.16rem);
-  line-height: 1.65;
 }
 
 .eyebrow {
@@ -1105,8 +1120,8 @@ nav a:hover {
 
 .controlSurface {
   display: grid;
-  gap: 22px;
-  margin-bottom: 28px;
+  gap: var(--space-5);
+  margin-bottom: var(--space-6);
   padding: 22px;
   border: 1px solid var(--line);
   border-radius: 20px;
@@ -1196,23 +1211,9 @@ nav a:hover {
   overflow-wrap: anywhere;
 }
 
-.panel {
-  gap: 18px;
-  margin-top: 0;
-  padding: 26px;
-  border-color: var(--line);
-  border-radius: 20px;
-  box-shadow: var(--shadow);
-}
-
-.panel h2 {
-  font-size: 1.16rem;
-  line-height: 1.3;
-}
-
 .dashboardGrid {
   grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
-  gap: 22px;
+  gap: var(--space-5);
 }
 
 .summaryPanel {
@@ -1284,23 +1285,21 @@ nav a:hover {
   padding-bottom: 4px;
 }
 
-input,
-select {
-  min-height: 48px;
-  padding: 10px 13px;
-  border-color: #cedbd2;
-  border-radius: 10px;
-}
-
-input:hover,
-select:hover {
+.formPanel :is(input, select):hover,
+.graphControls select:hover,
+.entriesHeader select:hover,
+.allocationInputs input:hover,
+.goalPanel input:hover {
   border-color: #8eb79c;
 }
 
-input:focus,
-select:focus {
+.formPanel :is(input, select):focus,
+.graphControls select:focus,
+.entriesHeader select:focus,
+.allocationInputs input:focus,
+.goalPanel input:focus {
   border-color: var(--green-500);
-  box-shadow: 0 0 0 4px rgb(72 168 109 / 11%);
+  box-shadow: var(--elevation-focus);
 }
 
 .button,
@@ -1421,7 +1420,7 @@ select:focus {
 
   .mobileAllocationList {
     display: grid;
-    gap: 16px;
+    gap: var(--space-4);
   }
 
   .mobileAllocationCard {
@@ -1437,7 +1436,7 @@ select:focus {
   .mobileAllocationCard dl > div {
     display: grid;
     grid-template-columns: minmax(112px, .8fr) minmax(0, 1.2fr);
-    gap: 16px;
+    gap: var(--space-4);
     padding: 12px 0;
     border-top: 1px solid #e5ede7;
   }
@@ -1466,7 +1465,7 @@ select:focus {
     height: 38px;
   }
 
-  nav a {
+  .siteHeader nav a {
     min-height: 36px;
     padding: 7px 10px;
     font-size: 0.82rem;
