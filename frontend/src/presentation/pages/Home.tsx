@@ -306,13 +306,16 @@ export function Home({ dependencies }) {
 
       <section className="controlSurface" aria-label="Ustawienia widoku portfela">
         <div className="filterGroup">
-          <p className="filterLabel">Czyj portfel wyświetlić?</p>
-          <div className="userSwitcher" aria-label="Wybór użytkownika">
+          <p className="filterLabel" id="owner-filter-label">
+            Czyj portfel wyświetlić?
+          </p>
+          <div className="userSwitcher" role="group" aria-labelledby="owner-filter-label">
             {users.map((user) => (
               <button
                 className={!isHouseholdView && user === selectedOwner ? 'userPill active' : 'userPill'}
                 key={user}
                 type="button"
+                aria-pressed={!isHouseholdView && user === selectedOwner}
                 onClick={() => setPortfolioScope(OwnerPortfolio(user))}
               >
                 <span className="userAvatar" aria-hidden="true">
@@ -324,6 +327,7 @@ export function Home({ dependencies }) {
             <button
               className={isHouseholdView ? 'userPill active' : 'userPill'}
               type="button"
+              aria-pressed={isHouseholdView}
               onClick={() => setPortfolioScope(HouseholdPortfolio(users))}
             >
               <span className="userAvatar" aria-hidden="true">
@@ -335,13 +339,16 @@ export function Home({ dependencies }) {
         </div>
         {!isHouseholdView && (
           <div className="filterGroup">
-            <p className="filterLabel">Rodzaj inwestycji</p>
-            <div className="typeNav" aria-label="Rodzaje inwestycji">
+            <p className="filterLabel" id="investment-type-filter-label">
+              Rodzaj inwestycji
+            </p>
+            <div className="typeNav" role="group" aria-labelledby="investment-type-filter-label">
               {types.map((type) => (
                 <button
                   className={type === typeFilter ? 'typeTab active' : 'typeTab'}
                   key={type}
                   type="button"
+                  aria-pressed={type === typeFilter}
                   onClick={() => changeType(type)}
                 >
                   {TYPE_LABELS[type] || type}
@@ -349,10 +356,14 @@ export function Home({ dependencies }) {
               ))}
             </div>
             {filterSubcategories.length > 0 && (
-              <div className="subtypeNav" aria-label="Podkategorie inwestycji">
+              <div className="subtypeNav" role="group" aria-labelledby="investment-subcategory-filter-label">
+                <span className="visuallyHidden" id="investment-subcategory-filter-label">
+                  Podkategorie inwestycji
+                </span>
                 <button
                   className={!subcategoryFilter ? 'subtypeTab active' : 'subtypeTab'}
                   type="button"
+                  aria-pressed={!subcategoryFilter}
                   onClick={() => setSubcategoryFilter('')}
                 >
                   Wszystkie
@@ -362,6 +373,7 @@ export function Home({ dependencies }) {
                     className={subcategory === subcategoryFilter ? 'subtypeTab active' : 'subtypeTab'}
                     key={subcategory}
                     type="button"
+                    aria-pressed={subcategory === subcategoryFilter}
                     onClick={() => setSubcategoryFilter(subcategory)}
                   >
                     {SUBCATEGORY_LABELS[subcategory] || subcategory}

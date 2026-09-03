@@ -56,6 +56,35 @@ describe('AppRouter', () => {
     expect(screen.getByText(/Portfele bez logowania/i)).toBeTruthy();
   });
 
+  it('names filter groups and announces each toggle button selected state', async () => {
+    render(
+      <AppRouter
+        dependencies={dependencies({
+          loadReferenceData: {
+            execute: async () => ({ users: ['jakub', 'zosia'], types: ['OBLIGACJE', 'KONTO_BANKOWE'] })
+          }
+        })}
+      />
+    );
+
+    const ownerGroup = await screen.findByRole('group', { name: 'Czyj portfel wyświetlić?' });
+    const typeGroup = screen.getByRole('group', { name: 'Rodzaj inwestycji' });
+    const subcategoryGroup = await screen.findByRole('group', { name: 'Podkategorie inwestycji' });
+    expect(ownerGroup).toHaveAccessibleName('Czyj portfel wyświetlić?');
+    expect(typeGroup).toHaveAccessibleName('Rodzaj inwestycji');
+    expect(subcategoryGroup).toHaveAccessibleName('Podkategorie inwestycji');
+
+    expect(screen.getByRole('button', { name: /jakub/i, pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /zosia/i, pressed: false })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Obligacje', pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Konto bankowe', pressed: false })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Wszystkie', pressed: true })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '3-letnie' }));
+    expect(screen.getByRole('button', { name: 'Wszystkie', pressed: false })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '3-letnie', pressed: true })).toBeInTheDocument();
+  });
+
   it('associates a validation error with the invalid field and focuses it', async () => {
     const validationError = new PortfolioChangeValidationFailure(
       'amountPln',
