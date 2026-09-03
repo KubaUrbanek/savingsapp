@@ -12,6 +12,12 @@ import {
   GLOBAL_ASSET_LABELS
 } from '../viewModels/formatters.js';
 
+function formatAllocationHeadline(targetAllocations) {
+  return STOCK_SUBCATEGORIES.map(
+    (subcategory) => `${SUBCATEGORY_LABELS[subcategory]} ${formatUnsignedPercent(targetAllocations[subcategory])}`
+  ).join(' / ');
+}
+
 export function StockAllocationPanel({ entries, onAddStockValue, preferences, onPreferenceError }) {
   const [virtualContribution, setVirtualContribution] = React.useState('');
   const [targetAllocations, setTargetAllocations] = React.useState(() => preferences.stockAllocation());
@@ -125,6 +131,40 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
                 </span>
                 <span>{formatPercent(row.divergencePercent)}</span>
               </div>
+            ))}
+          </div>
+          <div className="mobileAllocationList" aria-label="Docelowa alokacja giełdowa — widok mobilny">
+            {allocation.rows.map((row) => (
+              <article className={`mobileAllocationCard ${row.difference >= 0 ? 'buy' : 'trim'}`} key={row.subcategory}>
+                <h3>{SUBCATEGORY_LABELS[row.subcategory]}</h3>
+                <p className="mobileRecordMeta">{row.latestDate ? `Aktualizacja: ${row.latestDate}` : 'Brak wpisu'}</p>
+                <dl>
+                  <div>
+                    <dt>Obecnie</dt>
+                    <dd>{formatMoney(row.currentValue)}</dd>
+                  </div>
+                  <div>
+                    <dt>Powinno być</dt>
+                    <dd>{formatMoney(row.targetValue)}</dd>
+                  </div>
+                  <div>
+                    <dt>Różnica</dt>
+                    <dd className={row.difference >= 0 ? 'positiveText' : 'negativeText'}>
+                      {formatSignedMoney(row.difference)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Udział</dt>
+                    <dd>
+                      {formatUnsignedPercent(row.currentWeight)} / {row.targetWeight}%
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Odchylenie</dt>
+                    <dd>{formatPercent(row.divergencePercent)}</dd>
+                  </div>
+                </dl>
+              </article>
             ))}
           </div>
           <div className="rebalanceHint">

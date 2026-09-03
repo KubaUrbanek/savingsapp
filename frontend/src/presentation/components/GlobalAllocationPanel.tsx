@@ -124,6 +124,46 @@ export function GlobalAllocationPanel({ entries, preferences, onPreferenceError 
               </div>
             ))}
           </div>
+          <div className="mobileAllocationList" aria-label="Globalna alokacja majątku — widok mobilny">
+            {rows.map((row) => (
+              <article className="mobileAllocationCard" key={row.assetClass}>
+                <h3>{GLOBAL_ASSET_LABELS[row.assetClass]}</h3>
+                <dl>
+                  <div>
+                    <dt>Aktualnie</dt>
+                    <dd>
+                      {formatMoney(row.currentValue)}
+                      <small>{formatUnsignedPercent(row.currentWeight)}</small>
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Cel</dt>
+                    <dd>{formatUnsignedPercent(row.targetWeight)}</dd>
+                  </div>
+                  <div>
+                    <dt>Odchylenie</dt>
+                    <dd
+                      className={
+                        Math.abs(row.deviation) < 0.01 ? '' : row.deviation > 0 ? 'negativeText' : 'positiveText'
+                      }
+                    >
+                      {formatPercentagePoints(row.deviation)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Kup / sprzedaj</dt>
+                    <dd className={row.rebalanceAmount >= 0 ? 'positiveText' : 'negativeText'}>
+                      {formatSignedMoney(row.rebalanceAmount)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>Tylko nowe wpłaty</dt>
+                    <dd>{row.contributionAmount == null ? 'Niemożliwe' : formatMoney(row.contributionAmount)}</dd>
+                  </div>
+                </dl>
+              </article>
+            ))}
+          </div>
           <div className="rebalanceHint">
             <strong>Wariant bez sprzedaży:</strong>
             <span>
