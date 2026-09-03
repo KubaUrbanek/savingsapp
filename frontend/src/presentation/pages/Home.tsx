@@ -43,6 +43,8 @@ export function Home({ dependencies }) {
     date: today()
   });
   const importInputRef = React.useRef(null);
+  const pendingDeletionsRef = React.useRef(new Set());
+  const [pendingDeletions, setPendingDeletions] = React.useState([]);
   const isHouseholdView = portfolioScope.kind === PortfolioScopeKind.HOUSEHOLD;
   const selectedOwner = isHouseholdView ? null : portfolioScope.ownerId;
   const controller = usePortfolioController(useCases, portfolioScope, {
@@ -200,13 +202,53 @@ export function Home({ dependencies }) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  function deleteEntry(id) {
-    controller.commands
-      .deleteInvestmentEntry(id)
-      .then(() => {
-        setStatus('Usunięto wpis.');
-      })
-      .catch(reportError);
+  function confirmDeletion({ recordType, type, subcategory, date, amountLabel, amount }) {
+    const asset = [TYPE_LABELS[type] || type, subcategory && (SUBCATEGORY_LABELS[subcategory] || subcategory)]
+      .filter(Boolean)
+      .join(' · ');
+
+    return window.confirm(
+      `Czy na pewno chcesz usunąć ten rekord?\n\nTyp rekordu: ${recordType}\nAktywo: ${asset}\nData: ${date}\n${amountLabel}: ${formatMoney(amount)}`
+    );
+  }
+
+  function deleteRecord({ key, record, confirmation, command, onSuccess, trigger }) {
+    if (pendingDeletionsRef.current.has(key)) return;
+
+    const confirmed = confirmDeletion(confirmation);
+
+    // Native confirmation restores focus itself; this also makes that behavior deterministic in browsers and tests.
+    trigger?.focus();
+    if (!confirmed) return;
+
+    pendingDeletionsRef.current.add(key);
+    setPendingDeletions(Array.from(pendingDeletionsRef.current));
+
+    command(record.id)
+      .then(onSuccess)
+      .catch(reportError)
+      .finally(() => {
+        pendingDeletionsRef.current.delete(key);
+        setPendingDeletions(Array.from(pendingDeletionsRef.current));
+      });
+  }
+
+  function deleteEntry(entry, trigger) {
+    deleteRecord({
+      key: `entry:${entry.id}`,
+      record: entry,
+      confirmation: {
+        recordType: 'wpis wyceny',
+        type: entry.type,
+        subcategory: entry.subcategory,
+        date: entry.date,
+        amountLabel: 'Wartość',
+        amount: entry.valuePln
+      },
+      command: controller.commands.deleteInvestmentEntry,
+      onSuccess: () => setStatus('Usunięto wpis.'),
+      trigger
+    });
   }
 
   function submitOperation(event) {
@@ -233,8 +275,22 @@ export function Home({ dependencies }) {
       });
   }
 
-  function deleteOperation(id) {
-    controller.commands.deleteInvestmentOperation(id).catch(reportError);
+  function deleteOperation(operation, trigger) {
+    deleteRecord({
+      key: `operation:${operation.id}`,
+      record: operation,
+      confirmation: {
+        recordType: 'operacja',
+        type: operation.type,
+        subcategory: operation.subcategory,
+        date: operation.date,
+        amountLabel: 'Kwota',
+        amount: operation.amountPln
+      },
+      command: controller.commands.deleteInvestmentOperation,
+      onSuccess: undefined,
+      trigger
+    });
   }
 
   return (
@@ -553,8 +609,13 @@ export function Home({ dependencies }) {
                     <small>{operation.note}</small>
                   </div>
                   <strong>{formatMoney(operation.amountPln)}</strong>
-                  <button type="button" onClick={() => deleteOperation(operation.id)}>
-                    Usuń
+                  <button
+                    type="button"
+                    aria-disabled={pendingDeletions.includes(`operation:${operation.id}`) || undefined}
+                    aria-busy={pendingDeletions.includes(`operation:${operation.id}`) || undefined}
+                    onClick={(event) => deleteOperation(operation, event.currentTarget)}
+                  >
+                    {pendingDeletions.includes(`operation:${operation.id}`) ? 'Usuwanie…' : 'Usuń'}
                   </button>
                 </div>
               ))
@@ -596,8 +657,13 @@ export function Home({ dependencies }) {
                   </div>
                   <strong>{formatMoney(entry.valuePln)}</strong>
                   <div className="entryActions">
-                    <button type="button" onClick={() => deleteEntry(entry.id)}>
-                      Usuń
+                    <button
+                      type="button"
+                      aria-disabled={pendingDeletions.includes(`entry:${entry.id}`) || undefined}
+                      aria-busy={pendingDeletions.includes(`entry:${entry.id}`) || undefined}
+                      onClick={(event) => deleteEntry(entry, event.currentTarget)}
+                    >
+                      {pendingDeletions.includes(`entry:${entry.id}`) ? 'Usuwanie…' : 'Usuń'}
                     </button>
                   </div>
                 </div>
