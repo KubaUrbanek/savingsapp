@@ -423,7 +423,21 @@ export function Home({ dependencies }) {
         </section>
 
         {!isHouseholdView && (
-          <article className="summaryPanel" aria-labelledby="portfolio-summary-heading">
+          <nav className="sectionNavigation" aria-label="Nawigacja po sekcjach portfela">
+            <a href="#portfolio-summary">Podsumowanie</a>
+            <a href="#portfolio-update">Aktualizacja</a>
+            <a href="#portfolio-analysis">Analiza</a>
+            <a href="#portfolio-allocation">Alokacja</a>
+            <a href="#portfolio-history">Historia</a>
+          </nav>
+        )}
+
+        {!isHouseholdView && (
+          <article
+            className="summaryPanel sectionAnchor"
+            id="portfolio-summary"
+            aria-labelledby="portfolio-summary-heading"
+          >
             <div className="summaryHeading">
               <div>
                 <p className="eyebrow">Wartość aktywnego zakresu</p>
@@ -487,7 +501,7 @@ export function Home({ dependencies }) {
         />
       ) : (
         <>
-          <section className="quickUpdate" aria-labelledby="quick-update-heading">
+          <section className="quickUpdate sectionAnchor" id="portfolio-update" aria-labelledby="quick-update-heading">
             <form className="panel formPanel unifiedForm" onSubmit={submitOperation} aria-busy={isSaving}>
               <p className="eyebrow">Jedno miejsce do aktualizacji</p>
               <h2 id="quick-update-heading">Co zmieniło się w portfelu?</h2>
@@ -653,7 +667,12 @@ export function Home({ dependencies }) {
             </form>
           </section>
 
-          <GlobalAllocationPanel entries={graphEntries} preferences={preferences} onPreferenceError={reportError} />
+          <GlobalAllocationPanel
+            id="portfolio-allocation"
+            entries={graphEntries}
+            preferences={preferences}
+            onPreferenceError={reportError}
+          />
 
           {types.includes('GIELDA') && (
             <StockAllocationPanel
@@ -666,11 +685,11 @@ export function Home({ dependencies }) {
         </>
       )}
 
-      <SummaryChart entries={graphEntries} types={types} />
+      <SummaryChart id="portfolio-analysis" entries={graphEntries} types={types} />
 
       {!isHouseholdView && (
         <>
-          <section className="panel entriesPanel operationList">
+          <section className="panel entriesPanel operationList sectionAnchor" id="portfolio-history">
             <div className="entriesHeader">
               <h2>Historia wpłat i wypłat</h2>
             </div>

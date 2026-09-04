@@ -64,6 +64,25 @@ describe('AppRouter', () => {
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content');
   });
 
+  it('links the local portfolio navigation to stable section destinations', () => {
+    render(<AppRouter dependencies={dependencies()} />);
+
+    const navigation = screen.getByRole('navigation', { name: 'Nawigacja po sekcjach portfela' });
+    const destinations = {
+      Podsumowanie: 'portfolio-summary',
+      Aktualizacja: 'portfolio-update',
+      Analiza: 'portfolio-analysis',
+      Alokacja: 'portfolio-allocation',
+      Historia: 'portfolio-history'
+    };
+
+    for (const [name, id] of Object.entries(destinations)) {
+      expect(navigation).toContainElement(screen.getByRole('link', { name }));
+      expect(screen.getByRole('link', { name })).toHaveAttribute('href', `#${id}`);
+      expect(document.getElementById(id)).toBeInTheDocument();
+    }
+  });
+
   it.each([
     ['/', 'Portfele | Oszczędności'],
     ['/about', 'Informacje | Oszczędności'],

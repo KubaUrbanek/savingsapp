@@ -3,7 +3,7 @@ import React from 'react';
 import { buildSummary } from '../../domain/portfolio/summary.js';
 import { mapTimeSeriesViewModel } from '../viewModels/portfolioViewModelMappers.js';
 
-export function SummaryChart({ entries, types }) {
+export function SummaryChart({ id = undefined, entries, types }) {
   const summaryId = React.useId();
   const [selectedType, setSelectedType] = React.useState('ALL');
   const [period, setPeriod] = React.useState('monthly');
@@ -24,7 +24,7 @@ export function SummaryChart({ entries, types }) {
   const changeSymbol = (latestPoint?.changeAmount || 0) >= 0 ? '↑' : '↓';
 
   return (
-    <section className="panel graphPanel">
+    <section className="panel graphPanel sectionAnchor" id={id}>
       <div className="graphHeader">
         <div>
           <p className="eyebrow">Analiza wzrostu</p>
