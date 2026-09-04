@@ -5,6 +5,7 @@ import { HouseholdPortfolio, OwnerPortfolio, PortfolioScopeKind } from '../../ap
 import { buildCurrentSnapshot } from '../../domain/portfolio/snapshot.js';
 import { usePortfolioController } from '../portfolio/hooks/usePortfolioController.js';
 import { dataFrom } from '../portfolio/hooks/queryState.js';
+import { QueryBoundary } from '../components/QueryBoundary.js';
 import { GlobalAllocationPanel } from '../components/GlobalAllocationPanel.jsx';
 import { StockAllocationPanel } from '../components/StockAllocationPanel.jsx';
 import { SummaryChart } from '../components/SummaryChart.jsx';
@@ -64,8 +65,8 @@ export function Home({ dependencies }) {
   const referenceData = dataFrom(controller.referenceData, { users: FALLBACK_USERS, types: [] });
   const { users, types } = referenceData;
   const graphEntries = dataFrom(controller.snapshot, []);
+  const entries = dataFrom(controller.entries, []);
   const operations = dataFrom(controller.operations, []);
-  const performance = dataFrom(controller.performance, null);
   const reportError = React.useCallback(
     (nextError, action = 'odświeżyć dane', nextStep = 'Odśwież stronę i spróbuj ponownie.') => {
       setStatus('');
@@ -116,24 +117,6 @@ export function Home({ dependencies }) {
     }
     setStatus('');
   }, [portfolioScope, selectedOwner, isHouseholdView, preferences, reportError]);
-
-  React.useEffect(() => {
-    const failed = [
-      controller.referenceData,
-      controller.entries,
-      controller.snapshot,
-      controller.operations,
-      controller.performance
-    ].find((state) => state.status === 'failure');
-    if (failed) reportError(failed.error, 'wczytać portfela');
-  }, [
-    controller.referenceData,
-    controller.entries,
-    controller.snapshot,
-    controller.operations,
-    controller.performance,
-    reportError
-  ]);
 
   const currentEntries = buildCurrentSnapshot(graphEntries);
   const currentEntriesForView = typeFilter
@@ -445,46 +428,80 @@ export function Home({ dependencies }) {
             id="portfolio-summary"
             aria-labelledby="portfolio-summary-heading"
           >
-            <div className="summaryHeading">
-              <div>
-                <p className="eyebrow">Wartość aktywnego zakresu</p>
-                <h2 id="portfolio-summary-heading">{activePortfolioLabel}</h2>
-              </div>
-              <p className="dataFreshness">
-                <span>Stan danych</span>
-                <strong>{latestDataDate || 'Brak wycen'}</strong>
-              </p>
-            </div>
-            <p className="totalValue">{formatMoney(totalValue)}</p>
-            {performance && (
-              <p className="headlineChange">
-                <span>Zmiana w tym miesiącu</span>
-                <strong className={Number(performance.monthlyResultPln) >= 0 ? 'positiveText' : 'negativeText'}>
-                  {formatSignedMoney(performance.monthlyResultPln)}
-                </strong>
-                <small>
-                  {formatPercent(
-                    performance.monthlyReturnRatePercent == null ? NaN : Number(performance.monthlyReturnRatePercent)
-                  )}
-                </small>
-              </p>
-            )}
-            <div className="summaryGrid">
-              {types.map((type) => (
-                <div className="summaryCard" key={type}>
-                  <span>{TYPE_LABELS[type] || type}</span>
-                  <strong>{formatMoney(totalsByType[type] || 0)}</strong>
-                </div>
-              ))}
-            </div>
-            {performance && (
-              <div className="performanceGrid compactPerformance">
-                <div>
-                  <span>Łączny wynik inwestycji</span>
-                  <strong>{formatSignedMoney(performance.nominalResultPln)}</strong>
-                </div>
-              </div>
-            )}
+            <QueryBoundary
+              state={controller.snapshot}
+              skeletonShape="summary"
+              loadingLabel="Wczytywanie podsumowania portfela…"
+              emptyTitle="Portfel nie ma jeszcze wyceny"
+              emptyDescription="Dodaj pierwszą aktualną wycenę, aby zobaczyć wartość i strukturę portfela."
+              emptyAction={
+                <a className="button button--primary queryStateAction" href="#portfolio-update">
+                  Dodaj wycenę
+                </a>
+              }
+              onRetry={controller.retry.snapshot}
+            >
+              {() => (
+                <>
+                  <div className="summaryHeading">
+                    <div>
+                      <p className="eyebrow">Wartość aktywnego zakresu</p>
+                      <h2 id="portfolio-summary-heading">{activePortfolioLabel}</h2>
+                    </div>
+                    <p className="dataFreshness">
+                      <span>Stan danych</span>
+                      <strong>{latestDataDate || 'Brak wycen'}</strong>
+                    </p>
+                  </div>
+                  <p className="totalValue">{formatMoney(totalValue)}</p>
+                  <div className="summaryGrid">
+                    {types.map((type) => (
+                      <div className="summaryCard" key={type}>
+                        <span>{TYPE_LABELS[type] || type}</span>
+                        <strong>{formatMoney(totalsByType[type] || 0)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                  <QueryBoundary
+                    state={controller.performance}
+                    skeletonShape="summary"
+                    loadingLabel="Wczytywanie wyniku portfela…"
+                    onRetry={controller.retry.performance}
+                    isEmpty={(result) => result == null}
+                    emptyTitle="Brak danych o wyniku"
+                    emptyDescription="Wynik pojawi się po zapisaniu operacji i wyceny."
+                  >
+                    {(loadedPerformance) => (
+                      <>
+                        <p className="headlineChange">
+                          <span>Zmiana w tym miesiącu</span>
+                          <strong
+                            className={
+                              Number(loadedPerformance.monthlyResultPln) >= 0 ? 'positiveText' : 'negativeText'
+                            }
+                          >
+                            {formatSignedMoney(loadedPerformance.monthlyResultPln)}
+                          </strong>
+                          <small>
+                            {formatPercent(
+                              loadedPerformance.monthlyReturnRatePercent == null
+                                ? NaN
+                                : Number(loadedPerformance.monthlyReturnRatePercent)
+                            )}
+                          </small>
+                        </p>
+                        <div className="performanceGrid compactPerformance">
+                          <div>
+                            <span>Łączny wynik inwestycji</span>
+                            <strong>{formatSignedMoney(loadedPerformance.nominalResultPln)}</strong>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </QueryBoundary>
+                </>
+              )}
+            </QueryBoundary>
           </article>
         )}
       </header>
@@ -497,13 +514,23 @@ export function Home({ dependencies }) {
       </div>
 
       {isHouseholdView ? (
-        <HouseholdDashboard
-          entries={graphEntries}
-          users={users}
-          types={types}
-          preferences={preferences}
-          onPreferenceError={reportError}
-        />
+        <QueryBoundary
+          state={controller.snapshot}
+          skeletonShape="section"
+          onRetry={controller.retry.snapshot}
+          emptyTitle="Brak wycen gospodarstwa"
+          emptyDescription="Dodaj wycenę w portfelu właściciela, aby zobaczyć wspólne podsumowanie."
+        >
+          {(loadedEntries) => (
+            <HouseholdDashboard
+              entries={loadedEntries}
+              users={users}
+              types={types}
+              preferences={preferences}
+              onPreferenceError={reportError}
+            />
+          )}
+        </QueryBoundary>
       ) : (
         <>
           <section className="quickUpdate sectionAnchor" id="portfolio-update" aria-labelledby="quick-update-heading">
@@ -675,25 +702,68 @@ export function Home({ dependencies }) {
             </form>
           </section>
 
-          <GlobalAllocationPanel
-            id="portfolio-allocation"
-            entries={graphEntries}
-            preferences={preferences}
-            onPreferenceError={reportError}
-          />
+          <div id="portfolio-allocation" className="sectionAnchor">
+            <QueryBoundary
+              state={controller.snapshot}
+              skeletonShape="section"
+              onRetry={controller.retry.snapshot}
+              emptyTitle="Brak danych do alokacji"
+              emptyDescription="Dodaj wycenę, aby zobaczyć podział portfela."
+              emptyAction={
+                <a className="button button--primary queryStateAction" href="#portfolio-update">
+                  Dodaj wycenę
+                </a>
+              }
+            >
+              {(loadedEntries) => (
+                <GlobalAllocationPanel
+                  entries={loadedEntries}
+                  preferences={preferences}
+                  onPreferenceError={reportError}
+                />
+              )}
+            </QueryBoundary>
+          </div>
 
           {types.includes('GIELDA') && (
-            <StockAllocationPanel
-              entries={graphEntries}
-              onAddStockValue={prepareStockEntry}
-              preferences={preferences}
-              onPreferenceError={reportError}
-            />
+            <QueryBoundary
+              state={controller.snapshot}
+              skeletonShape="section"
+              onRetry={controller.retry.snapshot}
+              emptyTitle="Brak danych o akcjach"
+              emptyDescription="Dodaj wycenę ETF, aby zobaczyć szczegóły."
+            >
+              {(loadedEntries) => (
+                <StockAllocationPanel
+                  entries={loadedEntries}
+                  onAddStockValue={prepareStockEntry}
+                  preferences={preferences}
+                  onPreferenceError={reportError}
+                />
+              )}
+            </QueryBoundary>
           )}
         </>
       )}
 
-      <SummaryChart id="portfolio-analysis" entries={graphEntries} types={types} />
+      <div id="portfolio-analysis" className="sectionAnchor">
+        <QueryBoundary
+          state={controller.snapshot}
+          skeletonShape="chart"
+          onRetry={controller.retry.snapshot}
+          emptyTitle="Brak danych do analizy"
+          emptyDescription="Wykres pojawi się po zapisaniu pierwszej wyceny."
+          emptyAction={
+            !isHouseholdView && (
+              <a className="button button--primary queryStateAction" href="#portfolio-update">
+                Dodaj wycenę
+              </a>
+            )
+          }
+        >
+          {(loadedEntries) => <SummaryChart entries={loadedEntries} types={types} />}
+        </QueryBoundary>
+      </div>
 
       {!isHouseholdView && (
         <>
@@ -701,88 +771,105 @@ export function Home({ dependencies }) {
             <div className="entriesHeader">
               <h2>Historia wpłat i wypłat</h2>
             </div>
-            {operations.length === 0 ? (
-              <p>Brak przepływów dla wybranego aktywa.</p>
-            ) : (
-              operations.map((operation) => (
-                <div
-                  className="entryRow"
-                  key={operation.id}
-                  aria-busy={pendingDeletions.includes(`operation:${operation.id}`)}
-                >
-                  <div>
-                    <strong>
-                      <span className="entryFieldLabel">Typ zdarzenia: </span>
-                      {OPERATION_LABELS[operation.operationType]}
-                    </strong>
-                    <span>
-                      {TYPE_LABELS[operation.type]}
-                      {operation.subcategory ? ` · ${SUBCATEGORY_LABELS[operation.subcategory]}` : ''} ·{' '}
-                      <span className="entryFieldLabel">Data: </span>
-                      {operation.date}
-                    </span>
-                    <small>{operation.note}</small>
-                  </div>
-                  <strong>
-                    <span className="entryFieldLabel">Wartość: </span>
-                    {formatMoney(operation.amountPln)}
-                  </strong>
-                  <div className="entryActions">
-                    <span className="entryFieldLabel">Akcja:</span>
-                    <Button
-                      variant="danger"
-                      type="button"
-                      disabled={pendingDeletions.includes(`operation:${operation.id}`)}
-                      onClick={(event) => deleteOperation(operation, event.currentTarget)}
-                    >
-                      {pendingDeletions.includes(`operation:${operation.id}`) ? 'Usuwanie…' : 'Usuń'}
-                    </Button>
-                  </div>
-                </div>
-              ))
-            )}
-          </section>
-          <section className="panel entriesPanel">
-            <div className="entriesHeader">
-              <h2>Historia wycen: {displayName(selectedOwner)}</h2>
-            </div>
-            {graphEntries.length === 0 ? (
-              <p>Brak wpisów dla wybranej osoby.</p>
-            ) : (
-              <div className="entryList">
-                {graphEntries.map((entry) => (
-                  <div className="entryRow" key={entry.id} aria-busy={pendingDeletions.includes(`entry:${entry.id}`)}>
+            <QueryBoundary
+              state={controller.operations}
+              skeletonShape="list"
+              onRetry={controller.retry.operations}
+              emptyTitle="Brak przepływów"
+              emptyDescription="Wpłaty, wypłaty, kupna i sprzedaże pojawią się tutaj po zapisaniu."
+            >
+              {(loadedOperations) =>
+                loadedOperations.map((operation) => (
+                  <div
+                    className="entryRow"
+                    key={operation.id}
+                    aria-busy={pendingDeletions.includes(`operation:${operation.id}`)}
+                  >
                     <div>
                       <strong>
                         <span className="entryFieldLabel">Typ zdarzenia: </span>
-                        {TYPE_LABELS[entry.type] || entry.type}
+                        {OPERATION_LABELS[operation.operationType]}
                       </strong>
                       <span>
-                        {entry.subcategory ? SUBCATEGORY_LABELS[entry.subcategory] : 'Bez podkategorii'} ·{' '}
+                        {TYPE_LABELS[operation.type]}
+                        {operation.subcategory ? ` · ${SUBCATEGORY_LABELS[operation.subcategory]}` : ''} ·{' '}
                         <span className="entryFieldLabel">Data: </span>
-                        {entry.date}
+                        {operation.date}
                       </span>
-                      {entry.updatedAt && <small>Ostatnia modyfikacja: {formatDateTime(entry.updatedAt)}</small>}
+                      <small>{operation.note}</small>
                     </div>
                     <strong>
                       <span className="entryFieldLabel">Wartość: </span>
-                      {formatMoney(entry.valuePln)}
+                      {formatMoney(operation.amountPln)}
                     </strong>
                     <div className="entryActions">
                       <span className="entryFieldLabel">Akcja:</span>
                       <Button
                         variant="danger"
                         type="button"
-                        disabled={pendingDeletions.includes(`entry:${entry.id}`)}
-                        onClick={(event) => deleteEntry(entry, event.currentTarget)}
+                        disabled={pendingDeletions.includes(`operation:${operation.id}`)}
+                        onClick={(event) => deleteOperation(operation, event.currentTarget)}
                       >
-                        {pendingDeletions.includes(`entry:${entry.id}`) ? 'Usuwanie…' : 'Usuń'}
+                        {pendingDeletions.includes(`operation:${operation.id}`) ? 'Usuwanie…' : 'Usuń'}
                       </Button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                ))
+              }
+            </QueryBoundary>
+          </section>
+          <section className="panel entriesPanel">
+            <div className="entriesHeader">
+              <h2>Historia wycen: {displayName(selectedOwner)}</h2>
+            </div>
+            <QueryBoundary
+              state={controller.entries}
+              skeletonShape="list"
+              onRetry={controller.retry.entries}
+              emptyTitle="Brak wycen dla wybranej osoby"
+              emptyDescription="Dodaj pierwszą wycenę, aby rozpocząć historię."
+              emptyAction={
+                <a className="button button--primary queryStateAction" href="#portfolio-update">
+                  Dodaj wycenę
+                </a>
+              }
+            >
+              {() => (
+                <div className="entryList">
+                  {entries.map((entry) => (
+                    <div className="entryRow" key={entry.id} aria-busy={pendingDeletions.includes(`entry:${entry.id}`)}>
+                      <div>
+                        <strong>
+                          <span className="entryFieldLabel">Typ zdarzenia: </span>
+                          {TYPE_LABELS[entry.type] || entry.type}
+                        </strong>
+                        <span>
+                          {entry.subcategory ? SUBCATEGORY_LABELS[entry.subcategory] : 'Bez podkategorii'} ·{' '}
+                          <span className="entryFieldLabel">Data: </span>
+                          {entry.date}
+                        </span>
+                        {entry.updatedAt && <small>Ostatnia modyfikacja: {formatDateTime(entry.updatedAt)}</small>}
+                      </div>
+                      <strong>
+                        <span className="entryFieldLabel">Wartość: </span>
+                        {formatMoney(entry.valuePln)}
+                      </strong>
+                      <div className="entryActions">
+                        <span className="entryFieldLabel">Akcja:</span>
+                        <Button
+                          variant="danger"
+                          type="button"
+                          disabled={pendingDeletions.includes(`entry:${entry.id}`)}
+                          onClick={(event) => deleteEntry(entry, event.currentTarget)}
+                        >
+                          {pendingDeletions.includes(`entry:${entry.id}`) ? 'Usuwanie…' : 'Usuń'}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </QueryBoundary>
           </section>
         </>
       )}
