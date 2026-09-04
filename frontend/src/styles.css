@@ -1615,6 +1615,69 @@ a:focus-visible,
   color: var(--color-danger-text);
 }
 
+.queryBoundaryContent {
+  position: relative;
+}
+
+.queryRefreshing {
+  display: block;
+  margin-bottom: var(--space-2);
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+}
+
+.queryState {
+  display: grid;
+  justify-items: start;
+  min-height: 144px;
+  padding: var(--space-5);
+  border: 1px solid var(--color-ledger);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-muted);
+}
+
+.queryState > :is(strong, p) {
+  margin: 0 0 var(--space-3);
+}
+
+.queryState--failure {
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-background);
+  color: var(--color-danger-text);
+}
+
+.queryStateAction {
+  text-decoration: none;
+}
+
+.querySkeleton {
+  display: grid;
+  align-content: center;
+  gap: var(--space-3);
+  min-height: 180px;
+  padding: var(--space-5);
+  border: 1px solid var(--color-ledger);
+  border-radius: var(--radius-panel);
+  background: var(--color-surface-muted);
+}
+
+.querySkeleton--chart {
+  min-height: 320px;
+}
+
+.querySkeletonLine {
+  width: min(100%, 680px);
+  height: 22px;
+  border-radius: var(--radius-control);
+  background: var(--color-ledger);
+  opacity: 0.65;
+}
+
+.querySkeletonLine:nth-of-type(2n) {
+  width: min(72%, 480px);
+}
+
 .secondaryButton {
   border-color: var(--color-ledger);
   background: var(--color-portfolio-soft);

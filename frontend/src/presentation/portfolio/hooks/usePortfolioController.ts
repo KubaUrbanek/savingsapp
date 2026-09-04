@@ -17,23 +17,29 @@ export function usePortfolioController(useCases, scope, filters) {
   const type = filters.type || undefined;
   const subcategory = (type && filters.subcategory) || undefined;
   const isOwner = scope.kind === PortfolioScopeKind.OWNER;
+  const scopeKey =
+    scope.kind === PortfolioScopeKind.OWNER ? `owner:${scope.ownerId}` : `household:${scope.ownerIds.join(',')}`;
+  const filteredQueryKey = `${scopeKey}|${type || ''}|${subcategory || ''}`;
 
   const referenceData = useLatestQuery(
     (signal) => useCases.loadReferenceData.execute({ signal }),
-    [useCases, versions.referenceData]
+    [useCases, versions.referenceData],
+    { queryKey: 'referenceData' }
   );
   const entries = useLatestQuery(
     (signal) => useCases.loadPortfolio.execute({ scope, filters: { type, subcategory }, signal }),
-    [useCases, scope, type, subcategory, versions.entries]
+    [useCases, scope, type, subcategory, versions.entries],
+    { queryKey: filteredQueryKey }
   );
   const snapshot = useLatestQuery(
     (signal) => useCases.loadPortfolio.execute({ scope, signal }),
-    [useCases, scope, versions.snapshot]
+    [useCases, scope, versions.snapshot],
+    { queryKey: scopeKey }
   );
   const performanceResult = useLatestQuery(
     (signal) => useCases.loadPortfolioPerformance.execute({ scope, filters: { type, subcategory }, signal }),
     [useCases, scope, type, subcategory, versions.operations, versions.performance],
-    { enabled: isOwner }
+    { enabled: isOwner, queryKey: filteredQueryKey }
   );
 
   const operations = React.useMemo(() => {
@@ -75,5 +81,16 @@ export function usePortfolioController(useCases, scope, filters) {
     [runCommand, useCases]
   );
 
-  return { entries, snapshot, referenceData, operations, performance, mutation, commands };
+  const retry = React.useMemo(
+    () => ({
+      referenceData: () => invalidate([PortfolioQuery.REFERENCE_DATA]),
+      entries: () => invalidate([PortfolioQuery.ENTRIES]),
+      snapshot: () => invalidate([PortfolioQuery.SNAPSHOT]),
+      operations: () => invalidate([PortfolioQuery.OPERATIONS]),
+      performance: () => invalidate([PortfolioQuery.PERFORMANCE])
+    }),
+    []
+  );
+
+  return { entries, snapshot, referenceData, operations, performance, mutation, commands, retry };
 }

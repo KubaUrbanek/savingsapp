@@ -6,6 +6,7 @@ import { Button } from '../../src/presentation/components/Button.js';
 import { Field } from '../../src/presentation/components/Field.js';
 import { InlineMessage } from '../../src/presentation/components/InlineMessage.js';
 import { SectionHeader } from '../../src/presentation/components/SectionHeader.js';
+import { QueryBoundary } from '../../src/presentation/components/QueryBoundary.js';
 
 afterEach(cleanup);
 
@@ -59,5 +60,55 @@ describe('presentation components', () => {
     expect(screen.getByRole('heading', { name: 'Plan' })).toBeInTheDocument();
     expect(screen.getByText('Opis planu')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edytuj' })).toBeEnabled();
+  });
+
+  it('renders stable loading and empty states for a query section', () => {
+    const { rerender } = render(
+      <QueryBoundary state={{ status: 'loading' }} loadingLabel="Wczytywanie historii…">
+        {() => <p>Dane</p>}
+      </QueryBoundary>
+    );
+
+    expect(screen.getByRole('status', { name: 'Wczytywanie historii…' })).toHaveClass('querySkeleton');
+    expect(screen.queryByText('Dane')).not.toBeInTheDocument();
+
+    rerender(
+      <QueryBoundary
+        state={{ status: 'success', data: [] }}
+        emptyTitle="Brak wycen"
+        emptyDescription="Dodaj pierwszą wycenę."
+        emptyAction={<a href="#form">Dodaj wycenę</a>}
+      >
+        {() => <p>Dane</p>}
+      </QueryBoundary>
+    );
+    expect(screen.getByText('Brak wycen')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Dodaj wycenę' })).toHaveAttribute('href', '#form');
+  });
+
+  it('shows a safe failure and invokes the query retry action', () => {
+    const retry = vi.fn();
+    render(
+      <QueryBoundary state={{ status: 'failure', error: new Error('tajny komunikat adaptera') }} onRetry={retry}>
+        {() => <p>Dane</p>}
+      </QueryBoundary>
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Nie udało się wczytać tej sekcji');
+    expect(screen.queryByText('tajny komunikat adaptera')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Spróbuj ponownie' }));
+    expect(retry).toHaveBeenCalledOnce();
+  });
+
+  it('keeps successful data visible while a query refreshes', () => {
+    render(
+      <QueryBoundary state={{ status: 'loading', data: ['wartość'] }}>
+        {(data) => <p>{(data as string[])[0]}</p>}
+      </QueryBoundary>
+    );
+
+    expect(screen.getByText('wartość')).toBeInTheDocument();
+    expect(screen.getByText('Odświeżanie danych…')).toHaveAttribute('role', 'status');
+    expect(screen.getByText('wartość').parentElement).toHaveAttribute('aria-busy', 'true');
   });
 });

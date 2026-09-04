@@ -185,6 +185,73 @@ describe('AppRouter', () => {
     expect(screen.getByRole('button', { name: 'Razem', pressed: true })).toBeInTheDocument();
   });
 
+  it('clears the previous owner data while the newly selected owner is loading', async () => {
+    const zosiaSnapshot = deferred();
+    render(
+      <AppRouter
+        dependencies={dependencies({
+          loadReferenceData: { execute: async () => ({ users: ['jakub', 'zosia'], types: ['KONTO_BANKOWE'] }) },
+          loadPortfolio: {
+            execute: async ({ scope, filters }: { scope: { ownerId: string }; filters?: object }) => {
+              if (scope.ownerId === 'zosia' && !filters) return zosiaSnapshot.promise;
+              return [
+                {
+                  id: `entry-${scope.ownerId}`,
+                  owner: scope.ownerId,
+                  type: 'KONTO_BANKOWE',
+                  subcategory: '',
+                  date: '2026-09-03',
+                  valuePln: scope.ownerId === 'jakub' ? 4200 : 2800
+                }
+              ];
+            }
+          }
+        })}
+      />
+    );
+
+    expect((await screen.findAllByText(/4200,00/)).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: /zosia/i, pressed: false }));
+
+    expect(screen.queryAllByText(/4200,00/)).toHaveLength(0);
+    expect(screen.getByRole('status', { name: 'Wczytywanie podsumowania portfela…' })).toBeInTheDocument();
+    zosiaSnapshot.resolve([
+      { id: 'entry-zosia', owner: 'zosia', type: 'KONTO_BANKOWE', subcategory: '', date: '2026-09-04', valuePln: 2800 }
+    ]);
+    expect((await screen.findAllByText(/2800,00/)).length).toBeGreaterThan(0);
+  });
+
+  it('keeps an independent section available when the snapshot query fails', async () => {
+    render(
+      <AppRouter
+        dependencies={dependencies({
+          loadPortfolio: {
+            execute: async ({ filters }: { filters?: object }) =>
+              filters
+                ? [
+                    {
+                      id: 'entry-jakub',
+                      owner: 'jakub',
+                      type: 'KONTO_BANKOWE',
+                      subcategory: '',
+                      date: '2026-09-03',
+                      valuePln: 4200
+                    }
+                  ]
+                : Promise.reject(new Error('wewnętrzny błąd snapshotu'))
+          }
+        })}
+      />
+    );
+
+    expect(await screen.findByText('Historia wycen: jakub')).toBeInTheDocument();
+    expect((await screen.findAllByText(/4200,00/)).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole('alert').some((alert) => alert.textContent?.includes('Nie udało się wczytać tej sekcji'))
+    ).toBe(true);
+    expect(screen.queryByText('wewnętrzny błąd snapshotu')).not.toBeInTheDocument();
+  });
+
   it('associates a validation error with the invalid field and focuses it', async () => {
     const validationError = new PortfolioChangeValidationFailure(
       'amountPln',
