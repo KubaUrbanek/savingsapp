@@ -11,6 +11,10 @@ import {
   SUBCATEGORY_LABELS,
   GLOBAL_ASSET_LABELS
 } from '../viewModels/formatters.js';
+import { Button } from './Button.jsx';
+import { Field } from './Field.jsx';
+import { InlineMessage } from './InlineMessage.jsx';
+import { SectionHeader } from './SectionHeader.jsx';
 
 export function GlobalAllocationPanel({ id = undefined, entries, preferences, onPreferenceError }) {
   const [targets, setTargets] = React.useState(() => preferences.globalAllocation());
@@ -31,27 +35,30 @@ export function GlobalAllocationPanel({ id = undefined, entries, preferences, on
 
   return (
     <section className="panel globalAllocationPanel sectionAnchor" id={id}>
-      <div className="stockHeader">
-        <div>
-          <p className="eyebrow">Alokacja całego majątku</p>
-          <h2>Globalny plan portfela inwestycyjnego</h2>
-          <p>
+      <SectionHeader
+        className="stockHeader"
+        eyebrow="Alokacja całego majątku"
+        title="Globalny plan portfela inwestycyjnego"
+        description={
+          <>
             Obligacje, akcje i złoto są liczone na podstawie najnowszych wycen. Gotówka pozostaje poza wagami docelowymi
             i jest pokazana osobno.
-          </p>
-        </div>
-        <div className="globalTotals">
-          <div>
-            <span>Aktywa w planie</span>
-            <strong>{formatMoney(investedTotal)}</strong>
+          </>
+        }
+        action={
+          <div className="globalTotals">
+            <div>
+              <span>Aktywa w planie</span>
+              <strong>{formatMoney(investedTotal)}</strong>
+            </div>
+            <div>
+              <span>Gotówka poza planem</span>
+              <strong>{formatMoney(cashTotal)}</strong>
+              <small>Konta, PPO i PPK</small>
+            </div>
           </div>
-          <div>
-            <span>Gotówka poza planem</span>
-            <strong>{formatMoney(cashTotal)}</strong>
-            <small>Konta, PPO i PPK</small>
-          </div>
-        </div>
-      </div>
+        }
+      />
 
       <div className="allocationEditor">
         <div>
@@ -60,34 +67,35 @@ export function GlobalAllocationPanel({ id = undefined, entries, preferences, on
         </div>
         <div className="allocationInputs globalInputs">
           {GLOBAL_ASSET_CLASSES.map((assetClass) => (
-            <label key={assetClass}>
-              {GLOBAL_ASSET_LABELS[assetClass]}
-              <input
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                value={targets[assetClass]}
-                onChange={(event) =>
-                  setTargets((current) => ({
-                    ...current,
-                    [assetClass]: event.target.value === '' ? 0 : Number(event.target.value)
-                  }))
-                }
-              />
-            </label>
+            <Field
+              key={assetClass}
+              label={GLOBAL_ASSET_LABELS[assetClass]}
+              control={
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={targets[assetClass]}
+                  onChange={(event) =>
+                    setTargets((current) => ({
+                      ...current,
+                      [assetClass]: event.target.value === '' ? 0 : Number(event.target.value)
+                    }))
+                  }
+                />
+              }
+            />
           ))}
         </div>
         <div className={isValid ? 'allocationStatus valid' : 'allocationStatus invalid'}>
           <span>Suma wag: {formatUnsignedPercent(targetTotal)}</span>
-          {!isValid && <strong>Ustaw łącznie 100%, aby obliczenia tworzyły poprawny plan.</strong>}
-          <button
-            className="subtypeTab"
-            type="button"
-            onClick={() => setTargets({ ...DEFAULT_GLOBAL_TARGET_ALLOCATIONS })}
-          >
+          {!isValid && (
+            <InlineMessage variant="warning">Ustaw łącznie 100%, aby obliczenia tworzyły poprawny plan.</InlineMessage>
+          )}
+          <Button variant="quiet" type="button" onClick={() => setTargets({ ...DEFAULT_GLOBAL_TARGET_ALLOCATIONS })}>
             Przywróć 50/30/20
-          </button>
+          </Button>
         </div>
       </div>
 
