@@ -53,12 +53,24 @@ export function usePortfolioController(useCases, scope, filters) {
     return performanceResult.status === 'failure' ? failure(performanceResult.error) : idle();
   }, [performanceResult]);
 
+  const queryStates = React.useMemo(
+    () => ({ entries, snapshot, operations, performance, referenceData }),
+    [entries, snapshot, operations, performance, referenceData]
+  );
+
   const runCommand = React.useCallback(async (name, execute) => {
     setMutation(loading());
     try {
       const result = await execute();
-      setMutation(success({ command: name, result }));
-      invalidate(affectedQueries(name));
+      const queries = affectedQueries(name);
+      setMutation(
+        success({
+          command: name,
+          result,
+          affectedQueries: queries
+        })
+      );
+      invalidate(queries);
       return result;
     } catch (error) {
       setMutation(failure(error));
@@ -92,5 +104,25 @@ export function usePortfolioController(useCases, scope, filters) {
     []
   );
 
-  return { entries, snapshot, referenceData, operations, performance, mutation, commands, retry };
+  const mutationWithProjection = React.useMemo(() => {
+    if (mutation.status !== 'success') return mutation;
+    const affectedStates = mutation.data.affectedQueries.map((query) => queryStates[query]);
+    const projection = affectedStates.some((state) => state.status === 'failure')
+      ? 'failure'
+      : affectedStates.some((state) => state.status === 'loading')
+        ? 'refreshing'
+        : 'synchronized';
+    return success({ ...mutation.data, projection });
+  }, [mutation, queryStates]);
+
+  return {
+    entries,
+    snapshot,
+    referenceData,
+    operations,
+    performance,
+    mutation: mutationWithProjection,
+    commands,
+    retry
+  };
 }

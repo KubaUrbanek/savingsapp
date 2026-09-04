@@ -272,7 +272,7 @@ describe('AppRouter', () => {
     expect(amount).toHaveAttribute('aria-invalid', 'true');
     expect(amount).toHaveAttribute('aria-describedby', message.id);
     expect(message).toHaveAttribute('id', 'portfolio-change-amount-error');
-    expect(amount).toHaveFocus();
+    await waitFor(() => expect(amount).toHaveFocus());
   });
 
   it('keeps validation feedback associated when the conditional valuation input is shown', async () => {
@@ -319,6 +319,55 @@ describe('AppRouter', () => {
     expect(alert).toHaveFocus();
     expect(alert).toHaveTextContent('Nie udało się zapisać zmiany');
     expect(alert).toHaveTextContent('Sprawdź dane i spróbuj ponownie');
+  });
+
+  it('distinguishes an accepted command from synchronized CQRS projections', async () => {
+    const refreshedEntries = deferred();
+    const refreshedSnapshot = deferred();
+    const refreshedPerformance = deferred();
+    let waitForProjection = false;
+    const entry = {
+      id: 'entry-jakub',
+      owner: 'jakub',
+      type: 'KONTO_BANKOWE',
+      subcategory: '',
+      date: '2026-09-03',
+      valuePln: 100
+    };
+
+    render(
+      <AppRouter
+        dependencies={dependencies({
+          loadPortfolio: {
+            execute: ({ filters }: { filters?: object }) => {
+              if (!waitForProjection) return Promise.resolve([entry]);
+              return filters ? refreshedEntries.promise : refreshedSnapshot.promise;
+            }
+          },
+          loadPortfolioPerformance: {
+            execute: () =>
+              waitForProjection ? refreshedPerformance.promise : Promise.resolve({ operations: [], performance: null })
+          }
+        })}
+      />
+    );
+
+    fireEvent.change(await screen.findByLabelText('Kwota w PLN'), { target: { value: '10' } });
+    waitForProjection = true;
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
+
+    const savedMessage = await screen.findByText(/Zapisano operację/);
+    const status = savedMessage.closest('[role="status"]');
+    expect(status).not.toBeNull();
+    if (!status) throw new Error('The portfolio command status was not rendered.');
+    await waitFor(() => expect(status).toHaveTextContent('Aktualizujemy dane widoczne w portfelu'));
+
+    refreshedEntries.resolve([entry]);
+    refreshedSnapshot.resolve([entry]);
+    refreshedPerformance.resolve({ operations: [], performance: null });
+
+    await waitFor(() => expect(status).not.toHaveTextContent('Aktualizujemy dane widoczne w portfelu'));
+    expect(status).toHaveTextContent('Zapisano operację');
   });
 
   it('announces progress and success for an asynchronous export', async () => {

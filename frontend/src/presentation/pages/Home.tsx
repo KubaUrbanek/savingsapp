@@ -138,6 +138,13 @@ export function Home({ dependencies }) {
     (latestDate, entry) => (entry.date > latestDate ? entry.date : latestDate),
     ''
   );
+  const projectionStatus = controller.mutation.status === 'success' ? controller.mutation.data.projection : undefined;
+  const visibleStatus =
+    projectionStatus === 'refreshing'
+      ? `${status} Aktualizujemy dane widoczne w portfelu.`.trim()
+      : projectionStatus === 'failure'
+        ? `${status} Zapis został przyjęty, ale nie udało się odświeżyć wszystkich danych. Spróbuj ponownie w odpowiedniej sekcji.`.trim()
+        : status;
 
   function changeType(nextType) {
     setTypeFilter(nextType);
@@ -507,7 +514,7 @@ export function Home({ dependencies }) {
       </header>
 
       <div className="formFeedback" aria-label="Informacje o operacjach">
-        <InlineMessage variant="success">{status}</InlineMessage>
+        <InlineMessage variant={projectionStatus === 'failure' ? 'warning' : 'success'}>{visibleStatus}</InlineMessage>
         <InlineMessage ref={errorSummaryRef} variant="error">
           {error}
         </InlineMessage>
