@@ -1512,6 +1512,105 @@ a:focus-visible,
   color: var(--color-surface);
 }
 
+.button--primary {
+  border-color: var(--color-portfolio-strong);
+  background: var(--color-portfolio-strong);
+  box-shadow: var(--elevation-button);
+  color: var(--color-surface);
+}
+
+.button--secondary {
+  border-color: var(--color-ledger);
+  background: var(--color-portfolio-soft);
+  color: var(--color-portfolio-strong);
+}
+
+.button--quiet {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  color: var(--color-portfolio-strong);
+}
+
+.button--danger {
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-background);
+  color: var(--color-danger-text);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+  box-shadow: none;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+}
+
+.fieldLabel {
+  font-weight: 750;
+}
+
+.fieldHint {
+  color: var(--color-muted);
+  font-size: var(--font-size-caption);
+}
+
+.fieldError {
+  color: var(--color-danger-text);
+  font-size: var(--font-size-label);
+  font-weight: 750;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-5);
+}
+
+.sectionHeaderCopy {
+  display: grid;
+  gap: 6px;
+}
+
+.sectionHeaderCopy :is(h2, h3, p) {
+  margin: 0;
+}
+
+.inlineMessage {
+  padding: 12px 14px;
+  border: 1px solid;
+  border-radius: var(--radius-control);
+  font-weight: 700;
+}
+
+.inlineMessage--info {
+  border-color: var(--color-ledger);
+  background: var(--color-surface-muted);
+  color: var(--color-ink);
+}
+
+.inlineMessage--success {
+  border-color: var(--color-success-border);
+  background: var(--color-portfolio-soft);
+  color: var(--color-portfolio-strong);
+}
+
+.inlineMessage--warning {
+  border-color: var(--color-warning-border);
+  background: var(--color-warning-background);
+  color: var(--color-warning-text);
+}
+
+.inlineMessage--error {
+  border-color: var(--color-danger-border);
+  background: var(--color-danger-background);
+  color: var(--color-danger-text);
+}
+
 .secondaryButton {
   border-color: var(--color-ledger);
   background: var(--color-portfolio-soft);

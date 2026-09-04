@@ -11,6 +11,10 @@ import {
   SUBCATEGORY_LABELS,
   GLOBAL_ASSET_LABELS
 } from '../viewModels/formatters.js';
+import { Button } from './Button.jsx';
+import { Field } from './Field.jsx';
+import { InlineMessage } from './InlineMessage.jsx';
+import { SectionHeader } from './SectionHeader.jsx';
 
 function formatAllocationHeadline(targetAllocations) {
   return STOCK_SUBCATEGORIES.map(
@@ -56,20 +60,23 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
 
   return (
     <section className="panel stockPanel">
-      <div className="stockHeader">
-        <div>
-          <p className="eyebrow">Giełda — rebalancing ETF</p>
-          <h2>Docelowy podział: {formatAllocationHeadline(targetAllocations)}</h2>
-          <p>
+      <SectionHeader
+        className="stockHeader"
+        eyebrow="Giełda — rebalancing ETF"
+        title={<>Docelowy podział: {formatAllocationHeadline(targetAllocations)}</>}
+        description={
+          <>
             Panel używa najnowszej wartości każdej podkategorii Giełdy, więc możesz regularnie dopisywać aktualne wyceny
             ETF bez nadpisywania historii.
-          </p>
-        </div>
-        <div className="stockTotal">
-          <span>Aktualna wartość ETF</span>
-          <strong>{formatMoney(allocation.total)}</strong>
-        </div>
-      </div>
+          </>
+        }
+        action={
+          <div className="stockTotal">
+            <span>Aktualna wartość ETF</span>
+            <strong>{formatMoney(allocation.total)}</strong>
+          </div>
+        }
+      />
 
       <div className="allocationEditor">
         <div>
@@ -82,25 +89,30 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
         </div>
         <div className="allocationInputs">
           {STOCK_SUBCATEGORIES.map((subcategory) => (
-            <label key={subcategory}>
-              {SUBCATEGORY_LABELS[subcategory]}
-              <input
-                min="0"
-                max="100"
-                step="0.01"
-                type="number"
-                value={targetAllocations[subcategory]}
-                onChange={(event) => changeTargetAllocation(subcategory, event.target.value)}
-              />
-            </label>
+            <Field
+              key={subcategory}
+              label={SUBCATEGORY_LABELS[subcategory]}
+              control={
+                <input
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  type="number"
+                  value={targetAllocations[subcategory]}
+                  onChange={(event) => changeTargetAllocation(subcategory, event.target.value)}
+                />
+              }
+            />
           ))}
         </div>
         <div className={isAllocationValid ? 'allocationStatus valid' : 'allocationStatus invalid'}>
           <span>Suma wag: {formatUnsignedPercent(targetAllocationTotal)}</span>
-          {!isAllocationValid && <strong>Ustaw łącznie 100%, aby plan był poprawny.</strong>}
-          <button className="subtypeTab" type="button" onClick={resetTargetAllocations}>
+          {!isAllocationValid && (
+            <InlineMessage variant="warning">Ustaw łącznie 100%, aby plan był poprawny.</InlineMessage>
+          )}
+          <Button variant="quiet" type="button" onClick={resetTargetAllocations}>
             Przywróć 40/30/30
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -193,17 +205,19 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
                 zapiszesz nowych stanów ETF.
               </p>
             </div>
-            <label>
-              Kwota do dodania w PLN
-              <input
-                min="0"
-                step="0.01"
-                type="number"
-                value={virtualContribution}
-                onChange={(event) => setVirtualContribution(event.target.value)}
-                placeholder="np. 20000"
-              />
-            </label>
+            <Field
+              label="Kwota do dodania w PLN"
+              control={
+                <input
+                  min="0"
+                  step="0.01"
+                  type="number"
+                  value={virtualContribution}
+                  onChange={(event) => setVirtualContribution(event.target.value)}
+                  placeholder="np. 20000"
+                />
+              }
+            />
             {contributionAmount > 0 && (
               <div className="contributionTable" role="table" aria-label="Plan podziału wirtualnej dopłaty">
                 <div className="contributionHeader" role="row">
@@ -229,11 +243,11 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
               </div>
             )}
             {contributionAmount > 0 && contributionHasOverweight && (
-              <p className="warningText">
+              <InlineMessage variant="warning">
                 Aby idealnie zachować wagi po dopłacie {formatMoney(contributionAmount)}, jedna z pozycji musiałaby
                 zostać zmniejszona. Jeśli kupujesz tylko za nową kwotę, dodatnie rekomendacje sumują się do{' '}
                 {formatMoney(totalPositiveContribution)}.
-              </p>
+              </InlineMessage>
             )}
           </div>
         </>
@@ -241,9 +255,9 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
 
       <div className="quickStockActions" aria-label="Szybkie dodawanie ETF">
         {STOCK_SUBCATEGORIES.map((subcategory) => (
-          <button className="subtypeTab" type="button" key={subcategory} onClick={() => onAddStockValue(subcategory)}>
+          <Button variant="secondary" type="button" key={subcategory} onClick={() => onAddStockValue(subcategory)}>
             Dodaj wycenę: {SUBCATEGORY_LABELS[subcategory]}
-          </button>
+          </Button>
         ))}
       </div>
     </section>

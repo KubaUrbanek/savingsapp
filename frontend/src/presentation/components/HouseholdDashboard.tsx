@@ -9,6 +9,8 @@ import {
   formatUnsignedPercent,
   TYPE_LABELS
 } from '../viewModels/formatters.js';
+import { Field } from './Field.jsx';
+import { SectionHeader } from './SectionHeader.jsx';
 
 export function HouseholdDashboard({ entries, users, types, preferences, onPreferenceError }) {
   const goalDescriptionId = React.useId();
@@ -81,8 +83,7 @@ export function HouseholdDashboard({ entries, users, types, preferences, onPrefe
 
       <div className="householdDetailsGrid">
         <article className="panel assetPanel">
-          <p className="eyebrow">Klasy aktywów</p>
-          <h2>Struktura wspólnego portfela</h2>
+          <SectionHeader eyebrow="Klasy aktywów" title="Struktura wspólnego portfela" />
           <div className="assetList">
             {types.map((type) => {
               const value = totalsByType[type] || 0;
@@ -111,8 +112,7 @@ export function HouseholdDashboard({ entries, users, types, preferences, onPrefe
           </div>
         </article>
         <article className="panel goalPanel">
-          <p className="eyebrow">Wspólny cel</p>
-          <h2>Łączna realizacja celów</h2>
+          <SectionHeader eyebrow="Wspólny cel" title="Łączna realizacja celów" />
           <div
             aria-label="Realizacja wspólnego celu"
             aria-describedby={goalDescriptionId}
@@ -127,16 +127,18 @@ export function HouseholdDashboard({ entries, users, types, preferences, onPrefe
             <strong>{formatUnsignedPercent(goalProgress)}</strong>
             <span>zrealizowano</span>
           </div>
-          <label>
-            Docelowa wartość majątku
-            <input
-              min="1"
-              step="1000"
-              type="number"
-              value={goal}
-              onChange={(event) => updateGoal(event.target.value)}
-            />
-          </label>
+          <Field
+            label="Docelowa wartość majątku"
+            control={
+              <input
+                min="1"
+                step="1000"
+                type="number"
+                value={goal}
+                onChange={(event) => updateGoal(event.target.value)}
+              />
+            }
+          />
           <p id={goalDescriptionId}>
             {formatMoney(total)} z {formatMoney(goal)}
           </p>

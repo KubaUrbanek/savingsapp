@@ -9,6 +9,10 @@ import { GlobalAllocationPanel } from '../components/GlobalAllocationPanel.jsx';
 import { StockAllocationPanel } from '../components/StockAllocationPanel.jsx';
 import { SummaryChart } from '../components/SummaryChart.jsx';
 import { HouseholdDashboard } from '../components/HouseholdDashboard.jsx';
+import { Button } from '../components/Button.jsx';
+import { Field } from '../components/Field.jsx';
+import { InlineMessage } from '../components/InlineMessage.jsx';
+import { SectionHeader } from '../components/SectionHeader.jsx';
 import {
   displayName,
   formatDateTime,
@@ -62,11 +66,14 @@ export function Home({ dependencies }) {
   const graphEntries = dataFrom(controller.snapshot, []);
   const operations = dataFrom(controller.operations, []);
   const performance = dataFrom(controller.performance, null);
-  const reportError = React.useCallback((nextError) => {
-    setStatus('');
-    pendingErrorFocusRef.current = true;
-    setError(nextError.message);
-  }, []);
+  const reportError = React.useCallback(
+    (nextError, action = 'odświeżyć dane', nextStep = 'Odśwież stronę i spróbuj ponownie.') => {
+      setStatus('');
+      pendingErrorFocusRef.current = true;
+      setError(`Nie udało się ${action}. ${nextError.message} ${nextStep}`);
+    },
+    []
+  );
 
   React.useEffect(() => {
     const [invalidField] = Object.keys(fieldErrors);
@@ -104,7 +111,7 @@ export function Home({ dependencies }) {
       try {
         preferences.selectOwner(selectedOwner);
       } catch (preferenceError) {
-        reportError(preferenceError);
+        reportError(preferenceError, 'zapisać wyboru użytkownika', 'Wybierz użytkownika ponownie.');
       }
     }
     setStatus('');
@@ -118,7 +125,7 @@ export function Home({ dependencies }) {
       controller.operations,
       controller.performance
     ].find((state) => state.status === 'failure');
-    if (failed) reportError(failed.error);
+    if (failed) reportError(failed.error, 'wczytać portfela');
   }, [
     controller.referenceData,
     controller.entries,
@@ -176,7 +183,7 @@ export function Home({ dependencies }) {
         setStatus('Wyeksportowano bazę danych do pliku JSON.');
       })
       .catch((fetchError) => {
-        reportError(fetchError);
+        reportError(fetchError, 'wyeksportować bazy danych', 'Sprawdź połączenie i spróbuj ponownie.');
       })
       .finally(() => {
         exportingRef.current = false;
@@ -209,7 +216,7 @@ export function Home({ dependencies }) {
         setStatus('Zaimportowano bazę danych i odświeżono widok.');
       })
       .catch((fetchError) => {
-        reportError(fetchError);
+        reportError(fetchError, 'zaimportować bazy danych', 'Sprawdź plik kopii i spróbuj ponownie.');
       })
       .finally(() => {
         importingRef.current = false;
@@ -256,7 +263,7 @@ export function Home({ dependencies }) {
 
     command(record.id)
       .then(onSuccess)
-      .catch(reportError)
+      .catch((deleteError) => reportError(deleteError, 'usunąć rekordu', 'Spróbuj usunąć go ponownie.'))
       .finally(() => {
         pendingDeletionsRef.current.delete(key);
         setPendingDeletions(Array.from(pendingDeletionsRef.current));
@@ -304,7 +311,7 @@ export function Home({ dependencies }) {
         setStatus('');
         if (fetchError instanceof PortfolioChangeValidationFailure) {
           setFieldErrors({ [fetchError.field]: fetchError.message });
-        } else reportError(fetchError);
+        } else reportError(fetchError, 'zapisać zmiany', 'Sprawdź dane i spróbuj ponownie.');
       })
       .finally(() => {
         savingRef.current = false;
@@ -483,12 +490,10 @@ export function Home({ dependencies }) {
       </header>
 
       <div className="formFeedback" aria-label="Informacje o operacjach">
-        <p className="success" role="status" aria-live="polite" aria-atomic="true">
-          {status}
-        </p>
-        <p ref={errorSummaryRef} className="error" role="alert" tabIndex={-1} aria-atomic="true">
+        <InlineMessage variant="success">{status}</InlineMessage>
+        <InlineMessage ref={errorSummaryRef} variant="error">
           {error}
-        </p>
+        </InlineMessage>
       </div>
 
       {isHouseholdView ? (
@@ -503,12 +508,12 @@ export function Home({ dependencies }) {
         <>
           <section className="quickUpdate sectionAnchor" id="portfolio-update" aria-labelledby="quick-update-heading">
             <form className="panel formPanel unifiedForm" onSubmit={submitOperation} aria-busy={isSaving}>
-              <p className="eyebrow">Jedno miejsce do aktualizacji</p>
-              <h2 id="quick-update-heading">Co zmieniło się w portfelu?</h2>
-              <p className="formHint">
-                Wpłata i wypłata automatycznie zmienią stan. „Aktualna wycena” zapisuje zmianę rynku bez przepływu
-                pieniędzy.
-              </p>
+              <SectionHeader
+                eyebrow="Jedno miejsce do aktualizacji"
+                titleId="quick-update-heading"
+                title="Co zmieniło się w portfelu?"
+                description="Wpłata i wypłata automatycznie zmienią stan. „Aktualna wycena” zapisuje zmianę rynku bez przepływu pieniędzy."
+              />
               <label>
                 Rodzaj zmiany
                 <select
@@ -640,30 +645,33 @@ export function Home({ dependencies }) {
                   )}
                 </label>
               )}
-              <label>
-                Data
-                <input
-                  id="portfolio-change-date"
-                  ref={(element) => {
-                    fieldRefs.current.date = element;
-                  }}
-                  aria-invalid={fieldErrors.date ? 'true' : undefined}
-                  aria-describedby={fieldErrors.date ? 'portfolio-change-date-error' : undefined}
-                  type="date"
-                  required
-                  value={operationForm.date}
-                  disabled={isSaving}
-                  onChange={(event) => setOperationForm({ ...operationForm, date: event.target.value })}
-                />
-                {fieldErrors.date && (
-                  <span id="portfolio-change-date-error" className="error">
-                    {fieldErrors.date}
-                  </span>
-                )}
-              </label>
-              <button className="button primaryButton" type="submit" disabled={!operationForm.type || isSaving}>
-                {isSaving ? 'Zapisywanie…' : 'Zapisz zmianę'}
-              </button>
+              <Field
+                label="Data"
+                error={fieldErrors.date}
+                errorId="portfolio-change-date-error"
+                control={
+                  <input
+                    id="portfolio-change-date"
+                    ref={(element) => {
+                      fieldRefs.current.date = element;
+                    }}
+                    type="date"
+                    required
+                    value={operationForm.date}
+                    disabled={isSaving}
+                    onChange={(event) => setOperationForm({ ...operationForm, date: event.target.value })}
+                  />
+                }
+              />
+              <Button
+                variant="primary"
+                type="submit"
+                disabled={!operationForm.type}
+                busy={isSaving}
+                busyLabel="Zapisywanie…"
+              >
+                Zapisz zmianę
+              </Button>
             </form>
           </section>
 
@@ -712,13 +720,14 @@ export function Home({ dependencies }) {
                     <small>{operation.note}</small>
                   </div>
                   <strong>{formatMoney(operation.amountPln)}</strong>
-                  <button
+                  <Button
+                    variant="danger"
                     type="button"
                     disabled={pendingDeletions.includes(`operation:${operation.id}`)}
                     onClick={(event) => deleteOperation(operation, event.currentTarget)}
                   >
                     {pendingDeletions.includes(`operation:${operation.id}`) ? 'Usuwanie…' : 'Usuń'}
-                  </button>
+                  </Button>
                 </div>
               ))
             )}
@@ -742,13 +751,14 @@ export function Home({ dependencies }) {
                     </div>
                     <strong>{formatMoney(entry.valuePln)}</strong>
                     <div className="entryActions">
-                      <button
+                      <Button
+                        variant="danger"
                         type="button"
                         disabled={pendingDeletions.includes(`entry:${entry.id}`)}
                         onClick={(event) => deleteEntry(entry, event.currentTarget)}
                       >
                         {pendingDeletions.includes(`entry:${entry.id}`) ? 'Usuwanie…' : 'Usuń'}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ))}
@@ -759,33 +769,30 @@ export function Home({ dependencies }) {
       )}
 
       <section className="panel databasePanel">
-        <div>
-          <p className="eyebrow">Kopia bezpieczeństwa</p>
-          <h2>Eksport i import danych</h2>
-          <p>
-            Pobierz aktualny plik bazy danych lub wgraj wcześniej wyeksportowany plik. Import nadpisuje całą obecną
-            bazę.
-          </p>
-        </div>
+        <SectionHeader
+          eyebrow="Kopia bezpieczeństwa"
+          title="Eksport i import danych"
+          description="Pobierz aktualny plik bazy danych lub wgraj wcześniej wyeksportowany plik. Import nadpisuje całą obecną bazę."
+        />
         <div className="databaseActions">
-          <button
-            className="button secondaryButton"
+          <Button
+            variant="secondary"
             type="button"
             onClick={exportDatabase}
-            disabled={isExporting}
-            aria-busy={isExporting}
+            busy={isExporting}
+            busyLabel="Eksportowanie…"
           >
-            {isExporting ? 'Eksportowanie…' : 'Eksportuj bazę'}
-          </button>
-          <button
-            className="button dangerButton"
+            Eksportuj bazę
+          </Button>
+          <Button
+            variant="danger"
             type="button"
             onClick={chooseImportFile}
-            disabled={isImporting}
-            aria-busy={isImporting}
+            busy={isImporting}
+            busyLabel="Importowanie…"
           >
-            {isImporting ? 'Importowanie…' : 'Importuj i nadpisz'}
-          </button>
+            Importuj i nadpisz
+          </Button>
           <input
             ref={importInputRef}
             className="visuallyHidden"

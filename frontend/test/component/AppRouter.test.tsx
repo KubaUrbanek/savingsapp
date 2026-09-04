@@ -250,7 +250,8 @@ describe('AppRouter', () => {
     const alert = await screen.findByRole('alert');
     await waitFor(() => expect(alert).toHaveTextContent('Awaria API'));
     expect(alert).toHaveFocus();
-    expect(alert).not.toHaveTextContent('Nie udało się zapisać');
+    expect(alert).toHaveTextContent('Nie udało się zapisać zmiany');
+    expect(alert).toHaveTextContent('Sprawdź dane i spróbuj ponownie');
   });
 
   it('announces progress and success for an asynchronous export', async () => {
