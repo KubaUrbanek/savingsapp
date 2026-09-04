@@ -63,6 +63,24 @@ a {
   color: inherit;
 }
 
+.skipLink {
+  position: fixed;
+  z-index: 30;
+  top: var(--space-3);
+  left: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--color-green-900);
+  color: var(--color-surface);
+  font-weight: 800;
+  text-decoration: none;
+  transform: translateY(calc(-100% - var(--space-3)));
+}
+
+.skipLink:focus {
+  transform: translateY(0);
+}
+
 .topbar {
   display: flex;
   align-items: center;
