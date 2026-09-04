@@ -57,6 +57,11 @@ describe('responsive allocation representations', () => {
     render(<GlobalAllocationPanel entries={entries} preferences={preferences} onPreferenceError={vi.fn()} />);
 
     const desktop = screen.getByRole('table', { name: 'Globalna alokacja majątku' });
+    expect(within(desktop).getAllByRole('columnheader')).toHaveLength(6);
+    expect(within(desktop).getAllByRole('rowheader')).toHaveLength(3);
+    const scroller = screen.getByRole('region', { name: 'Przewijana globalna alokacja majątku' });
+    expect(scroller).toHaveAttribute('tabindex', '0');
+    expect(scroller).toHaveAccessibleDescription(/przewija się poziomo.*klawiszy strzałek/i);
     const mobile = screen.getByLabelText('Globalna alokacja majątku — widok mobilny');
     for (const label of ['Obligacje', 'Akcje', 'Złoto']) {
       expect(within(desktop).getByText(label)).toBeInTheDocument();
@@ -79,6 +84,11 @@ describe('responsive allocation representations', () => {
     );
 
     const desktop = screen.getByRole('table', { name: 'Docelowa alokacja giełdowa' });
+    expect(within(desktop).getAllByRole('columnheader')).toHaveLength(6);
+    expect(within(desktop).getAllByRole('rowheader')).toHaveLength(3);
+    const scroller = screen.getByRole('region', { name: 'Przewijana docelowa alokacja giełdowa' });
+    expect(scroller).toHaveAttribute('tabindex', '0');
+    expect(scroller).toHaveAccessibleDescription(/przewija się poziomo.*klawiszy strzałek/i);
     const mobile = screen.getByLabelText('Docelowa alokacja giełdowa — widok mobilny');
     for (const label of ['Złoto', 'Rynki rozwinięte', 'Rynki rozwijające się']) {
       expect(within(desktop).getByText(label)).toBeInTheDocument();

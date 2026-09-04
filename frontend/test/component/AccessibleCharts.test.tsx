@@ -45,11 +45,16 @@ describe('accessible financial charts', () => {
       /Wszystkie inwestycje, miesięcznie: aktualna suma 100\s000,00\szł, zmiana kwotowa 50\s000,00\szł, zmiana procentowa \+100%\./
     );
     expect(chart.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    const chartScroller = screen.getByRole('region', { name: 'Przewijany wykres podsumowania inwestycji' });
+    expect(chartScroller).toHaveAttribute('tabindex', '0');
+    expect(chartScroller).toHaveAccessibleDescription(/przewija się poziomo.*klawiszy strzałek/i);
 
     const disclosure = screen.getByText('Pokaż dane wykresu');
     expect(disclosure.tagName).toBe('SUMMARY');
     fireEvent.click(disclosure);
     const table = screen.getByRole('table', { name: 'Dane dla: Wszystkie inwestycje, miesięcznie' });
+    expect(within(table).getAllByRole('columnheader')).toHaveLength(3);
+    expect(within(table).getAllByRole('rowheader')).toHaveLength(2);
     expect(within(table).getByRole('rowheader', { name: /lip 2026/i })).toBeInTheDocument();
     expect(within(table).getByRole('rowheader', { name: /sie 2026/i })).toBeInTheDocument();
     expect(within(table).getByText(/50\s000,00\szł/)).toBeInTheDocument();

@@ -488,6 +488,8 @@ pre {
   font-weight: 800;
 }
 
+.entryFieldLabel { display: none; }
+
 .entryRow .editButton {
   border-color: var(--color-success-border);
   background: var(--color-portfolio-soft);
@@ -629,6 +631,12 @@ pre {
 .chartScroller {
   overflow-x: auto;
   padding: 12px 4px 4px;
+}
+
+.tableScroller:focus-visible,
+.chartScroller:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 3px;
 }
 
 .chartTextSummary { margin: 16px 0 0; color: var(--color-muted); }
@@ -792,26 +800,24 @@ pre {
   border-radius: var(--radius-panel);
 }
 
-.globalAllocationHeader,
-.globalAllocationRow {
-  display: grid;
-  grid-template-columns: 1.15fr 1.4fr repeat(4, minmax(125px, 1fr));
-  gap: var(--space-3);
+.globalAllocationTable table {
+  width: 100%;
   min-width: 900px;
-  padding: 12px 16px;
-  align-items: center;
+  border-collapse: collapse;
 }
 
-.globalAllocationHeader {
+.globalAllocationTable thead {
   background: var(--color-surface-muted);
   color: var(--color-muted);
   font-size: var(--font-size-caption);
   font-weight: 900;
 }
 
-.globalAllocationRow + .globalAllocationRow { border-top: 1px solid var(--color-ledger); }
-.globalAllocationRow span { display: grid; }
-.globalAllocationRow small { color: var(--color-muted); font-weight: 700; }
+.globalAllocationTable th,
+.globalAllocationTable td { padding: 12px 16px; text-align: left; vertical-align: middle; }
+.globalAllocationTable tbody tr + tr { border-top: 1px solid var(--color-ledger); }
+.globalAllocationTable td:nth-child(2) { display: grid; }
+.globalAllocationTable small { display: block; color: var(--color-muted); font-weight: 700; }
 
 .stockHeader {
   display: grid;
@@ -857,42 +863,41 @@ pre {
   border-radius: var(--radius-panel);
 }
 
-.stockTableHeader,
-.stockRow {
-  display: grid;
-  grid-template-columns: 1.25fr repeat(5, minmax(120px, 1fr));
-  gap: var(--space-3);
+.stockTable table {
+  width: 100%;
   min-width: 860px;
-  padding: 12px 16px;
-  align-items: center;
+  border-collapse: collapse;
 }
 
-.stockTableHeader {
+.stockTable thead {
   background: var(--color-surface-muted);
   color: var(--color-muted);
   font-size: var(--font-size-caption);
   font-weight: 900;
 }
 
-.stockRow + .stockRow {
+.stockTable tbody tr + tr {
   border-top: 1px solid var(--color-ledger);
 }
 
-.stockRow div {
+.stockTable th,
+.stockTable td { padding: 12px 16px; text-align: left; vertical-align: middle; }
+
+.stockRowLabel {
   display: grid;
   gap: 4px;
 }
 
-.stockRow small {
+.stockTable small {
   color: var(--color-muted);
   font-weight: 700;
 }
 
-.stockRow.buy strong:last-of-type {
+.stockTable tr.buy .differenceCell {
   color: var(--color-success-text);
 }
 
-.stockRow.trim strong:last-of-type {
+.stockTable tr.trim .differenceCell {
   color: var(--color-danger-text);
 }
 
@@ -958,33 +963,32 @@ pre {
   background: var(--color-surface);
 }
 
-.contributionHeader,
-.contributionRow {
-  display: grid;
-  grid-template-columns: 1.3fr repeat(3, minmax(130px, 1fr));
-  gap: var(--space-3);
+.contributionTable table {
+  width: 100%;
   min-width: 640px;
-  padding: 12px 16px;
-  align-items: center;
+  border-collapse: collapse;
 }
 
-.contributionHeader {
+.contributionTable thead {
   background: var(--color-portfolio-soft);
   color: var(--color-muted);
   font-size: var(--font-size-caption);
   font-weight: 900;
 }
 
-.contributionRow + .contributionRow {
+.contributionTable tbody tr + tr {
   border-top: 1px solid var(--color-ledger);
 }
 
-.contributionRow.buy span:first-of-type {
+.contributionTable th,
+.contributionTable td { padding: 12px 16px; text-align: left; vertical-align: middle; }
+
+.contributionTable tr.buy .amountToAddCell {
   color: var(--color-success-text);
   font-weight: 900;
 }
 
-.contributionRow.trim span:first-of-type,
+.contributionTable tr.trim .amountToAddCell,
 .warningText {
   color: var(--color-danger-text);
   font-weight: 800;
@@ -1637,13 +1641,13 @@ a:focus-visible,
   background: linear-gradient(145deg, var(--color-portfolio-strong), var(--color-portfolio));
 }
 
-.stockTableHeader,
-.contributionHeader {
+.stockTable thead,
+.contributionTable thead {
   background: var(--color-portfolio-soft);
 }
 
-.stockRow,
-.contributionRow {
+.stockTable tbody tr,
+.contributionTable tbody tr {
   min-height: 62px;
 }
 
@@ -1730,6 +1734,13 @@ a:focus-visible,
   .mobileAllocationCard dt { color: var(--color-muted); font-size: var(--font-size-caption); font-weight: 850; }
   .mobileAllocationCard dd { margin: 0; text-align: right; font-weight: 800; }
   .mobileAllocationCard dd small { display: block; margin-top: 4px; color: var(--color-muted); }
+
+  .entryFieldLabel {
+    display: inline;
+    color: var(--color-muted);
+    font-size: var(--font-size-caption);
+    font-weight: 800;
+  }
 }
 
 @media (max-width: 640px) {

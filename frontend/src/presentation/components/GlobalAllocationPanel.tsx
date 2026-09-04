@@ -17,6 +17,7 @@ import { InlineMessage } from './InlineMessage.jsx';
 import { SectionHeader } from './SectionHeader.jsx';
 
 export function GlobalAllocationPanel({ id = undefined, entries, preferences, onPreferenceError }) {
+  const scrollHintId = React.useId();
   const [targets, setTargets] = React.useState(() => preferences.globalAllocation());
   const { investedTotal, cashTotal, contributionOnlyTotal, rows } = React.useMemo(
     () => buildGlobalAllocation(entries, targets),
@@ -103,34 +104,51 @@ export function GlobalAllocationPanel({ id = undefined, entries, preferences, on
         <p>Dodaj wyceny aktywów, aby zobaczyć aktualną alokację i plan równoważenia.</p>
       ) : (
         <>
-          <div className="globalAllocationTable" role="table" aria-label="Globalna alokacja majątku">
-            <div className="globalAllocationHeader" role="row">
-              <span>Klasa aktywów</span>
-              <span>Aktualnie</span>
-              <span>Cel</span>
-              <span>Odchylenie</span>
-              <span>Kup / sprzedaj</span>
-              <span>Tylko nowe wpłaty</span>
-            </div>
-            {rows.map((row) => (
-              <div className="globalAllocationRow" role="row" key={row.assetClass}>
-                <strong>{GLOBAL_ASSET_LABELS[row.assetClass]}</strong>
-                <span>
-                  {formatMoney(row.currentValue)}
-                  <small>{formatUnsignedPercent(row.currentWeight)}</small>
-                </span>
-                <span>{formatUnsignedPercent(row.targetWeight)}</span>
-                <strong
-                  className={Math.abs(row.deviation) < 0.01 ? '' : row.deviation > 0 ? 'negativeText' : 'positiveText'}
-                >
-                  {formatPercentagePoints(row.deviation)}
-                </strong>
-                <span className={row.rebalanceAmount >= 0 ? 'positiveText' : 'negativeText'}>
-                  {row.rebalanceAmount >= 0 ? '↑ Kup' : '↓ Sprzedaj'}: {formatSignedMoney(row.rebalanceAmount)}
-                </span>
-                <span>{row.contributionAmount == null ? 'Niemożliwe' : formatMoney(row.contributionAmount)}</span>
-              </div>
-            ))}
+          <p className="visuallyHidden" id={scrollHintId}>
+            Tabela przewija się poziomo. Użyj klawiszy strzałek, aby zobaczyć pozostałe kolumny.
+          </p>
+          <div
+            className="globalAllocationTable tableScroller"
+            role="region"
+            aria-label="Przewijana globalna alokacja majątku"
+            aria-describedby={scrollHintId}
+            tabIndex={0}
+          >
+            <table aria-label="Globalna alokacja majątku">
+              <thead>
+                <tr>
+                  <th scope="col">Klasa aktywów</th>
+                  <th scope="col">Aktualnie</th>
+                  <th scope="col">Cel</th>
+                  <th scope="col">Odchylenie</th>
+                  <th scope="col">Kup / sprzedaj</th>
+                  <th scope="col">Tylko nowe wpłaty</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.assetClass}>
+                    <th scope="row">{GLOBAL_ASSET_LABELS[row.assetClass]}</th>
+                    <td>
+                      {formatMoney(row.currentValue)}
+                      <small>{formatUnsignedPercent(row.currentWeight)}</small>
+                    </td>
+                    <td>{formatUnsignedPercent(row.targetWeight)}</td>
+                    <td
+                      className={
+                        Math.abs(row.deviation) < 0.01 ? '' : row.deviation > 0 ? 'negativeText' : 'positiveText'
+                      }
+                    >
+                      {formatPercentagePoints(row.deviation)}
+                    </td>
+                    <td className={row.rebalanceAmount >= 0 ? 'positiveText' : 'negativeText'}>
+                      {row.rebalanceAmount >= 0 ? '↑ Kup' : '↓ Sprzedaj'}: {formatSignedMoney(row.rebalanceAmount)}
+                    </td>
+                    <td>{row.contributionAmount == null ? 'Niemożliwe' : formatMoney(row.contributionAmount)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
           <div className="mobileAllocationList" aria-label="Globalna alokacja majątku — widok mobilny">
             {rows.map((row) => (
