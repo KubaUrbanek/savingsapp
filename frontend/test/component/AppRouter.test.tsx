@@ -82,7 +82,7 @@ describe('AppRouter', () => {
       </React.StrictMode>
     );
 
-    const initialHeading = screen.getByRole('heading', { level: 1, name: 'Oszczędności pod kontrolą.' });
+    const initialHeading = screen.getByRole('heading', { level: 1, name: 'Portfel: jakub' });
     expect(initialHeading).not.toHaveFocus();
 
     fireEvent.click(screen.getByRole('link', { name: 'Informacje' }));
@@ -119,6 +119,51 @@ describe('AppRouter', () => {
     fireEvent.click(screen.getByRole('button', { name: '3-letnie' }));
     expect(screen.getByRole('button', { name: 'Wszystkie', pressed: false })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '3-letnie', pressed: true })).toBeInTheDocument();
+  });
+
+  it('orders the workspace context, scope switcher, summary and quick-update form without changing scope behavior', async () => {
+    render(
+      <AppRouter
+        dependencies={dependencies({
+          loadReferenceData: {
+            execute: async () => ({ users: ['jakub', 'zosia'], types: ['KONTO_BANKOWE'] })
+          },
+          loadPortfolio: {
+            execute: async ({ scope }: { scope: { kind: string; ownerId?: string } }) =>
+              scope.kind === 'OWNER'
+                ? [
+                    {
+                      id: `entry-${scope.ownerId}`,
+                      owner: scope.ownerId,
+                      type: 'KONTO_BANKOWE',
+                      subcategory: '',
+                      date: '2026-09-03',
+                      valuePln: scope.ownerId === 'jakub' ? 4200 : 2800
+                    }
+                  ]
+                : []
+          }
+        })}
+      />
+    );
+
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Portfel: jakub' });
+    const scopeSwitcher = screen.getByRole('group', { name: 'Czyj portfel wyświetlić?' });
+    const summary = document.querySelector('.summaryPanel')!;
+    const form = screen.getByRole('heading', { level: 2, name: 'Co zmieniło się w portfelu?' }).closest('form')!;
+
+    expect(heading.compareDocumentPosition(scopeSwitcher) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(scopeSwitcher.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(summary.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(summary).toHaveTextContent('Stan danych2026-09-03');
+
+    fireEvent.click(screen.getByRole('button', { name: /zosia/i, pressed: false }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Portfel: zosia' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /zosia/i, pressed: true })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Razem', pressed: false }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'Portfel całego gospodarstwa' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Razem', pressed: true })).toBeInTheDocument();
   });
 
   it('associates a validation error with the invalid field and focuses it', async () => {

@@ -139,6 +139,15 @@ export function Home({ dependencies }) {
   const totalValue = currentEntriesForView.reduce((sum, entry) => sum + Number(entry.valuePln), 0);
   const filterSubcategories = typeFilter ? subcategoriesFor(typeFilter) : [];
   const operationSubcategories = operationForm.type ? subcategoriesFor(operationForm.type) : [];
+  const activePortfolioLabel = subcategoryFilter
+    ? SUBCATEGORY_LABELS[subcategoryFilter] || subcategoryFilter
+    : typeFilter
+      ? TYPE_LABELS[typeFilter] || typeFilter
+      : 'Wszystkie inwestycje';
+  const latestDataDate = currentEntriesForView.reduce(
+    (latestDate, entry) => (entry.date > latestDate ? entry.date : latestDate),
+    ''
+  );
 
   function changeType(nextType) {
     setTypeFilter(nextType);
@@ -323,95 +332,141 @@ export function Home({ dependencies }) {
 
   return (
     <main className="page" id="main-content">
-      <section className="hero">
-        <p className="eyebrow">Twój finansowy pulpit</p>
-        <h1 tabIndex={-1}>Oszczędności pod kontrolą.</h1>
-        <p>
-          Sprawdzaj wartość portfela, aktualizuj wyceny i pilnuj przyjętego planu — wszystko w jednym, czytelnym
-          miejscu.
-        </p>
-      </section>
+      <header className="workspaceHeader">
+        <section className="hero">
+          <p className="eyebrow">Pulpit portfela</p>
+          <h1 tabIndex={-1}>
+            {isHouseholdView ? 'Portfel całego gospodarstwa' : `Portfel: ${displayName(selectedOwner)}`}
+          </h1>
+          <p>{isHouseholdView ? 'Wspólny obraz oszczędności' : activePortfolioLabel}</p>
+        </section>
 
-      <section className="controlSurface" aria-label="Ustawienia widoku portfela">
-        <div className="filterGroup">
-          <p className="filterLabel" id="owner-filter-label">
-            Czyj portfel wyświetlić?
-          </p>
-          <div className="userSwitcher" role="group" aria-labelledby="owner-filter-label">
-            {users.map((user) => (
-              <button
-                className={!isHouseholdView && user === selectedOwner ? 'userPill active' : 'userPill'}
-                key={user}
-                type="button"
-                aria-pressed={!isHouseholdView && user === selectedOwner}
-                onClick={() => setPortfolioScope(OwnerPortfolio(user))}
-              >
-                <span className="userAvatar" aria-hidden="true">
-                  {displayName(user).charAt(0)}
-                </span>
-                {displayName(user)}
-              </button>
-            ))}
-            <button
-              className={isHouseholdView ? 'userPill active' : 'userPill'}
-              type="button"
-              aria-pressed={isHouseholdView}
-              onClick={() => setPortfolioScope(HouseholdPortfolio(users))}
-            >
-              <span className="userAvatar" aria-hidden="true">
-                ⌂
-              </span>
-              Razem
-            </button>
-          </div>
-        </div>
-        {!isHouseholdView && (
+        <section className="controlSurface" aria-label="Ustawienia widoku portfela">
           <div className="filterGroup">
-            <p className="filterLabel" id="investment-type-filter-label">
-              Rodzaj inwestycji
+            <p className="filterLabel" id="owner-filter-label">
+              Czyj portfel wyświetlić?
             </p>
-            <div className="typeNav" role="group" aria-labelledby="investment-type-filter-label">
-              {types.map((type) => (
+            <div className="userSwitcher" role="group" aria-labelledby="owner-filter-label">
+              {users.map((user) => (
                 <button
-                  className={type === typeFilter ? 'typeTab active' : 'typeTab'}
-                  key={type}
+                  className={!isHouseholdView && user === selectedOwner ? 'userPill active' : 'userPill'}
+                  key={user}
                   type="button"
-                  aria-pressed={type === typeFilter}
-                  onClick={() => changeType(type)}
+                  aria-pressed={!isHouseholdView && user === selectedOwner}
+                  onClick={() => setPortfolioScope(OwnerPortfolio(user))}
                 >
-                  {TYPE_LABELS[type] || type}
+                  <span className="userAvatar" aria-hidden="true">
+                    {displayName(user).charAt(0)}
+                  </span>
+                  {displayName(user)}
                 </button>
               ))}
-            </div>
-            {filterSubcategories.length > 0 && (
-              <div className="subtypeNav" role="group" aria-labelledby="investment-subcategory-filter-label">
-                <span className="visuallyHidden" id="investment-subcategory-filter-label">
-                  Podkategorie inwestycji
+              <button
+                className={isHouseholdView ? 'userPill active' : 'userPill'}
+                type="button"
+                aria-pressed={isHouseholdView}
+                onClick={() => setPortfolioScope(HouseholdPortfolio(users))}
+              >
+                <span className="userAvatar" aria-hidden="true">
+                  ⌂
                 </span>
-                <button
-                  className={!subcategoryFilter ? 'subtypeTab active' : 'subtypeTab'}
-                  type="button"
-                  aria-pressed={!subcategoryFilter}
-                  onClick={() => setSubcategoryFilter('')}
-                >
-                  Wszystkie
-                </button>
-                {filterSubcategories.map((subcategory) => (
+                Razem
+              </button>
+            </div>
+          </div>
+          {!isHouseholdView && (
+            <div className="filterGroup">
+              <p className="filterLabel" id="investment-type-filter-label">
+                Rodzaj inwestycji
+              </p>
+              <div className="typeNav" role="group" aria-labelledby="investment-type-filter-label">
+                {types.map((type) => (
                   <button
-                    className={subcategory === subcategoryFilter ? 'subtypeTab active' : 'subtypeTab'}
-                    key={subcategory}
+                    className={type === typeFilter ? 'typeTab active' : 'typeTab'}
+                    key={type}
                     type="button"
-                    aria-pressed={subcategory === subcategoryFilter}
-                    onClick={() => setSubcategoryFilter(subcategory)}
+                    aria-pressed={type === typeFilter}
+                    onClick={() => changeType(type)}
                   >
-                    {SUBCATEGORY_LABELS[subcategory] || subcategory}
+                    {TYPE_LABELS[type] || type}
                   </button>
                 ))}
               </div>
+              {filterSubcategories.length > 0 && (
+                <div className="subtypeNav" role="group" aria-labelledby="investment-subcategory-filter-label">
+                  <span className="visuallyHidden" id="investment-subcategory-filter-label">
+                    Podkategorie inwestycji
+                  </span>
+                  <button
+                    className={!subcategoryFilter ? 'subtypeTab active' : 'subtypeTab'}
+                    type="button"
+                    aria-pressed={!subcategoryFilter}
+                    onClick={() => setSubcategoryFilter('')}
+                  >
+                    Wszystkie
+                  </button>
+                  {filterSubcategories.map((subcategory) => (
+                    <button
+                      className={subcategory === subcategoryFilter ? 'subtypeTab active' : 'subtypeTab'}
+                      key={subcategory}
+                      type="button"
+                      aria-pressed={subcategory === subcategoryFilter}
+                      onClick={() => setSubcategoryFilter(subcategory)}
+                    >
+                      {SUBCATEGORY_LABELS[subcategory] || subcategory}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
+        {!isHouseholdView && (
+          <article className="summaryPanel" aria-labelledby="portfolio-summary-heading">
+            <div className="summaryHeading">
+              <div>
+                <p className="eyebrow">Wartość aktywnego zakresu</p>
+                <h2 id="portfolio-summary-heading">{activePortfolioLabel}</h2>
+              </div>
+              <p className="dataFreshness">
+                <span>Stan danych</span>
+                <strong>{latestDataDate || 'Brak wycen'}</strong>
+              </p>
+            </div>
+            <p className="totalValue">{formatMoney(totalValue)}</p>
+            {performance && (
+              <p className="headlineChange">
+                <span>Zmiana w tym miesiącu</span>
+                <strong className={Number(performance.monthlyResultPln) >= 0 ? 'positiveText' : 'negativeText'}>
+                  {formatSignedMoney(performance.monthlyResultPln)}
+                </strong>
+                <small>
+                  {formatPercent(
+                    performance.monthlyReturnRatePercent == null ? NaN : Number(performance.monthlyReturnRatePercent)
+                  )}
+                </small>
+              </p>
             )}
-          </div>
+            <div className="summaryGrid">
+              {types.map((type) => (
+                <div className="summaryCard" key={type}>
+                  <span>{TYPE_LABELS[type] || type}</span>
+                  <strong>{formatMoney(totalsByType[type] || 0)}</strong>
+                </div>
+              ))}
+            </div>
+            {performance && (
+              <div className="performanceGrid compactPerformance">
+                <div>
+                  <span>Łączny wynik inwestycji</span>
+                  <strong>{formatSignedMoney(performance.nominalResultPln)}</strong>
+                </div>
+              </div>
+            )}
+          </article>
         )}
-      </section>
+      </header>
 
       <div className="formFeedback" aria-label="Informacje o operacjach">
         <p className="success" role="status" aria-live="polite" aria-atomic="true">
@@ -432,49 +487,10 @@ export function Home({ dependencies }) {
         />
       ) : (
         <>
-          <section className="dashboardGrid">
-            <article className="panel summaryPanel">
-              <p className="eyebrow">Aktualny widok</p>
-              <h2>
-                {displayName(selectedOwner)} — {typeFilter ? TYPE_LABELS[typeFilter] : 'wszystkie inwestycje'}
-              </h2>
-              <p className="totalValue">{formatMoney(totalValue)}</p>
-              <div className="summaryGrid">
-                {types.map((type) => (
-                  <div className="summaryCard" key={type}>
-                    <span>{TYPE_LABELS[type] || type}</span>
-                    <strong>{formatMoney(totalsByType[type] || 0)}</strong>
-                  </div>
-                ))}
-              </div>
-              {performance && (
-                <div className="performanceGrid compactPerformance">
-                  <div>
-                    <span>Wynik w tym miesiącu</span>
-                    <strong className={Number(performance.monthlyResultPln) >= 0 ? 'positiveText' : 'negativeText'}>
-                      {formatSignedMoney(performance.monthlyResultPln)}
-                    </strong>
-                  </div>
-                  <div>
-                    <span>Miesięczna stopa zwrotu</span>
-                    <strong>
-                      {formatPercent(
-                        performance.monthlyReturnRatePercent == null
-                          ? NaN
-                          : Number(performance.monthlyReturnRatePercent)
-                      )}
-                    </strong>
-                  </div>
-                  <div>
-                    <span>Łączny wynik inwestycji</span>
-                    <strong>{formatSignedMoney(performance.nominalResultPln)}</strong>
-                  </div>
-                </div>
-              )}
-            </article>
+          <section className="quickUpdate" aria-labelledby="quick-update-heading">
             <form className="panel formPanel unifiedForm" onSubmit={submitOperation} aria-busy={isSaving}>
               <p className="eyebrow">Jedno miejsce do aktualizacji</p>
-              <h2>Co zmieniło się w portfelu?</h2>
+              <h2 id="quick-update-heading">Co zmieniło się w portfelu?</h2>
               <p className="formHint">
                 Wpłata i wypłata automatycznie zmienią stan. „Aktualna wycena” zapisuje zmianę rynku bez przepływu
                 pieniędzy.
@@ -636,6 +652,24 @@ export function Home({ dependencies }) {
               </button>
             </form>
           </section>
+
+          <GlobalAllocationPanel entries={graphEntries} preferences={preferences} onPreferenceError={reportError} />
+
+          {types.includes('GIELDA') && (
+            <StockAllocationPanel
+              entries={graphEntries}
+              onAddStockValue={prepareStockEntry}
+              preferences={preferences}
+              onPreferenceError={reportError}
+            />
+          )}
+        </>
+      )}
+
+      <SummaryChart entries={graphEntries} types={types} />
+
+      {!isHouseholdView && (
+        <>
           <section className="panel entriesPanel operationList">
             <div className="entriesHeader">
               <h2>Historia wpłat i wypłat</h2>
@@ -670,55 +704,39 @@ export function Home({ dependencies }) {
               ))
             )}
           </section>
-
-          <GlobalAllocationPanel entries={graphEntries} preferences={preferences} onPreferenceError={reportError} />
-
-          {types.includes('GIELDA') && (
-            <StockAllocationPanel
-              entries={graphEntries}
-              onAddStockValue={prepareStockEntry}
-              preferences={preferences}
-              onPreferenceError={reportError}
-            />
-          )}
-        </>
-      )}
-
-      <SummaryChart entries={graphEntries} types={types} />
-
-      {!isHouseholdView && (
-        <section className="panel entriesPanel">
-          <div className="entriesHeader">
-            <h2>Historia wycen: {displayName(selectedOwner)}</h2>
-          </div>
-          {graphEntries.length === 0 ? (
-            <p>Brak wpisów dla wybranej osoby.</p>
-          ) : (
-            <div className="entryList">
-              {graphEntries.map((entry) => (
-                <div className="entryRow" key={entry.id} aria-busy={pendingDeletions.includes(`entry:${entry.id}`)}>
-                  <div>
-                    <strong>{TYPE_LABELS[entry.type] || entry.type}</strong>
-                    <span>
-                      {entry.subcategory ? SUBCATEGORY_LABELS[entry.subcategory] : 'Bez podkategorii'} · {entry.date}
-                    </span>
-                    {entry.updatedAt && <small>Ostatnia modyfikacja: {formatDateTime(entry.updatedAt)}</small>}
-                  </div>
-                  <strong>{formatMoney(entry.valuePln)}</strong>
-                  <div className="entryActions">
-                    <button
-                      type="button"
-                      disabled={pendingDeletions.includes(`entry:${entry.id}`)}
-                      onClick={(event) => deleteEntry(entry, event.currentTarget)}
-                    >
-                      {pendingDeletions.includes(`entry:${entry.id}`) ? 'Usuwanie…' : 'Usuń'}
-                    </button>
-                  </div>
-                </div>
-              ))}
+          <section className="panel entriesPanel">
+            <div className="entriesHeader">
+              <h2>Historia wycen: {displayName(selectedOwner)}</h2>
             </div>
-          )}
-        </section>
+            {graphEntries.length === 0 ? (
+              <p>Brak wpisów dla wybranej osoby.</p>
+            ) : (
+              <div className="entryList">
+                {graphEntries.map((entry) => (
+                  <div className="entryRow" key={entry.id} aria-busy={pendingDeletions.includes(`entry:${entry.id}`)}>
+                    <div>
+                      <strong>{TYPE_LABELS[entry.type] || entry.type}</strong>
+                      <span>
+                        {entry.subcategory ? SUBCATEGORY_LABELS[entry.subcategory] : 'Bez podkategorii'} · {entry.date}
+                      </span>
+                      {entry.updatedAt && <small>Ostatnia modyfikacja: {formatDateTime(entry.updatedAt)}</small>}
+                    </div>
+                    <strong>{formatMoney(entry.valuePln)}</strong>
+                    <div className="entryActions">
+                      <button
+                        type="button"
+                        disabled={pendingDeletions.includes(`entry:${entry.id}`)}
+                        onClick={(event) => deleteEntry(entry, event.currentTarget)}
+                      >
+                        {pendingDeletions.includes(`entry:${entry.id}`) ? 'Usuwanie…' : 'Usuń'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
+        </>
       )}
 
       <section className="panel databasePanel">
