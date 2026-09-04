@@ -5,6 +5,7 @@ import { mapTimeSeriesViewModel } from '../viewModels/portfolioViewModelMappers.
 
 export function SummaryChart({ id = undefined, entries, types }) {
   const summaryId = React.useId();
+  const scrollHintId = React.useId();
   const [selectedType, setSelectedType] = React.useState('ALL');
   const [period, setPeriod] = React.useState('monthly');
   const filteredEntries = selectedType === 'ALL' ? entries : entries.filter((entry) => entry.type === selectedType);
@@ -78,56 +79,64 @@ export function SummaryChart({ id = undefined, entries, types }) {
       {viewModel.rows.length === 0 ? (
         <p>Brak danych do narysowania wykresu dla wybranego zakresu.</p>
       ) : (
-        <div
-          className="chartScroller"
-          role="img"
-          aria-label="Wykres słupkowy podsumowania inwestycji"
-          aria-describedby={summaryId}
-        >
-          <svg
-            aria-hidden="true"
-            className="summaryChart"
-            viewBox={`0 0 ${chartWidth} ${chartHeight}`}
-            preserveAspectRatio="none"
+        <>
+          <p className="visuallyHidden" id={scrollHintId}>
+            Wykres przewija się poziomo. Użyj klawiszy strzałek, aby zobaczyć pozostałe okresy.
+          </p>
+          <div
+            className="chartScroller"
+            role="region"
+            aria-label="Przewijany wykres podsumowania inwestycji"
+            aria-describedby={scrollHintId}
+            tabIndex={0}
           >
-            <defs>
-              <linearGradient id="barGradient" x1="0" x2="0" y1="0" y2="1">
-                <stop offset="0%" stopColor="#3f9d63" />
-                <stop offset="100%" stopColor="#173d27" />
-              </linearGradient>
-            </defs>
-            <line
-              x1={padding.left}
-              x2={chartWidth - padding.right}
-              y1={chartHeight - padding.bottom}
-              y2={chartHeight - padding.bottom}
-            />
-            {viewModel.rows.map((point, index) => {
-              const height = point.heightRatio * innerHeight;
-              const x = padding.left + index * (barWidth + barGap);
-              const y = padding.top + innerHeight - height;
-              return (
-                <g key={point.key}>
-                  <rect className="chartBar" x={x} y={y} width={barWidth} height={height} rx="8" />
-                  <text className="chartValue" x={x + barWidth / 2} y={Math.max(18, y - 8)} textAnchor="middle">
-                    {point.valueLabel}
-                  </text>
-                  <text
-                    className={`chartChange ${point.changeClass}`}
-                    x={x + barWidth / 2}
-                    y={chartHeight - 34}
-                    textAnchor="middle"
-                  >
-                    {point.changeLabel}
-                  </text>
-                  <text className="chartLabel" x={x + barWidth / 2} y={chartHeight - 12} textAnchor="middle">
-                    {point.label}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
-        </div>
+            <div role="img" aria-label="Wykres słupkowy podsumowania inwestycji" aria-describedby={summaryId}>
+              <svg
+                aria-hidden="true"
+                className="summaryChart"
+                viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+                preserveAspectRatio="none"
+              >
+                <defs>
+                  <linearGradient id="barGradient" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor="#3f9d63" />
+                    <stop offset="100%" stopColor="#173d27" />
+                  </linearGradient>
+                </defs>
+                <line
+                  x1={padding.left}
+                  x2={chartWidth - padding.right}
+                  y1={chartHeight - padding.bottom}
+                  y2={chartHeight - padding.bottom}
+                />
+                {viewModel.rows.map((point, index) => {
+                  const height = point.heightRatio * innerHeight;
+                  const x = padding.left + index * (barWidth + barGap);
+                  const y = padding.top + innerHeight - height;
+                  return (
+                    <g key={point.key}>
+                      <rect className="chartBar" x={x} y={y} width={barWidth} height={height} rx="8" />
+                      <text className="chartValue" x={x + barWidth / 2} y={Math.max(18, y - 8)} textAnchor="middle">
+                        {point.valueLabel}
+                      </text>
+                      <text
+                        className={`chartChange ${point.changeClass}`}
+                        x={x + barWidth / 2}
+                        y={chartHeight - 34}
+                        textAnchor="middle"
+                      >
+                        {point.changeLabel}
+                      </text>
+                      <text className="chartLabel" x={x + barWidth / 2} y={chartHeight - 12} textAnchor="middle">
+                        {point.label}
+                      </text>
+                    </g>
+                  );
+                })}
+              </svg>
+            </div>
+          </div>
+        </>
       )}
       {viewModel.rows.length > 0 && (
         <details className="chartDataDisclosure">

@@ -23,6 +23,8 @@ function formatAllocationHeadline(targetAllocations) {
 }
 
 export function StockAllocationPanel({ entries, onAddStockValue, preferences, onPreferenceError }) {
+  const allocationScrollHintId = React.useId();
+  const contributionScrollHintId = React.useId();
   const [virtualContribution, setVirtualContribution] = React.useState('');
   const [targetAllocations, setTargetAllocations] = React.useState(() => preferences.stockAllocation());
   const contributionAmount = Number(virtualContribution || 0);
@@ -120,31 +122,48 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
         <p>Dodaj pierwsze wartości dla trzech ETF w typie „Giełda”, aby zobaczyć odchylenia od planu.</p>
       ) : (
         <>
-          <div className="stockTable" role="table" aria-label="Docelowa alokacja giełdowa">
-            <div className="stockTableHeader" role="row">
-              <span>ETF</span>
-              <span>Obecnie</span>
-              <span>Powinno być</span>
-              <span>Różnica</span>
-              <span>Udział</span>
-              <span>Odchylenie</span>
-            </div>
-            {allocation.rows.map((row) => (
-              <div className={row.difference >= 0 ? 'stockRow buy' : 'stockRow trim'} role="row" key={row.subcategory}>
-                <div>
-                  <strong>{SUBCATEGORY_LABELS[row.subcategory]}</strong>
-                  <small>{row.difference >= 0 ? '↑ Kup' : '↓ Ogranicz'}</small>
-                  <small>{row.latestDate ? `Aktualizacja: ${row.latestDate}` : 'Brak wpisu'}</small>
-                </div>
-                <span>{formatMoney(row.currentValue)}</span>
-                <span>{formatMoney(row.targetValue)}</span>
-                <strong>{formatSignedMoney(row.difference)}</strong>
-                <span>
-                  {formatUnsignedPercent(row.currentWeight)} / {row.targetWeight}%
-                </span>
-                <span>{formatPercent(row.divergencePercent)}</span>
-              </div>
-            ))}
+          <p className="visuallyHidden" id={allocationScrollHintId}>
+            Tabela przewija się poziomo. Użyj klawiszy strzałek, aby zobaczyć pozostałe kolumny.
+          </p>
+          <div
+            className="stockTable tableScroller"
+            role="region"
+            aria-label="Przewijana docelowa alokacja giełdowa"
+            aria-describedby={allocationScrollHintId}
+            tabIndex={0}
+          >
+            <table aria-label="Docelowa alokacja giełdowa">
+              <thead>
+                <tr>
+                  <th scope="col">ETF</th>
+                  <th scope="col">Obecnie</th>
+                  <th scope="col">Powinno być</th>
+                  <th scope="col">Różnica</th>
+                  <th scope="col">Udział</th>
+                  <th scope="col">Odchylenie</th>
+                </tr>
+              </thead>
+              <tbody>
+                {allocation.rows.map((row) => (
+                  <tr className={row.difference >= 0 ? 'buy' : 'trim'} key={row.subcategory}>
+                    <th scope="row">
+                      <span className="stockRowLabel">
+                        <strong>{SUBCATEGORY_LABELS[row.subcategory]}</strong>
+                        <small>{row.difference >= 0 ? '↑ Kup' : '↓ Ogranicz'}</small>
+                        <small>{row.latestDate ? `Aktualizacja: ${row.latestDate}` : 'Brak wpisu'}</small>
+                      </span>
+                    </th>
+                    <td>{formatMoney(row.currentValue)}</td>
+                    <td>{formatMoney(row.targetValue)}</td>
+                    <td className="differenceCell">{formatSignedMoney(row.difference)}</td>
+                    <td>
+                      {formatUnsignedPercent(row.currentWeight)} / {row.targetWeight}%
+                    </td>
+                    <td>{formatPercent(row.divergencePercent)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
           <div className="mobileAllocationList" aria-label="Docelowa alokacja giełdowa — widok mobilny">
             {allocation.rows.map((row) => (
@@ -219,28 +238,41 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
               }
             />
             {contributionAmount > 0 && (
-              <div className="contributionTable" role="table" aria-label="Plan podziału wirtualnej dopłaty">
-                <div className="contributionHeader" role="row">
-                  <span>ETF</span>
-                  <span>Dodać</span>
-                  <span>Stan po dopłacie</span>
-                  <span>Docelowy udział</span>
+              <>
+                <p className="visuallyHidden" id={contributionScrollHintId}>
+                  Tabela przewija się poziomo. Użyj klawiszy strzałek, aby zobaczyć pozostałe kolumny.
+                </p>
+                <div
+                  className="contributionTable tableScroller"
+                  role="region"
+                  aria-label="Przewijany plan podziału wirtualnej dopłaty"
+                  aria-describedby={contributionScrollHintId}
+                  tabIndex={0}
+                >
+                  <table aria-label="Plan podziału wirtualnej dopłaty">
+                    <thead>
+                      <tr>
+                        <th scope="col">ETF</th>
+                        <th scope="col">Dodać</th>
+                        <th scope="col">Stan po dopłacie</th>
+                        <th scope="col">Docelowy udział</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {contributionRows.map((row) => (
+                        <tr className={row.amountToAdd >= 0 ? 'buy' : 'trim'} key={row.subcategory}>
+                          <th scope="row">{SUBCATEGORY_LABELS[row.subcategory]}</th>
+                          <td className="amountToAddCell">
+                            {row.amountToAdd >= 0 ? '↑ Kup' : '↓ Ogranicz'}: {formatSignedMoney(row.amountToAdd)}
+                          </td>
+                          <td>{formatMoney(row.currentValue + Math.max(row.amountToAdd, 0))}</td>
+                          <td>{row.targetWeight}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                {contributionRows.map((row) => (
-                  <div
-                    className={row.amountToAdd >= 0 ? 'contributionRow buy' : 'contributionRow trim'}
-                    role="row"
-                    key={row.subcategory}
-                  >
-                    <strong>{SUBCATEGORY_LABELS[row.subcategory]}</strong>
-                    <span>
-                      {row.amountToAdd >= 0 ? '↑ Kup' : '↓ Ogranicz'}: {formatSignedMoney(row.amountToAdd)}
-                    </span>
-                    <span>{formatMoney(row.currentValue + Math.max(row.amountToAdd, 0))}</span>
-                    <span>{row.targetWeight}%</span>
-                  </div>
-                ))}
-              </div>
+              </>
             )}
             {contributionAmount > 0 && contributionHasOverweight && (
               <InlineMessage variant="warning">

@@ -711,23 +711,33 @@ export function Home({ dependencies }) {
                   aria-busy={pendingDeletions.includes(`operation:${operation.id}`)}
                 >
                   <div>
-                    <strong>{OPERATION_LABELS[operation.operationType]}</strong>
+                    <strong>
+                      <span className="entryFieldLabel">Typ zdarzenia: </span>
+                      {OPERATION_LABELS[operation.operationType]}
+                    </strong>
                     <span>
                       {TYPE_LABELS[operation.type]}
                       {operation.subcategory ? ` · ${SUBCATEGORY_LABELS[operation.subcategory]}` : ''} ·{' '}
+                      <span className="entryFieldLabel">Data: </span>
                       {operation.date}
                     </span>
                     <small>{operation.note}</small>
                   </div>
-                  <strong>{formatMoney(operation.amountPln)}</strong>
-                  <Button
-                    variant="danger"
-                    type="button"
-                    disabled={pendingDeletions.includes(`operation:${operation.id}`)}
-                    onClick={(event) => deleteOperation(operation, event.currentTarget)}
-                  >
-                    {pendingDeletions.includes(`operation:${operation.id}`) ? 'Usuwanie…' : 'Usuń'}
-                  </Button>
+                  <strong>
+                    <span className="entryFieldLabel">Wartość: </span>
+                    {formatMoney(operation.amountPln)}
+                  </strong>
+                  <div className="entryActions">
+                    <span className="entryFieldLabel">Akcja:</span>
+                    <Button
+                      variant="danger"
+                      type="button"
+                      disabled={pendingDeletions.includes(`operation:${operation.id}`)}
+                      onClick={(event) => deleteOperation(operation, event.currentTarget)}
+                    >
+                      {pendingDeletions.includes(`operation:${operation.id}`) ? 'Usuwanie…' : 'Usuń'}
+                    </Button>
+                  </div>
                 </div>
               ))
             )}
@@ -743,14 +753,23 @@ export function Home({ dependencies }) {
                 {graphEntries.map((entry) => (
                   <div className="entryRow" key={entry.id} aria-busy={pendingDeletions.includes(`entry:${entry.id}`)}>
                     <div>
-                      <strong>{TYPE_LABELS[entry.type] || entry.type}</strong>
+                      <strong>
+                        <span className="entryFieldLabel">Typ zdarzenia: </span>
+                        {TYPE_LABELS[entry.type] || entry.type}
+                      </strong>
                       <span>
-                        {entry.subcategory ? SUBCATEGORY_LABELS[entry.subcategory] : 'Bez podkategorii'} · {entry.date}
+                        {entry.subcategory ? SUBCATEGORY_LABELS[entry.subcategory] : 'Bez podkategorii'} ·{' '}
+                        <span className="entryFieldLabel">Data: </span>
+                        {entry.date}
                       </span>
                       {entry.updatedAt && <small>Ostatnia modyfikacja: {formatDateTime(entry.updatedAt)}</small>}
                     </div>
-                    <strong>{formatMoney(entry.valuePln)}</strong>
+                    <strong>
+                      <span className="entryFieldLabel">Wartość: </span>
+                      {formatMoney(entry.valuePln)}
+                    </strong>
                     <div className="entryActions">
+                      <span className="entryFieldLabel">Akcja:</span>
                       <Button
                         variant="danger"
                         type="button"
