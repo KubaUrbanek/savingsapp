@@ -27,6 +27,7 @@ import {
 } from '../viewModels/formatters.js';
 import { mapPortfolioChangeForm } from '../mappers/portfolioChangeFormMapper.js';
 import { PortfolioChangeValidationFailure } from '../../application/portfolio/RecordPortfolioChange.js';
+import { PortfolioQuery } from '../portfolio/hooks/refreshPolicy.js';
 
 export function Home({ dependencies }) {
   const { useCases, preferences } = dependencies;
@@ -138,13 +139,20 @@ export function Home({ dependencies }) {
     (latestDate, entry) => (entry.date > latestDate ? entry.date : latestDate),
     ''
   );
-  const projectionStatus = controller.mutation.status === 'success' ? controller.mutation.data.projection : undefined;
+  const projectionPhase =
+    controller.projection.status === 'refreshing' ? 'refreshing' : controller.projection.data?.phase;
+  const projectionAffects = (query) =>
+    projectionPhase === 'refreshing' && controller.projection.data?.affectedQueries.includes(query);
   const visibleStatus =
-    projectionStatus === 'refreshing'
-      ? `${status} Aktualizujemy dane widoczne w portfelu.`.trim()
-      : projectionStatus === 'failure'
-        ? `${status} Zapis został przyjęty, ale nie udało się odświeżyć wszystkich danych. Spróbuj ponownie w odpowiedniej sekcji.`.trim()
-        : status;
+    controller.mutation.status === 'loading'
+      ? status
+      : projectionPhase === 'refreshing'
+        ? 'Zmiana zapisana. Aktualizujemy podsumowanie…'
+        : projectionPhase === 'confirmed'
+          ? 'Zmiana zapisana. Podsumowanie jest aktualne.'
+          : projectionPhase === 'pending'
+            ? 'Zmiana została przyjęta, ale aktualność podsumowania nie została potwierdzona.'
+            : status;
 
   function changeType(nextType) {
     setTypeFilter(nextType);
@@ -338,7 +346,11 @@ export function Home({ dependencies }) {
           <p>{isHouseholdView ? 'Wspólny obraz oszczędności' : activePortfolioLabel}</p>
         </section>
 
-        <section className="controlSurface" aria-label="Ustawienia widoku portfela">
+        <section
+          className="controlSurface"
+          aria-label="Ustawienia widoku portfela"
+          aria-busy={projectionAffects(PortfolioQuery.REFERENCE_DATA)}
+        >
           <div className="filterGroup">
             <p className="filterLabel" id="owner-filter-label">
               Czyj portfel wyświetlić?
@@ -434,6 +446,7 @@ export function Home({ dependencies }) {
             className="summaryPanel sectionAnchor"
             id="portfolio-summary"
             aria-labelledby="portfolio-summary-heading"
+            aria-busy={projectionAffects(PortfolioQuery.SNAPSHOT) || projectionAffects(PortfolioQuery.PERFORMANCE)}
           >
             <QueryBoundary
               state={controller.snapshot}
@@ -514,30 +527,39 @@ export function Home({ dependencies }) {
       </header>
 
       <div className="formFeedback" aria-label="Informacje o operacjach">
-        <InlineMessage variant={projectionStatus === 'failure' ? 'warning' : 'success'}>{visibleStatus}</InlineMessage>
+        <InlineMessage variant={projectionPhase === 'pending' ? 'warning' : 'success'}>
+          {visibleStatus}
+          {projectionPhase === 'pending' && (
+            <Button variant="secondary" type="button" onClick={controller.retryProjection}>
+              Odśwież dotknięte sekcje
+            </Button>
+          )}
+        </InlineMessage>
         <InlineMessage ref={errorSummaryRef} variant="error">
           {error}
         </InlineMessage>
       </div>
 
       {isHouseholdView ? (
-        <QueryBoundary
-          state={controller.snapshot}
-          skeletonShape="section"
-          onRetry={controller.retry.snapshot}
-          emptyTitle="Brak wycen gospodarstwa"
-          emptyDescription="Dodaj wycenę w portfelu właściciela, aby zobaczyć wspólne podsumowanie."
-        >
-          {(loadedEntries) => (
-            <HouseholdDashboard
-              entries={loadedEntries}
-              users={users}
-              types={types}
-              preferences={preferences}
-              onPreferenceError={reportError}
-            />
-          )}
-        </QueryBoundary>
+        <div aria-busy={projectionAffects(PortfolioQuery.SNAPSHOT)}>
+          <QueryBoundary
+            state={controller.snapshot}
+            skeletonShape="section"
+            onRetry={controller.retry.snapshot}
+            emptyTitle="Brak wycen gospodarstwa"
+            emptyDescription="Dodaj wycenę w portfelu właściciela, aby zobaczyć wspólne podsumowanie."
+          >
+            {(loadedEntries) => (
+              <HouseholdDashboard
+                entries={loadedEntries}
+                users={users}
+                types={types}
+                preferences={preferences}
+                onPreferenceError={reportError}
+              />
+            )}
+          </QueryBoundary>
+        </div>
       ) : (
         <>
           <section className="quickUpdate sectionAnchor" id="portfolio-update" aria-labelledby="quick-update-heading">
@@ -709,7 +731,11 @@ export function Home({ dependencies }) {
             </form>
           </section>
 
-          <div id="portfolio-allocation" className="sectionAnchor">
+          <div
+            id="portfolio-allocation"
+            className="sectionAnchor"
+            aria-busy={projectionAffects(PortfolioQuery.SNAPSHOT)}
+          >
             <QueryBoundary
               state={controller.snapshot}
               skeletonShape="section"
@@ -733,27 +759,29 @@ export function Home({ dependencies }) {
           </div>
 
           {types.includes('GIELDA') && (
-            <QueryBoundary
-              state={controller.snapshot}
-              skeletonShape="section"
-              onRetry={controller.retry.snapshot}
-              emptyTitle="Brak danych o akcjach"
-              emptyDescription="Dodaj wycenę ETF, aby zobaczyć szczegóły."
-            >
-              {(loadedEntries) => (
-                <StockAllocationPanel
-                  entries={loadedEntries}
-                  onAddStockValue={prepareStockEntry}
-                  preferences={preferences}
-                  onPreferenceError={reportError}
-                />
-              )}
-            </QueryBoundary>
+            <div aria-busy={projectionAffects(PortfolioQuery.SNAPSHOT)}>
+              <QueryBoundary
+                state={controller.snapshot}
+                skeletonShape="section"
+                onRetry={controller.retry.snapshot}
+                emptyTitle="Brak danych o akcjach"
+                emptyDescription="Dodaj wycenę ETF, aby zobaczyć szczegóły."
+              >
+                {(loadedEntries) => (
+                  <StockAllocationPanel
+                    entries={loadedEntries}
+                    onAddStockValue={prepareStockEntry}
+                    preferences={preferences}
+                    onPreferenceError={reportError}
+                  />
+                )}
+              </QueryBoundary>
+            </div>
           )}
         </>
       )}
 
-      <div id="portfolio-analysis" className="sectionAnchor">
+      <div id="portfolio-analysis" className="sectionAnchor" aria-busy={projectionAffects(PortfolioQuery.SNAPSHOT)}>
         <QueryBoundary
           state={controller.snapshot}
           skeletonShape="chart"
@@ -774,7 +802,11 @@ export function Home({ dependencies }) {
 
       {!isHouseholdView && (
         <>
-          <section className="panel entriesPanel operationList sectionAnchor" id="portfolio-history">
+          <section
+            className="panel entriesPanel operationList sectionAnchor"
+            id="portfolio-history"
+            aria-busy={projectionAffects(PortfolioQuery.OPERATIONS)}
+          >
             <div className="entriesHeader">
               <h2>Historia wpłat i wypłat</h2>
             </div>
@@ -825,7 +857,7 @@ export function Home({ dependencies }) {
               }
             </QueryBoundary>
           </section>
-          <section className="panel entriesPanel">
+          <section className="panel entriesPanel" aria-busy={projectionAffects(PortfolioQuery.ENTRIES)}>
             <div className="entriesHeader">
               <h2>Historia wycen: {displayName(selectedOwner)}</h2>
             </div>

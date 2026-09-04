@@ -322,6 +322,7 @@ describe('AppRouter', () => {
   });
 
   it('distinguishes an accepted command from synchronized CQRS projections', async () => {
+    const acceptedCommand = deferred();
     const refreshedEntries = deferred();
     const refreshedSnapshot = deferred();
     const refreshedPerformance = deferred();
@@ -334,10 +335,21 @@ describe('AppRouter', () => {
       date: '2026-09-03',
       valuePln: 100
     };
+    const projectedEntry = { ...entry, date: '2026-09-04', valuePln: 10 };
+    const projectedOperation = {
+      id: 'operation-1',
+      owner: 'jakub',
+      operationType: 'DEPOSIT',
+      type: 'KONTO_BANKOWE',
+      subcategory: '',
+      date: '2026-09-04',
+      amountPln: 10
+    };
 
     render(
       <AppRouter
         dependencies={dependencies({
+          recordPortfolioChange: { execute: () => acceptedCommand.promise },
           loadPortfolio: {
             execute: ({ filters }: { filters?: object }) => {
               if (!waitForProjection) return Promise.resolve([entry]);
@@ -355,19 +367,26 @@ describe('AppRouter', () => {
     fireEvent.change(await screen.findByLabelText('Kwota w PLN'), { target: { value: '10' } });
     waitForProjection = true;
     fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
+    const liveStatus = screen.getByLabelText('Informacje o operacjach').querySelector('[role="status"]');
+    expect(liveStatus).not.toBeNull();
+    expect(liveStatus).toHaveTextContent('Zapisywanie…');
 
-    const savedMessage = await screen.findByText(/Zapisano operację/);
+    acceptedCommand.resolve({ nextValue: 10, kind: 'DEPOSIT', atomic: true });
+
+    const savedMessage = await screen.findByText('Zmiana zapisana. Aktualizujemy podsumowanie…');
     const status = savedMessage.closest('[role="status"]');
     expect(status).not.toBeNull();
     if (!status) throw new Error('The portfolio command status was not rendered.');
-    await waitFor(() => expect(status).toHaveTextContent('Aktualizujemy dane widoczne w portfelu'));
+    await waitFor(() => expect(status).toHaveTextContent('Aktualizujemy podsumowanie'));
+    expect(document.getElementById('portfolio-summary')).toHaveAttribute('aria-busy', 'true');
+    expect(document.getElementById('portfolio-allocation')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('button', { name: /jakub/i, pressed: true })).toBeEnabled();
 
-    refreshedEntries.resolve([entry]);
-    refreshedSnapshot.resolve([entry]);
-    refreshedPerformance.resolve({ operations: [], performance: null });
+    refreshedEntries.resolve([projectedEntry]);
+    refreshedSnapshot.resolve([projectedEntry]);
+    refreshedPerformance.resolve({ operations: [projectedOperation], performance: null });
 
-    await waitFor(() => expect(status).not.toHaveTextContent('Aktualizujemy dane widoczne w portfelu'));
-    expect(status).toHaveTextContent('Zapisano operację');
+    await waitFor(() => expect(status).toHaveTextContent('Podsumowanie jest aktualne'));
   });
 
   it('announces progress and success for an asynchronous export', async () => {
@@ -496,18 +515,22 @@ describe('AppRouter', () => {
     const deletion = deferred();
     const deleteEntry = vi.fn(() => deletion.promise);
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    let deleted = false;
     const appDependencies = dependencies({
       loadPortfolio: {
-        execute: async () => [
-          {
-            id: 'entry-1',
-            owner: 'jakub',
-            type: 'KONTO_BANKOWE',
-            subcategory: '',
-            date: '2026-09-01',
-            valuePln: 4321.5
-          }
-        ]
+        execute: async () =>
+          deleted
+            ? []
+            : [
+                {
+                  id: 'entry-1',
+                  owner: 'jakub',
+                  type: 'KONTO_BANKOWE',
+                  subcategory: '',
+                  date: '2026-09-01',
+                  valuePln: 4321.5
+                }
+              ]
       },
       deleteInvestmentEntry: { execute: deleteEntry }
     });
@@ -524,8 +547,9 @@ describe('AppRouter', () => {
     expect(deleteEntry).toHaveBeenCalledOnce();
     expect(deleteEntry).toHaveBeenCalledWith('entry-1');
     expect(deleteButton).toHaveFocus();
+    deleted = true;
     deletion.resolve(undefined);
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Usunięto wpis'));
+    await screen.findByText('Zmiana zapisana. Podsumowanie jest aktualne.');
   });
 
   it('disables a confirmed delete while pending and prevents duplicate submissions', async () => {
