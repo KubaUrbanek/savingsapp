@@ -4,7 +4,7 @@ import { failure, idle, loading, success } from './queryState.js';
 
 // Both cancellation and the generation check are intentional: not every use-case
 // adapter is necessarily able to cancel its underlying work.
-export function useLatestQuery(load, dependencies, { enabled = true, queryKey } = {}) {
+export function useLatestQuery(load, dependencies, { enabled = true, queryKey, refreshVersions = {} } = {}) {
   const [state, setState] = React.useState(idle);
   const generation = React.useRef(0);
   const previousQueryKey = React.useRef(queryKey);
@@ -22,16 +22,20 @@ export function useLatestQuery(load, dependencies, { enabled = true, queryKey } 
     // portfolio can never be rendered while the replacement request is pending.
     const queryChanged = previousQueryKey.current !== queryKey;
     previousQueryKey.current = queryKey;
-    setState((current) => (!queryChanged && current.status === 'success' ? loading(current.data) : loading()));
+    setState((current) => ({
+      ...(!queryChanged && current.status === 'success' ? loading(current.data) : loading()),
+      refreshVersions
+    }));
     Promise.resolve()
       .then(() => load(controller.signal))
       .then(
         (data) => {
-          if (request === generation.current && !controller.signal.aborted) setState(success(data));
+          if (request === generation.current && !controller.signal.aborted)
+            setState({ ...success(data), refreshVersions });
         },
         (error) => {
           if (request === generation.current && !controller.signal.aborted && error?.name !== 'AbortError')
-            setState(failure(error));
+            setState({ ...failure(error), refreshVersions });
         }
       );
     return () => controller.abort();
