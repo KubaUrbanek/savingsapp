@@ -1,4 +1,5 @@
 import '@testing-library/jest-dom/vitest';
+import React from 'react';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppRouter } from '../../src/app/AppRouter.js';
@@ -54,6 +55,41 @@ describe('AppRouter', () => {
     window.history.pushState({}, '', '/about');
     render(<AppRouter dependencies={{}} />);
     expect(screen.getByText(/Portfele bez logowania/i)).toBeTruthy();
+  });
+
+  it('links past the header to the stable main-content destination', () => {
+    render(<AppRouter dependencies={dependencies()} />);
+
+    expect(screen.getByRole('link', { name: 'Przejdź do treści' })).toHaveAttribute('href', '#main-content');
+    expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content');
+  });
+
+  it.each([
+    ['/', 'Portfele | Oszczędności'],
+    ['/about', 'Informacje | Oszczędności'],
+    ['/brak', 'Nie znaleziono strony | Oszczędności']
+  ])('sets the document title for %s', (path, title) => {
+    window.history.pushState({}, '', path);
+    render(<AppRouter dependencies={dependencies()} />);
+
+    expect(document.title).toBe(title);
+  });
+
+  it('focuses the primary heading after client-side navigation but not on initial load', async () => {
+    render(
+      <React.StrictMode>
+        <AppRouter dependencies={dependencies()} />
+      </React.StrictMode>
+    );
+
+    const initialHeading = screen.getByRole('heading', { level: 1, name: 'Oszczędności pod kontrolą.' });
+    expect(initialHeading).not.toHaveFocus();
+
+    fireEvent.click(screen.getByRole('link', { name: 'Informacje' }));
+
+    const nextHeading = await screen.findByRole('heading', { level: 1, name: 'Portfele bez logowania.' });
+    await waitFor(() => expect(nextHeading).toHaveFocus());
+    expect(document.title).toBe('Informacje | Oszczędności');
   });
 
   it('names filter groups and announces each toggle button selected state', async () => {

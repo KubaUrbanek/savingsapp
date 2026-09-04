@@ -322,10 +322,10 @@ export function Home({ dependencies }) {
   }
 
   return (
-    <main className="page">
+    <main className="page" id="main-content">
       <section className="hero">
         <p className="eyebrow">Twój finansowy pulpit</p>
-        <h1>Oszczędności pod kontrolą.</h1>
+        <h1 tabIndex={-1}>Oszczędności pod kontrolą.</h1>
         <p>
           Sprawdzaj wartość portfela, aktualizuj wyceny i pilnuj przyjętego planu — wszystko w jednym, czytelnym
           miejscu.
