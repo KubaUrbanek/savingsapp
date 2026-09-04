@@ -1147,6 +1147,48 @@ a:focus-visible,
   box-shadow: 0 10px 32px rgb(25 58 38 / 5%);
 }
 
+.sectionNavigation {
+  position: sticky;
+  z-index: 10;
+  top: 71px;
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  padding: 8px;
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  background: rgb(251 253 251 / 94%);
+  box-shadow: 0 8px 24px rgb(25 58 38 / 7%);
+  scrollbar-width: thin;
+  backdrop-filter: blur(16px);
+}
+
+.sectionNavigation a {
+  flex: 0 0 auto;
+  min-height: 40px;
+  padding: 9px 14px;
+  border-radius: 9px;
+  color: var(--color-text-muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.sectionNavigation a:hover {
+  background: var(--color-green-100);
+  color: var(--color-green-900);
+}
+
+.sectionNavigation a:focus-visible {
+  background: var(--color-surface);
+  color: var(--color-green-900);
+}
+
+.sectionAnchor {
+  scroll-margin-top: 145px;
+}
+
 .filterGroup {
   display: grid;
   gap: 11px;
@@ -1567,6 +1609,28 @@ a:focus-visible,
 
   .page {
     padding-top: 8px;
+  }
+
+  .sectionNavigation {
+    top: 0;
+    width: calc(100% + 28px);
+    margin-right: -14px;
+    margin-left: -14px;
+    padding-right: 14px;
+    padding-left: 14px;
+    border-right: 0;
+    border-left: 0;
+    border-radius: 0;
+    overscroll-behavior-inline: contain;
+  }
+
+  .sectionNavigation a {
+    min-height: 44px;
+    padding: 11px 14px;
+  }
+
+  .sectionAnchor {
+    scroll-margin-top: 76px;
   }
 
   .hero h1 {

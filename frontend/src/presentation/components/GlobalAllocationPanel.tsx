@@ -12,7 +12,7 @@ import {
   GLOBAL_ASSET_LABELS
 } from '../viewModels/formatters.js';
 
-export function GlobalAllocationPanel({ entries, preferences, onPreferenceError }) {
+export function GlobalAllocationPanel({ id = undefined, entries, preferences, onPreferenceError }) {
   const [targets, setTargets] = React.useState(() => preferences.globalAllocation());
   const { investedTotal, cashTotal, contributionOnlyTotal, rows } = React.useMemo(
     () => buildGlobalAllocation(entries, targets),
@@ -30,7 +30,7 @@ export function GlobalAllocationPanel({ entries, preferences, onPreferenceError 
   }, [targets, preferences, onPreferenceError]);
 
   return (
-    <section className="panel globalAllocationPanel">
+    <section className="panel globalAllocationPanel sectionAnchor" id={id}>
       <div className="stockHeader">
         <div>
           <p className="eyebrow">Alokacja całego majątku</p>
