@@ -174,7 +174,7 @@ describe('AppRouter', () => {
     expect(heading.compareDocumentPosition(scopeSwitcher) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(scopeSwitcher.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(summary.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(summary).toHaveTextContent('Stan danych2026-09-03');
+    await waitFor(() => expect(summary).toHaveTextContent('Stan danych2026-09-03'));
 
     fireEvent.click(screen.getByRole('button', { name: /zosia/i, pressed: false }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Portfel: zosia' })).toBeInTheDocument();
