@@ -364,7 +364,7 @@ export function Home({ dependencies }) {
                   aria-pressed={!isHouseholdView && user === selectedOwner}
                   onClick={() => setPortfolioScope(OwnerPortfolio(user))}
                 >
-                  <span className="userAvatar" aria-hidden="true">
+                  <span className="userAvatar" aria-hidden="true" role="presentation">
                     {displayName(user).charAt(0)}
                   </span>
                   {displayName(user)}
@@ -376,7 +376,7 @@ export function Home({ dependencies }) {
                 aria-pressed={isHouseholdView}
                 onClick={() => setPortfolioScope(HouseholdPortfolio(users))}
               >
-                <span className="userAvatar" aria-hidden="true">
+                <span className="userAvatar" aria-hidden="true" role="presentation">
                   ⌂
                 </span>
                 Razem
@@ -526,7 +526,7 @@ export function Home({ dependencies }) {
         )}
       </header>
 
-      <div className="formFeedback" aria-label="Informacje o operacjach">
+      <div className="formFeedback" role="region" aria-label="Informacje o operacjach">
         <InlineMessage variant={projectionPhase === 'pending' ? 'warning' : 'success'}>
           {visibleStatus}
           {projectionPhase === 'pending' && (
@@ -942,6 +942,7 @@ export function Home({ dependencies }) {
             ref={importInputRef}
             className="visuallyHidden"
             type="file"
+            aria-label="Wybierz plik kopii bazy danych do importu"
             accept="application/json,.json"
             disabled={isImporting}
             onChange={importDatabase}

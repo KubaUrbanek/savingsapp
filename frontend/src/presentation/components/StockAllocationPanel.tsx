@@ -149,7 +149,10 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
                     <th scope="row">
                       <span className="stockRowLabel">
                         <strong>{SUBCATEGORY_LABELS[row.subcategory]}</strong>
-                        <small>{row.difference >= 0 ? '↑ Kup' : '↓ Ogranicz'}</small>
+                        <small>
+                          <span aria-hidden="true">{row.difference >= 0 ? '↑ ' : '↓ '}</span>
+                          {row.difference >= 0 ? 'Kup' : 'Ogranicz'}
+                        </small>
                         <small>{row.latestDate ? `Aktualizacja: ${row.latestDate}` : 'Brak wpisu'}</small>
                       </span>
                     </th>
@@ -169,7 +172,10 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
             {allocation.rows.map((row) => (
               <article className={`mobileAllocationCard ${row.difference >= 0 ? 'buy' : 'trim'}`} key={row.subcategory}>
                 <h3>{SUBCATEGORY_LABELS[row.subcategory]}</h3>
-                <p className="mobileRecordMeta">{row.difference >= 0 ? '↑ Kup' : '↓ Ogranicz'}</p>
+                <p className="mobileRecordMeta">
+                  <span aria-hidden="true">{row.difference >= 0 ? '↑ ' : '↓ '}</span>
+                  {row.difference >= 0 ? 'Kup' : 'Ogranicz'}
+                </p>
                 <p className="mobileRecordMeta">{row.latestDate ? `Aktualizacja: ${row.latestDate}` : 'Brak wpisu'}</p>
                 <dl>
                   <div>
@@ -263,7 +269,8 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
                         <tr className={row.amountToAdd >= 0 ? 'buy' : 'trim'} key={row.subcategory}>
                           <th scope="row">{SUBCATEGORY_LABELS[row.subcategory]}</th>
                           <td className="amountToAddCell">
-                            {row.amountToAdd >= 0 ? '↑ Kup' : '↓ Ogranicz'}: {formatSignedMoney(row.amountToAdd)}
+                            <span aria-hidden="true">{row.amountToAdd >= 0 ? '↑ ' : '↓ '}</span>
+                            {row.amountToAdd >= 0 ? 'Kup' : 'Ogranicz'}: {formatSignedMoney(row.amountToAdd)}
                           </td>
                           <td>{formatMoney(row.currentValue + Math.max(row.amountToAdd, 0))}</td>
                           <td>{row.targetWeight}%</td>

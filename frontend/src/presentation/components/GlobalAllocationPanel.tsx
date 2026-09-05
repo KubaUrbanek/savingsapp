@@ -142,7 +142,8 @@ export function GlobalAllocationPanel({ id = undefined, entries, preferences, on
                       {formatPercentagePoints(row.deviation)}
                     </td>
                     <td className={row.rebalanceAmount >= 0 ? 'positiveText' : 'negativeText'}>
-                      {row.rebalanceAmount >= 0 ? '↑ Kup' : '↓ Sprzedaj'}: {formatSignedMoney(row.rebalanceAmount)}
+                      <span aria-hidden="true">{row.rebalanceAmount >= 0 ? '↑ ' : '↓ '}</span>
+                      {row.rebalanceAmount >= 0 ? 'Kup' : 'Sprzedaj'}: {formatSignedMoney(row.rebalanceAmount)}
                     </td>
                     <td>{row.contributionAmount == null ? 'Niemożliwe' : formatMoney(row.contributionAmount)}</td>
                   </tr>
@@ -179,7 +180,8 @@ export function GlobalAllocationPanel({ id = undefined, entries, preferences, on
                   <div>
                     <dt>Kup / sprzedaj</dt>
                     <dd className={row.rebalanceAmount >= 0 ? 'positiveText' : 'negativeText'}>
-                      {row.rebalanceAmount >= 0 ? '↑ Kup' : '↓ Sprzedaj'}: {formatSignedMoney(row.rebalanceAmount)}
+                      <span aria-hidden="true">{row.rebalanceAmount >= 0 ? '↑ ' : '↓ '}</span>
+                      {row.rebalanceAmount >= 0 ? 'Kup' : 'Sprzedaj'}: {formatSignedMoney(row.rebalanceAmount)}
                     </dd>
                   </div>
                   <div>
