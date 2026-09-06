@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spokojna księga portfela — makiety porównawcze</title>
+    <style>
+      :root { color: #1c2720; background: #ecefeb; font: 14px/1.5 Inter, system-ui, sans-serif; font-variant-numeric: tabular-nums; }
+      * { box-sizing: border-box; }
+      body { margin: 0; padding: 32px; }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      .intro { max-width: 760px; margin: 0 0 32px; color: #59655d; }
+      .board { display: grid; gap: 32px; }
+      .viewport { padding: 20px; border: 1px solid #cbd2cc; background: #f7f8f6; }
+      .viewport > h2 { display: flex; justify-content: space-between; margin: 0 0 16px; font-size: 16px; }
+      .screens { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+      .screen { min-width: 0; overflow: hidden; border: 1px solid #bfc8c1; background: #f4f6f3; }
+      .screen > header { display: flex; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid #d9dfda; background: #fff; font-size: 11px; font-weight: 700; }
+      .canvas { padding: 16px; }
+      .label { margin: 0 0 8px; color: #637067; font-size: 10px; font-weight: 700; }
+      .balance { min-height: 126px; padding: 18px; border: 1px solid #245b3b; background: #17462e; color: white; }
+      .balance small { color: #bdd2c4; }
+      .balance strong { display: block; margin: 8px 0 12px; font-size: 25px; letter-spacing: -.04em; }
+      .rule { margin-top: 20px; padding-top: 12px; border-top: 1px solid #cfd7d1; }
+      .rule h3 { margin: 0 0 12px; font-size: 13px; }
+      .row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid #dfe4e0; }
+      .row b { color: #17462e; }
+      .empty, .waiting { padding: 16px 0; color: #59655d; }
+      .empty b, .waiting b { display: block; margin-bottom: 6px; color: #1c2720; }
+      .button { display: inline-block; margin-top: 12px; padding: 8px 12px; background: #24623f; color: white; font-weight: 700; }
+      .skeleton { height: 12px; margin: 12px 0; background: #dce2dd; }
+      .skeleton.short { width: 58%; }
+      .waiting { border-left: 3px solid #a87316; padding-left: 12px; }
+      .viewport.tablet .screens { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .viewport.mobile .screens { grid-template-columns: 1fr; }
+      .viewport.mobile .screen { width: min(375px, 100%); }
+      @media print { body { padding: 12px; } .viewport { break-inside: avoid; } }
+    </style>
+  </head>
+  <body>
+    <h1>Spokojna księga portfela</h1>
+    <p class="intro">Porównanie hierarchii i zachowania widoku przed wdrożeniem. Tylko aktualny stan portfela otrzymuje pełną zieloną powierzchnię; pozostałe sekcje tworzą rytm nagłówków, odstępów i cienkich linii.</p>
+    <main class="board" id="boards"></main>
+    <script>
+      const states = {
+        success: `<p class="label">Aktualny stan · 5 września</p><section class="balance"><small>Wartość portfela</small><strong>248 430,00 zł</strong><small>+2 840,00 zł w tym miesiącu</small></section><section class="rule"><h3>Struktura portfela</h3><div class="row"><span>Giełda</span><b>124 215,00 zł</b></div><div class="row"><span>Gotówka</span><b>72 400,00 zł</b></div></section>`,
+        empty: `<p class="label">Aktualny stan</p><section class="balance"><small>Portfel nie ma jeszcze wyceny</small><strong>—</strong><small>Pierwszy zapis rozpocznie historię.</small></section><section class="rule empty"><b>Dodaj pierwszą wycenę</b><span>Wartość i struktura pojawią się tutaj.</span><span class="button">Dodaj wycenę</span></section>`,
+        loading: `<p class="label">Aktualny stan · wczytywanie</p><section class="balance"><small>Pobieramy dane portfela</small><div class="skeleton"></div><div class="skeleton short"></div></section><section class="rule"><h3>Analiza</h3><div class="skeleton"></div><div class="skeleton short"></div><div class="skeleton"></div></section>`,
+        waiting: `<p class="label">Aktualny stan · zapisano</p><section class="balance"><small>Ostatnia potwierdzona wartość</small><strong>248 430,00 zł</strong><small>Stan z 5 września</small></section><section class="rule waiting"><b>Czekamy na przeliczenie</b><span>Zmiana została przyjęta. Dane pomocnicze odświeżą się po potwierdzeniu.</span><span class="button">Sprawdź ponownie</span></section>`
+      };
+      const viewports = [['desktop', 'Desktop', '1440 px'], ['tablet', 'Tablet', '768 px'], ['mobile', 'Mobile', '375 px']];
+      document.querySelector('#boards').innerHTML = viewports.map(([kind, name, width]) => `<section class="viewport ${kind}"><h2><span>${name}</span><span>${width}</span></h2><div class="screens">${Object.entries(states).map(([state, content]) => `<article class="screen"><header><span>${state}</span><span>Portfel</span></header><div class="canvas">${content}</div></article>`).join('')}</div></section>`).join('');
+    </script>
+  </body>
+</html>

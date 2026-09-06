@@ -65,3 +65,15 @@ test('known low-contrast copy colors and opacity-based disabled text do not retu
   assert.doesNotMatch(stylesheet, /#718078/i);
   assert.doesNotMatch(stylesheet, /\.button:disabled\s*{[^}]*opacity\s*:/s);
 });
+
+test('calm ledger hierarchy keeps supporting sections open and the current balance emphasized', () => {
+  assert.match(
+    stylesheet,
+    /\.ledgerSection\s*{[^}]*border-top:\s*1px solid var\(--color-ledger\)[^}]*background:\s*transparent[^}]*box-shadow:\s*none/s
+  );
+  assert.match(
+    stylesheet,
+    /\.summaryPanel,\s*\.householdHero\s*{[^}]*background:\s*var\(--color-portfolio-strong\)[^}]*box-shadow:\s*var\(--elevation-portfolio\)/s
+  );
+  assert.match(stylesheet, /\.chartBar\s*{[^}]*fill:\s*var\(--color-portfolio\)[^}]*filter:\s*none/s);
+});

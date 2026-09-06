@@ -563,7 +563,7 @@ export function Home({ dependencies }) {
       ) : (
         <>
           <section className="quickUpdate sectionAnchor" id="portfolio-update" aria-labelledby="quick-update-heading">
-            <form className="panel formPanel unifiedForm" onSubmit={submitOperation} aria-busy={isSaving}>
+            <form className="ledgerSection formPanel unifiedForm" onSubmit={submitOperation} aria-busy={isSaving}>
               <SectionHeader
                 eyebrow="Jedno miejsce do aktualizacji"
                 titleId="quick-update-heading"
@@ -803,7 +803,7 @@ export function Home({ dependencies }) {
       {!isHouseholdView && (
         <>
           <section
-            className="panel entriesPanel operationList sectionAnchor"
+            className="ledgerSection entriesPanel operationList sectionAnchor"
             id="portfolio-history"
             aria-busy={projectionAffects(PortfolioQuery.OPERATIONS)}
           >
@@ -857,7 +857,7 @@ export function Home({ dependencies }) {
               }
             </QueryBoundary>
           </section>
-          <section className="panel entriesPanel" aria-busy={projectionAffects(PortfolioQuery.ENTRIES)}>
+          <section className="ledgerSection entriesPanel" aria-busy={projectionAffects(PortfolioQuery.ENTRIES)}>
             <div className="entriesHeader">
               <h2>Historia wycen: {displayName(selectedOwner)}</h2>
             </div>
@@ -913,7 +913,7 @@ export function Home({ dependencies }) {
         </>
       )}
 
-      <section className="panel databasePanel">
+      <section className="ledgerSection databasePanel">
         <SectionHeader
           eyebrow="Kopia bezpieczeństwa"
           title="Eksport i import danych"

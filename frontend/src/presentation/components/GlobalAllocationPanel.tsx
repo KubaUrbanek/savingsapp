@@ -35,7 +35,7 @@ export function GlobalAllocationPanel({ id = undefined, entries, preferences, on
   }, [targets, preferences, onPreferenceError]);
 
   return (
-    <section className="panel globalAllocationPanel sectionAnchor" id={id}>
+    <section className="ledgerSection globalAllocationPanel sectionAnchor" id={id}>
       <SectionHeader
         className="stockHeader"
         eyebrow="Alokacja całego majątku"

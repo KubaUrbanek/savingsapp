@@ -1983,3 +1983,271 @@ h1,
 .stockTotal strong {
   font-size: var(--font-size-financial-value);
 }
+
+/* Calm portfolio ledger: one emphasized balance, open supporting sections. */
+:root {
+  --color-ink: #1c2720;
+  --color-muted: #59655d;
+  --color-canvas: #f4f6f3;
+  --color-portfolio: #24623f;
+  --color-portfolio-strong: #17462e;
+  --color-portfolio-hover: #205738;
+  --color-ledger: #d9dfda;
+  --color-ledger-subtle: #e5e9e6;
+  --color-focus: #009bb5;
+  --radius-panel: 10px;
+  --elevation-panel: none;
+  --elevation-subtle: none;
+  --elevation-control: none;
+  --elevation-control-hover: none;
+  --elevation-chart: none;
+  --elevation-brand: none;
+  --elevation-button: none;
+  --elevation-portfolio: 0 12px 28px rgb(23 70 46 / 12%);
+  --elevation-portfolio-strong: var(--elevation-portfolio);
+  font-variant-numeric: tabular-nums;
+}
+
+body {
+  background: var(--color-canvas);
+}
+
+.siteHeader {
+  background: var(--color-surface);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.brandMark {
+  border: 1px solid var(--color-portfolio);
+  background: var(--color-portfolio);
+  box-shadow: none;
+}
+
+.siteHeader nav a.active,
+.siteHeader nav a:hover {
+  border-color: var(--color-ledger);
+  box-shadow: none;
+}
+
+.controlSurface {
+  padding: var(--space-5) 0;
+  border: 0;
+  border-top: 1px solid var(--color-ledger);
+  border-bottom: 1px solid var(--color-ledger);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.sectionNavigation {
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.userPill,
+.typeTab,
+.subtypeTab {
+  box-shadow: none;
+}
+
+.userPill:hover,
+.typeTab:hover,
+.subtypeTab:hover,
+.button:hover {
+  transform: none;
+}
+
+.summaryPanel,
+.householdHero {
+  border: 1px solid var(--color-portfolio-strong);
+  background: var(--color-portfolio-strong);
+  box-shadow: var(--elevation-portfolio);
+}
+
+.summaryPanel::after {
+  display: none;
+}
+
+.summaryCard,
+.summaryPanel .performanceGrid div {
+  border: 0;
+  border-left: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 0;
+  background: transparent;
+}
+
+.summaryPanel .queryState,
+.summaryPanel .querySkeleton {
+  border-color: rgb(255 255 255 / 24%);
+  background: transparent;
+  color: var(--color-surface);
+}
+
+.summaryPanel .queryState p {
+  color: var(--color-on-portfolio-muted);
+}
+
+.summaryPanel .querySkeletonLine {
+  background: rgb(255 255 255 / 24%);
+}
+
+.ledgerSection {
+  display: grid;
+  gap: var(--space-5);
+  width: 100%;
+  max-width: none;
+  margin-top: var(--space-10);
+  padding: var(--space-7) 0 0;
+  border: 0;
+  border-top: 1px solid var(--color-ledger);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.formPanel {
+  width: min(760px, 100%);
+  border-top: 1px solid var(--color-ledger);
+}
+
+.formPanel.editing {
+  border-color: var(--color-portfolio);
+  box-shadow: none;
+}
+
+.performanceGrid div,
+.metricCard,
+.householdMetric,
+.allocationEditor,
+.virtualContribution,
+.mobileAllocationCard {
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.performanceGrid div,
+.metricCard,
+.householdMetric {
+  padding: var(--space-4) 0;
+  border: 0;
+  border-top: 1px solid var(--color-ledger);
+}
+
+.householdMetric.retirement {
+  border-color: var(--color-ledger);
+  background: transparent;
+}
+
+.householdDetailsGrid .ledgerSection {
+  margin: 0;
+}
+
+.ownershipRow {
+  border-radius: var(--radius-control);
+  background: transparent;
+}
+
+.progressTrack span {
+  background: var(--color-portfolio);
+}
+
+.stockTotal {
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-ledger);
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-ink);
+}
+
+.stockTotal span {
+  color: var(--color-muted);
+}
+
+.globalTotals {
+  gap: 0;
+}
+
+.globalTotals div {
+  padding: var(--space-4) 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-ink);
+}
+
+.globalTotals div + div {
+  padding-left: var(--space-5);
+  border-left: 1px solid var(--color-ledger);
+}
+
+.globalTotals span,
+.globalTotals small {
+  color: var(--color-muted);
+}
+
+.summaryChart {
+  border-radius: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent 0 54px,
+    color-mix(in srgb, var(--color-portfolio) 12%, transparent) 55px
+  );
+}
+
+.chartBar {
+  fill: var(--color-portfolio);
+  filter: none;
+}
+
+.globalAllocationTable,
+.stockTable,
+.contributionTable {
+  border-right: 0;
+  border-left: 0;
+  border-radius: 0;
+}
+
+.queryState,
+.querySkeleton {
+  padding-right: 0;
+  padding-left: 0;
+  border-right: 0;
+  border-left: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.databasePanel {
+  border-style: solid;
+  background: transparent;
+}
+
+.primaryButton,
+.button--primary {
+  box-shadow: none;
+}
+
+@media (max-width: 860px) {
+  .householdMetricGrid {
+    gap: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .controlSurface,
+  .ledgerSection {
+    padding: var(--space-5) 0 0;
+  }
+
+  .summaryPanel,
+  .householdHero {
+    padding: var(--space-5);
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+}
