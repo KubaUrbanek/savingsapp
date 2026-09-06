@@ -174,7 +174,10 @@ describe('AppRouter', () => {
     expect(heading.compareDocumentPosition(scopeSwitcher) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(scopeSwitcher.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(summary.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    await waitFor(() => expect(summary).toHaveTextContent('Stan danych2026-09-03'));
+    await waitFor(() => expect(summary).toHaveTextContent('Data danych2026-09-03'));
+    expect(summary.querySelector('.summaryTotal.metric')).toHaveTextContent(/Wartość portfela4\s?200,00\s*zł/);
+    expect(scopeSwitcher.querySelectorAll('.button')).toHaveLength(3);
+    expect(form.querySelectorAll('.field')).toHaveLength(4);
 
     fireEvent.click(screen.getByRole('button', { name: /zosia/i, pressed: false }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Portfel: zosia' })).toBeInTheDocument();
@@ -273,6 +276,28 @@ describe('AppRouter', () => {
     expect(amount).toHaveAttribute('aria-describedby', message.id);
     expect(message).toHaveAttribute('id', 'portfolio-change-amount-error');
     await waitFor(() => expect(amount).toHaveFocus());
+  });
+
+  it('keeps the pilot controls in visual keyboard order and exposes a visible focus target', async () => {
+    render(<AppRouter dependencies={dependencies()} />);
+
+    const owner = await screen.findByRole('button', { name: /jakub/i, pressed: true });
+    const together = screen.getByRole('button', { name: 'Razem', pressed: false });
+    const type = await screen.findByRole('button', { name: 'Konto bankowe', pressed: true });
+    const operationType = screen.getByLabelText('Rodzaj zmiany');
+    const asset = screen.getByLabelText('Aktywo');
+    const amount = screen.getByLabelText('Kwota w PLN');
+    const date = screen.getByLabelText('Data');
+    const save = screen.getByRole('button', { name: 'Zapisz zmianę' });
+    const controls = [owner, together, type, operationType, asset, amount, date, save];
+
+    controls.forEach((control, index) => {
+      control.focus();
+      expect(control).toHaveFocus();
+      if (index > 0) {
+        expect(controls[index - 1]!.compareDocumentPosition(control) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      }
+    });
   });
 
   it('keeps validation feedback associated when the conditional valuation input is shown', async () => {
