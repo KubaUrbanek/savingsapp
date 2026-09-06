@@ -365,6 +365,7 @@ describe('AppRouter', () => {
     );
 
     fireEvent.change(await screen.findByLabelText('Kwota w PLN'), { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText('Data'), { target: { value: '2026-09-04' } });
     waitForProjection = true;
     fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
     const liveStatus = screen.getByLabelText('Informacje o operacjach').querySelector('[role="status"]');

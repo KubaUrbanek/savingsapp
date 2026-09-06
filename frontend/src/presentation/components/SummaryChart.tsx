@@ -25,7 +25,7 @@ export function SummaryChart({ id = undefined, entries, types }) {
   const changeSymbol = (latestPoint?.changeAmount || 0) >= 0 ? '↑' : '↓';
 
   return (
-    <section className="panel graphPanel sectionAnchor" id={id}>
+    <section className="ledgerSection graphPanel sectionAnchor" id={id}>
       <div className="graphHeader">
         <div>
           <p className="eyebrow">Analiza wzrostu</p>
@@ -97,12 +97,6 @@ export function SummaryChart({ id = undefined, entries, types }) {
                 viewBox={`0 0 ${chartWidth} ${chartHeight}`}
                 preserveAspectRatio="none"
               >
-                <defs>
-                  <linearGradient id="barGradient" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="#3f9d63" />
-                    <stop offset="100%" stopColor="#173d27" />
-                  </linearGradient>
-                </defs>
                 <line
                   x1={padding.left}
                   x2={chartWidth - padding.right}

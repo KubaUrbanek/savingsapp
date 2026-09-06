@@ -82,7 +82,7 @@ export function HouseholdDashboard({ entries, users, types, preferences, onPrefe
       </div>
 
       <div className="householdDetailsGrid">
-        <article className="panel assetPanel">
+        <article className="ledgerSection assetPanel">
           <SectionHeader eyebrow="Klasy aktywów" title="Struktura wspólnego portfela" />
           <div className="assetList">
             {types.map((type) => {
@@ -111,7 +111,7 @@ export function HouseholdDashboard({ entries, users, types, preferences, onPrefe
             })}
           </div>
         </article>
-        <article className="panel goalPanel">
+        <article className="ledgerSection goalPanel">
           <SectionHeader eyebrow="Wspólny cel" title="Łączna realizacja celów" />
           <div
             aria-label="Realizacja wspólnego celu"

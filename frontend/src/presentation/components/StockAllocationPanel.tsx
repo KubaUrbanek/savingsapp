@@ -61,7 +61,7 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
     .sort((first, second) => second.difference - first.difference);
 
   return (
-    <section className="panel stockPanel">
+    <section className="ledgerSection stockPanel">
       <SectionHeader
         className="stockHeader"
         eyebrow="Giełda — rebalancing ETF"
