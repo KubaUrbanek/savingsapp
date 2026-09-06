@@ -1,5 +1,8 @@
 # Spokojna księga portfela
 
+Kolejność wdrożenia, wspólną macierz odbioru i bramę akceptacji pilota opisuje
+[`calm-portfolio-ledger-delivery-plan.md`](calm-portfolio-ledger-delivery-plan.md).
+
 Makieta porównawcza przed wdrożeniem znajduje się w pliku
 [`calm-portfolio-ledger-mockups.html`](calm-portfolio-ledger-mockups.html). Obejmuje widoki
 desktop (1440 px), tablet (768 px) i mobile (375 px) oraz stany `success`, `empty`,
