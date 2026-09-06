@@ -37,13 +37,12 @@ The backend exposes these routes under `/api`:
 | `DELETE`   | `/api/investment-operations/{id}` | Deletes an operation by UUID.                                         |
 | `GET`      | `/api/portfolio-performance`      | Calculates performance for an owner and optional asset filters.       |
 
-The domain API uses HTTP Basic authentication. Read operations accept either the
-configured reader or administrator account; writes, deletes, imports, and exports
-require the administrator role. Configure credentials with `APP_READER_USERNAME`,
-`APP_READER_PASSWORD`, `APP_ADMIN_USERNAME`, and `APP_ADMIN_PASSWORD`.
+The application does not authenticate or authorize API clients. **Every client
+with network access to the application has full administrative permissions**, including
+permission to read, create, update, delete, import, and export portfolio data. Restrict
+network access to trusted clients at the deployment boundary.
 
-Operational health is exposed separately at `GET /actuator/health` and does not
-require domain API authentication. The former demo `/api/hello` and custom
+Operational health is exposed separately at `GET /actuator/health`. The former demo `/api/hello` and custom
 `/api/status` endpoints are not part of the application.
 
 ## Project structure
@@ -120,27 +119,10 @@ The image stores runtime investment data at `/app/data/investment-entries.json` 
 docker run --rm -p 8080:8080 -e JAVA_OPTS="-Xmx512m" -v oszczednosci-data:/app/data oszczednosci-app
 ```
 
-### Docker secrets/config tree
-
-Credentials can be supplied as environment variables or through Spring config-tree
-secrets. For example, create files matching the `APP_*` credential variable names
-in the mounted config-tree directory and start the container with:
-
-```yaml
-services:
-  savingsapp:
-    image: savingsapp:latest
-    volumes:
-      - /share/Container/secrets:/run/secrets:ro
-    environment:
-      SPRING_CONFIG_IMPORT: optional:configtree:/run/secrets/
-```
-
-At runtime, Spring Boot maps these values into the authentication adapter. When
-credentials are omitted, random passwords are generated, so an unconfigured
-production instance does not silently expose the domain API. Cross-origin browser
-access is denied by default; set `APP_CORS_ALLOWED_ORIGINS` to a comma-separated
-list of trusted HTTP(S) origins when a separately hosted frontend requires it.
+Cross-origin browser access is denied by default; set `APP_CORS_ALLOWED_ORIGINS` to
+a comma-separated list of trusted HTTP(S) origins when a separately hosted frontend
+requires it. CORS is not an access-control boundary for non-browser clients, so the
+application must still be exposed only to trusted networks and clients.
 
 ## Development workflow
 
