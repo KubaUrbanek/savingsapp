@@ -2123,6 +2123,71 @@ body {
   background: rgb(255 255 255 / 24%);
 }
 
+/* Owner-workspace pilot: keep asynchronous replacements stable and use the shared ledger primitives. */
+.summaryPanel {
+  min-height: 440px;
+}
+
+.summaryPanel .queryBoundaryContent {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.summaryPanel .summaryTotal {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-4) 0 var(--space-5);
+  border: 0;
+}
+
+.summaryPanel .summaryTotal .metricLabel,
+.summaryPanel .summaryTotal .metricDetail,
+.summaryPanel .summaryCard .metricLabel,
+.summaryPanel .summaryCard .metricDetail,
+.summaryPanel .headlineChange .metricLabel,
+.summaryPanel .headlineChange .metricDetail,
+.summaryPanel .compactPerformance .metricLabel,
+.summaryPanel .compactPerformance .metricDetail {
+  color: var(--color-on-portfolio-muted);
+}
+
+.summaryPanel .summaryTotal .metricValue {
+  color: var(--color-on-portfolio);
+  font-size: clamp(var(--font-size-36), 7vw, var(--font-size-48));
+  letter-spacing: -0.05em;
+}
+
+.summaryPanel .summaryCard .metricValue,
+.summaryPanel .compactPerformance .metricValue {
+  color: var(--color-on-portfolio);
+}
+
+.summaryPanel .headlineChange.metric {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  padding: 0;
+  border: 0;
+}
+
+.summaryPanel .headlineChange.metric--positive .metricValue {
+  color: var(--color-success-background);
+}
+
+.summaryPanel .headlineChange.metric--negative .metricValue {
+  color: var(--color-danger-background);
+}
+
+.formFeedback {
+  min-height: 72px;
+}
+
+.formPanel {
+  min-height: 640px;
+}
+
 .ledgerSection {
   display: grid;
   gap: var(--space-5);
@@ -2274,6 +2339,14 @@ body {
   .summaryPanel,
   .householdHero {
     padding: var(--space-5);
+  }
+
+  .summaryPanel {
+    min-height: 620px;
+  }
+
+  .formPanel {
+    min-height: 680px;
   }
 
   .summaryGrid {

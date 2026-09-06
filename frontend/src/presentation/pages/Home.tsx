@@ -13,6 +13,7 @@ import { HouseholdDashboard } from '../components/HouseholdDashboard.jsx';
 import { Button } from '../components/Button.jsx';
 import { Field } from '../components/Field.jsx';
 import { InlineMessage } from '../components/InlineMessage.jsx';
+import { Metric } from '../components/Metric.jsx';
 import { SectionHeader } from '../components/SectionHeader.jsx';
 import {
   displayName,
@@ -357,7 +358,8 @@ export function Home({ dependencies }) {
             </p>
             <div className="userSwitcher" role="group" aria-labelledby="owner-filter-label">
               {users.map((user) => (
-                <button
+                <Button
+                  variant="quiet"
                   className={!isHouseholdView && user === selectedOwner ? 'userPill active' : 'userPill'}
                   key={user}
                   type="button"
@@ -368,9 +370,10 @@ export function Home({ dependencies }) {
                     {displayName(user).charAt(0)}
                   </span>
                   {displayName(user)}
-                </button>
+                </Button>
               ))}
-              <button
+              <Button
+                variant="quiet"
                 className={isHouseholdView ? 'userPill active' : 'userPill'}
                 type="button"
                 aria-pressed={isHouseholdView}
@@ -380,7 +383,7 @@ export function Home({ dependencies }) {
                   ⌂
                 </span>
                 Razem
-              </button>
+              </Button>
             </div>
           </div>
           {!isHouseholdView && (
@@ -390,7 +393,8 @@ export function Home({ dependencies }) {
               </p>
               <div className="typeNav" role="group" aria-labelledby="investment-type-filter-label">
                 {types.map((type) => (
-                  <button
+                  <Button
+                    variant="quiet"
                     className={type === typeFilter ? 'typeTab active' : 'typeTab'}
                     key={type}
                     type="button"
@@ -398,7 +402,7 @@ export function Home({ dependencies }) {
                     onClick={() => changeType(type)}
                   >
                     {TYPE_LABELS[type] || type}
-                  </button>
+                  </Button>
                 ))}
               </div>
               {filterSubcategories.length > 0 && (
@@ -406,16 +410,18 @@ export function Home({ dependencies }) {
                   <span className="visuallyHidden" id="investment-subcategory-filter-label">
                     Podkategorie inwestycji
                   </span>
-                  <button
+                  <Button
+                    variant="quiet"
                     className={!subcategoryFilter ? 'subtypeTab active' : 'subtypeTab'}
                     type="button"
                     aria-pressed={!subcategoryFilter}
                     onClick={() => setSubcategoryFilter('')}
                   >
                     Wszystkie
-                  </button>
+                  </Button>
                   {filterSubcategories.map((subcategory) => (
-                    <button
+                    <Button
+                      variant="quiet"
                       className={subcategory === subcategoryFilter ? 'subtypeTab active' : 'subtypeTab'}
                       key={subcategory}
                       type="button"
@@ -423,7 +429,7 @@ export function Home({ dependencies }) {
                       onClick={() => setSubcategoryFilter(subcategory)}
                     >
                       {SUBCATEGORY_LABELS[subcategory] || subcategory}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               )}
@@ -465,21 +471,23 @@ export function Home({ dependencies }) {
                 <>
                   <div className="summaryHeading">
                     <div>
-                      <p className="eyebrow">Wartość aktywnego zakresu</p>
+                      <p className="eyebrow">Aktualny stan</p>
                       <h2 id="portfolio-summary-heading">{activePortfolioLabel}</h2>
                     </div>
                     <p className="dataFreshness">
-                      <span>Stan danych</span>
+                      <span>Data danych</span>
                       <strong>{latestDataDate || 'Brak wycen'}</strong>
                     </p>
                   </div>
-                  <p className="totalValue">{formatMoney(totalValue)}</p>
+                  <Metric className="summaryTotal" label="Wartość portfela" value={formatMoney(totalValue)} />
                   <div className="summaryGrid">
                     {types.map((type) => (
-                      <div className="summaryCard" key={type}>
-                        <span>{TYPE_LABELS[type] || type}</span>
-                        <strong>{formatMoney(totalsByType[type] || 0)}</strong>
-                      </div>
+                      <Metric
+                        className="summaryCard"
+                        key={type}
+                        label={TYPE_LABELS[type] || type}
+                        value={formatMoney(totalsByType[type] || 0)}
+                      />
                     ))}
                   </div>
                   <QueryBoundary
@@ -493,28 +501,23 @@ export function Home({ dependencies }) {
                   >
                     {(loadedPerformance) => (
                       <>
-                        <p className="headlineChange">
-                          <span>Zmiana w tym miesiącu</span>
-                          <strong
-                            className={
-                              Number(loadedPerformance.monthlyResultPln) >= 0 ? 'positiveText' : 'negativeText'
-                            }
-                          >
-                            {formatSignedMoney(loadedPerformance.monthlyResultPln)}
-                          </strong>
-                          <small>
-                            {formatPercent(
-                              loadedPerformance.monthlyReturnRatePercent == null
-                                ? NaN
-                                : Number(loadedPerformance.monthlyReturnRatePercent)
-                            )}
-                          </small>
-                        </p>
+                        <Metric
+                          className="headlineChange"
+                          label="Zmiana w tym miesiącu"
+                          value={formatSignedMoney(loadedPerformance.monthlyResultPln)}
+                          tone={Number(loadedPerformance.monthlyResultPln) >= 0 ? 'positive' : 'negative'}
+                          detail={formatPercent(
+                            loadedPerformance.monthlyReturnRatePercent == null
+                              ? NaN
+                              : Number(loadedPerformance.monthlyReturnRatePercent)
+                          )}
+                        />
                         <div className="performanceGrid compactPerformance">
-                          <div>
-                            <span>Łączny wynik inwestycji</span>
-                            <strong>{formatSignedMoney(loadedPerformance.nominalResultPln)}</strong>
-                          </div>
+                          <Metric
+                            label="Łączny wynik inwestycji"
+                            value={formatSignedMoney(loadedPerformance.nominalResultPln)}
+                            tone={Number(loadedPerformance.nominalResultPln) >= 0 ? 'positive' : 'negative'}
+                          />
                         </div>
                       </>
                     )}
@@ -570,136 +573,121 @@ export function Home({ dependencies }) {
                 title="Co zmieniło się w portfelu?"
                 description="Wpłata i wypłata automatycznie zmienią stan. „Aktualna wycena” zapisuje zmianę rynku bez przepływu pieniędzy."
               />
-              <label>
-                Rodzaj zmiany
-                <select
-                  id="portfolio-change-operation-type"
-                  ref={(element) => {
-                    fieldRefs.current.operationType = element;
-                  }}
-                  aria-invalid={fieldErrors.operationType ? 'true' : undefined}
-                  aria-describedby={fieldErrors.operationType ? 'portfolio-change-operation-type-error' : undefined}
-                  value={operationForm.operationType}
-                  disabled={isSaving}
-                  onChange={(event) => setOperationForm({ ...operationForm, operationType: event.target.value })}
-                >
-                  <option value="DEPOSIT">Wpłata — zwiększ stan</option>
-                  <option value="WITHDRAWAL">Wypłata — zmniejsz stan</option>
-                  <option value="VALUATION">Aktualna wycena — policz zysk lub stratę</option>
-                  <option value="BUY">Kupno — zwiększ stan</option>
-                  <option value="SELL">Sprzedaż — zmniejsz stan</option>
-                </select>
-                {fieldErrors.operationType && (
-                  <span id="portfolio-change-operation-type-error" className="error">
-                    {fieldErrors.operationType}
-                  </span>
-                )}
-              </label>
-              <label>
-                Aktywo
-                <select
-                  id="portfolio-change-type"
-                  ref={(element) => {
-                    fieldRefs.current.type = element;
-                  }}
-                  aria-invalid={fieldErrors.type ? 'true' : undefined}
-                  aria-describedby={fieldErrors.type ? 'portfolio-change-type-error' : undefined}
-                  required
-                  value={operationForm.type}
-                  disabled={isSaving}
-                  onChange={(event) => {
-                    const type = event.target.value;
-                    setOperationForm({ ...operationForm, type, subcategory: subcategoriesFor(type)[0] || '' });
-                  }}
-                >
-                  {types.map((type) => (
-                    <option key={type} value={type}>
-                      {TYPE_LABELS[type] || type}
-                    </option>
-                  ))}
-                </select>
-                {fieldErrors.type && (
-                  <span id="portfolio-change-type-error" className="error">
-                    {fieldErrors.type}
-                  </span>
-                )}
-              </label>
-              {operationSubcategories.length > 0 && (
-                <label>
-                  Podkategoria
+              <Field
+                label="Rodzaj zmiany"
+                error={fieldErrors.operationType}
+                errorId="portfolio-change-operation-type-error"
+                control={
                   <select
-                    id="portfolio-change-subcategory"
+                    id="portfolio-change-operation-type"
                     ref={(element) => {
-                      fieldRefs.current.subcategory = element;
+                      fieldRefs.current.operationType = element;
                     }}
-                    aria-invalid={fieldErrors.subcategory ? 'true' : undefined}
-                    aria-describedby={fieldErrors.subcategory ? 'portfolio-change-subcategory-error' : undefined}
-                    required
-                    value={operationForm.subcategory}
+                    value={operationForm.operationType}
                     disabled={isSaving}
-                    onChange={(event) => setOperationForm({ ...operationForm, subcategory: event.target.value })}
+                    onChange={(event) => setOperationForm({ ...operationForm, operationType: event.target.value })}
                   >
-                    {operationSubcategories.map((value) => (
-                      <option key={value} value={value}>
-                        {SUBCATEGORY_LABELS[value]}
+                    <option value="DEPOSIT">Wpłata — zwiększ stan</option>
+                    <option value="WITHDRAWAL">Wypłata — zmniejsz stan</option>
+                    <option value="VALUATION">Aktualna wycena — policz zysk lub stratę</option>
+                    <option value="BUY">Kupno — zwiększ stan</option>
+                    <option value="SELL">Sprzedaż — zmniejsz stan</option>
+                  </select>
+                }
+              />
+              <Field
+                label="Aktywo"
+                error={fieldErrors.type}
+                errorId="portfolio-change-type-error"
+                control={
+                  <select
+                    id="portfolio-change-type"
+                    ref={(element) => {
+                      fieldRefs.current.type = element;
+                    }}
+                    required
+                    value={operationForm.type}
+                    disabled={isSaving}
+                    onChange={(event) => {
+                      const type = event.target.value;
+                      setOperationForm({ ...operationForm, type, subcategory: subcategoriesFor(type)[0] || '' });
+                    }}
+                  >
+                    {types.map((type) => (
+                      <option key={type} value={type}>
+                        {TYPE_LABELS[type] || type}
                       </option>
                     ))}
                   </select>
-                  {fieldErrors.subcategory && (
-                    <span id="portfolio-change-subcategory-error" className="error">
-                      {fieldErrors.subcategory}
-                    </span>
-                  )}
-                </label>
+                }
+              />
+              {operationSubcategories.length > 0 && (
+                <Field
+                  label="Podkategoria"
+                  error={fieldErrors.subcategory}
+                  errorId="portfolio-change-subcategory-error"
+                  control={
+                    <select
+                      id="portfolio-change-subcategory"
+                      ref={(element) => {
+                        fieldRefs.current.subcategory = element;
+                      }}
+                      required
+                      value={operationForm.subcategory}
+                      disabled={isSaving}
+                      onChange={(event) => setOperationForm({ ...operationForm, subcategory: event.target.value })}
+                    >
+                      {operationSubcategories.map((value) => (
+                        <option key={value} value={value}>
+                          {SUBCATEGORY_LABELS[value]}
+                        </option>
+                      ))}
+                    </select>
+                  }
+                />
               )}
               {operationForm.operationType === 'VALUATION' ? (
-                <label>
-                  Aktualna wartość w PLN
-                  <input
-                    id="portfolio-change-current-value"
-                    ref={(element) => {
-                      fieldRefs.current.currentValuePln = element;
-                    }}
-                    aria-invalid={fieldErrors.currentValuePln ? 'true' : undefined}
-                    aria-describedby={fieldErrors.currentValuePln ? 'portfolio-change-current-value-error' : undefined}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    required
-                    value={operationForm.currentValuePln}
-                    disabled={isSaving}
-                    onChange={(event) => setOperationForm({ ...operationForm, currentValuePln: event.target.value })}
-                  />
-                  {fieldErrors.currentValuePln && (
-                    <span id="portfolio-change-current-value-error" className="error">
-                      {fieldErrors.currentValuePln}
-                    </span>
-                  )}
-                </label>
+                <Field
+                  label="Aktualna wartość w PLN"
+                  error={fieldErrors.currentValuePln}
+                  errorId="portfolio-change-current-value-error"
+                  control={
+                    <input
+                      id="portfolio-change-current-value"
+                      ref={(element) => {
+                        fieldRefs.current.currentValuePln = element;
+                      }}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      required
+                      value={operationForm.currentValuePln}
+                      disabled={isSaving}
+                      onChange={(event) => setOperationForm({ ...operationForm, currentValuePln: event.target.value })}
+                    />
+                  }
+                />
               ) : (
-                <label>
-                  Kwota w PLN
-                  <input
-                    id="portfolio-change-amount"
-                    ref={(element) => {
-                      fieldRefs.current.amountPln = element;
-                    }}
-                    aria-invalid={fieldErrors.amountPln ? 'true' : undefined}
-                    aria-describedby={fieldErrors.amountPln ? 'portfolio-change-amount-error' : undefined}
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    required
-                    value={operationForm.amountPln}
-                    disabled={isSaving}
-                    onChange={(event) => setOperationForm({ ...operationForm, amountPln: event.target.value })}
-                  />
-                  {fieldErrors.amountPln && (
-                    <span id="portfolio-change-amount-error" className="error">
-                      {fieldErrors.amountPln}
-                    </span>
-                  )}
-                </label>
+                <Field
+                  label="Kwota w PLN"
+                  error={fieldErrors.amountPln}
+                  errorId="portfolio-change-amount-error"
+                  control={
+                    <input
+                      id="portfolio-change-amount"
+                      ref={(element) => {
+                        fieldRefs.current.amountPln = element;
+                      }}
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      required
+                      value={operationForm.amountPln}
+                      disabled={isSaving}
+                      onChange={(event) => setOperationForm({ ...operationForm, amountPln: event.target.value })}
+                    />
+                  }
+                />
               )}
               <Field
                 label="Data"
