@@ -2,6 +2,10 @@
 import React from 'react';
 import { buildSummary } from '../../domain/portfolio/summary.js';
 import { mapTimeSeriesViewModel } from '../viewModels/portfolioViewModelMappers.js';
+import { DataTable, type DataColumn } from './DataTable.js';
+import { Field } from './Field.js';
+import { Metric } from './Metric.js';
+import { SectionHeader } from './SectionHeader.js';
 
 export function SummaryChart({ id = undefined, entries, types }) {
   const summaryId = React.useId();
@@ -27,48 +31,44 @@ export function SummaryChart({ id = undefined, entries, types }) {
   return (
     <section className="ledgerSection graphPanel sectionAnchor" id={id}>
       <div className="graphHeader">
-        <div>
-          <p className="eyebrow">Analiza wzrostu</p>
-          <h2>Miesięczne i roczne podsumowanie inwestycji</h2>
-        </div>
+        <SectionHeader eyebrow="Analiza wzrostu" title="Miesięczne i roczne podsumowanie inwestycji" />
         <div className="graphControls">
-          <label>
-            Zakres inwestycji
-            <select value={selectedType} onChange={(event) => setSelectedType(event.target.value)}>
-              {viewModel.typeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Okres
-            <select value={period} onChange={(event) => setPeriod(event.target.value)}>
-              <option value="monthly">Miesięcznie</option>
-              <option value="yearly">Rocznie</option>
-            </select>
-          </label>
+          <Field
+            label="Zakres inwestycji"
+            control={
+              <select value={selectedType} onChange={(event) => setSelectedType(event.target.value)}>
+                {viewModel.typeOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            }
+          />
+          <Field
+            label="Okres"
+            control={
+              <select value={period} onChange={(event) => setPeriod(event.target.value)}>
+                <option value="monthly">Miesięcznie</option>
+                <option value="yearly">Rocznie</option>
+              </select>
+            }
+          />
         </div>
       </div>
 
       <div className="metricGrid">
-        <div className="metricCard">
-          <span>Aktualna suma</span>
-          <strong>{viewModel.total}</strong>
-        </div>
-        <div className={viewModel.changeClass}>
-          <span>Zmiana kwotowa</span>
-          <strong>
-            {changeSymbol} {viewModel.change}
-          </strong>
-        </div>
-        <div className={viewModel.percentClass}>
-          <span>Zmiana procentowa</span>
-          <strong>
-            {changeSymbol} {viewModel.changePercent}
-          </strong>
-        </div>
+        <Metric label="Aktualna suma" value={viewModel.total} />
+        <Metric
+          label="Zmiana kwotowa"
+          value={`${changeSymbol} ${viewModel.change}`}
+          tone={(latestPoint?.changeAmount || 0) >= 0 ? 'positive' : 'negative'}
+        />
+        <Metric
+          label="Zmiana procentowa"
+          value={`${changeSymbol} ${viewModel.changePercent}`}
+          tone={(latestPoint?.changeAmount || 0) >= 0 ? 'positive' : 'negative'}
+        />
       </div>
 
       <p id={summaryId} className="chartTextSummary">
@@ -135,29 +135,22 @@ export function SummaryChart({ id = undefined, entries, types }) {
       {viewModel.rows.length > 0 && (
         <details className="chartDataDisclosure">
           <summary>Pokaż dane wykresu</summary>
-          <table>
-            <caption>
-              Dane dla: {selectedTypeLabel}, {periodLabel}
-            </caption>
-            <thead>
-              <tr>
-                <th scope="col">Okres</th>
-                <th scope="col">Wartość</th>
-                <th scope="col">Zmiana</th>
-              </tr>
-            </thead>
-            <tbody>
-              {viewModel.rows.map((point) => (
-                <tr key={point.key}>
-                  <th scope="row">{point.label}</th>
-                  <td>{point.valueLabel}</td>
-                  <td>
-                    {point.changeAmount >= 0 ? '↑' : '↓'} {point.changeLabel}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <DataTable
+            caption={`Dane dla: ${selectedTypeLabel}, ${periodLabel}`}
+            rows={viewModel.rows}
+            rowKey={(point) => point.key}
+            columns={
+              [
+                { key: 'period', header: 'Okres', rowHeader: true, cell: (point) => point.label },
+                { key: 'value', header: 'Wartość', cell: (point) => point.valueLabel },
+                {
+                  key: 'change',
+                  header: 'Zmiana',
+                  cell: (point) => `${point.changeAmount >= 0 ? '↑' : '↓'} ${point.changeLabel}`
+                }
+              ] satisfies DataColumn<(typeof viewModel.rows)[number]>[]
+            }
+          />
         </details>
       )}
     </section>

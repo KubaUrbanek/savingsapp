@@ -30,8 +30,6 @@ export function mapTimeSeriesViewModel(points, types, selectedType, period) {
     total: formatMoney(latest?.total || 0),
     change: formatMoney(latest?.changeAmount || 0),
     changePercent: formatPercent(latest?.changePercent),
-    changeClass: latest?.changeAmount >= 0 ? 'metricCard positive' : 'metricCard negative',
-    percentClass: latest?.changePercent >= 0 ? 'metricCard positive' : 'metricCard negative',
     rows: points.map((point) => ({
       ...point,
       label: period === 'yearly' ? point.key : monthLabel(point.key),

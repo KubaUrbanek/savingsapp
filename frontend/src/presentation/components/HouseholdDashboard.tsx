@@ -10,6 +10,7 @@ import {
   TYPE_LABELS
 } from '../viewModels/formatters.js';
 import { Field } from './Field.jsx';
+import { Metric } from './Metric.jsx';
 import { SectionHeader } from './SectionHeader.jsx';
 
 export function HouseholdDashboard({ entries, users, types, preferences, onPreferenceError }) {
@@ -64,21 +65,17 @@ export function HouseholdDashboard({ entries, users, types, preferences, onPrefe
       </article>
 
       <div className="householdMetricGrid">
-        <article className="householdMetric">
-          <span>Aktywa płynne</span>
-          <strong>{formatMoney(liquid)}</strong>
-          <small>{formatUnsignedPercent(total ? (liquid / total) * 100 : 0)} całości</small>
-        </article>
-        <article className="householdMetric">
-          <span>Długoterminowe</span>
-          <strong>{formatMoney(longTerm)}</strong>
-          <small>{formatUnsignedPercent(total ? (longTerm / total) * 100 : 0)} całości</small>
-        </article>
-        <article className="householdMetric retirement">
-          <span>Emerytura</span>
-          <strong>{formatMoney(retirement)}</strong>
-          <small>IKE, IKZE, PPK i PPO</small>
-        </article>
+        <Metric
+          label="Aktywa płynne"
+          value={formatMoney(liquid)}
+          detail={`${formatUnsignedPercent(total ? (liquid / total) * 100 : 0)} całości`}
+        />
+        <Metric
+          label="Długoterminowe"
+          value={formatMoney(longTerm)}
+          detail={`${formatUnsignedPercent(total ? (longTerm / total) * 100 : 0)} całości`}
+        />
+        <Metric label="Emerytura" value={formatMoney(retirement)} detail="IKE, IKZE, PPK i PPO" tone="highlight" />
       </div>
 
       <div className="householdDetailsGrid">

@@ -1,8 +1,9 @@
-// @ts-nocheck
 import React from 'react';
 import { Button } from './Button.jsx';
 
-function QuerySkeleton({ shape, label }) {
+type SkeletonShape = 'section' | 'chart' | 'list';
+
+function QuerySkeleton({ shape, label }: { shape: SkeletonShape; label: string }) {
   const lines = shape === 'chart' ? 4 : shape === 'list' ? 3 : 2;
   return (
     <div className={`querySkeleton querySkeleton--${shape}`} role="status" aria-label={label}>
@@ -14,11 +15,16 @@ function QuerySkeleton({ shape, label }) {
   );
 }
 
-type QueryBoundaryProps = {
-  state: { status: string; data?: unknown; error?: unknown };
-  children: (data: unknown) => React.ReactNode;
-  isEmpty?: (data: unknown) => boolean;
-  skeletonShape?: string;
+type QueryState<Data> =
+  | { status: 'idle' | 'loading'; data?: Data }
+  | { status: 'success'; data: Data }
+  | { status: 'failure'; error: unknown; data?: Data };
+
+type QueryBoundaryProps<Data> = {
+  state: QueryState<Data>;
+  children: (data: Data) => React.ReactNode;
+  isEmpty?: (data: Data) => boolean;
+  skeletonShape?: SkeletonShape;
   loadingLabel?: string;
   emptyTitle?: string;
   emptyDescription?: React.ReactNode;
@@ -26,7 +32,7 @@ type QueryBoundaryProps = {
   onRetry?: () => void;
 };
 
-export function QueryBoundary({
+export function QueryBoundary<Data>({
   state,
   children,
   isEmpty = (data) => Array.isArray(data) && data.length === 0,
@@ -36,7 +42,7 @@ export function QueryBoundary({
   emptyDescription = undefined,
   emptyAction = undefined,
   onRetry = undefined
-}: QueryBoundaryProps) {
+}: QueryBoundaryProps<Data>) {
   const hasData = state.status === 'success' || (state.status === 'loading' && 'data' in state);
 
   if (state.status === 'loading' && !hasData) return <QuerySkeleton shape={skeletonShape} label={loadingLabel} />;
@@ -53,7 +59,7 @@ export function QueryBoundary({
     );
   }
 
-  if (!hasData || isEmpty(state.data)) {
+  if (!hasData || state.data === undefined || isEmpty(state.data)) {
     return (
       <div className="queryState queryState--empty">
         <strong>{emptyTitle}</strong>

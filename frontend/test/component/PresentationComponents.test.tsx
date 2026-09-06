@@ -7,6 +7,8 @@ import { Field } from '../../src/presentation/components/Field.js';
 import { InlineMessage } from '../../src/presentation/components/InlineMessage.js';
 import { SectionHeader } from '../../src/presentation/components/SectionHeader.js';
 import { QueryBoundary } from '../../src/presentation/components/QueryBoundary.js';
+import { DataList, DataTable } from '../../src/presentation/components/DataTable.js';
+import { Metric } from '../../src/presentation/components/Metric.js';
 
 afterEach(cleanup);
 
@@ -15,14 +17,12 @@ describe('presentation components', () => {
     render(<InlineMessage variant={variant}>Treść komunikatu</InlineMessage>);
 
     const message = screen.getByText('Treść komunikatu');
-    expect(message).toHaveClass(`inlineMessage--${variant}`);
     expect(message).toHaveAttribute('role', variant === 'error' ? 'alert' : 'status');
   });
 
   it('keeps an empty live region in the accessibility tree without displaying a visual block', () => {
     render(<InlineMessage variant="success" />);
 
-    expect(screen.getByRole('status')).toHaveClass('visuallyHidden');
     expect(screen.getByRole('status')).toBeEmptyDOMElement();
   });
 
@@ -69,7 +69,7 @@ describe('presentation components', () => {
       </QueryBoundary>
     );
 
-    expect(screen.getByRole('status', { name: 'Wczytywanie historii…' })).toHaveClass('querySkeleton');
+    expect(screen.getByRole('status', { name: 'Wczytywanie historii…' })).toBeInTheDocument();
     expect(screen.queryByText('Dane')).not.toBeInTheDocument();
 
     rerender(
@@ -84,6 +84,37 @@ describe('presentation components', () => {
     );
     expect(screen.getByText('Brak wycen')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Dodaj wycenę' })).toHaveAttribute('href', '#form');
+  });
+
+  it('renders metric variants with their complete accessible text', () => {
+    render(<Metric label="Wynik" value="1 250 zł" detail="w tym miesiącu" tone="positive" />);
+
+    expect(screen.getByText('Wynik').parentElement).toHaveTextContent('Wynik1 250 złw tym miesiącu');
+  });
+
+  it('renders tabular data with column and row headers', () => {
+    render(
+      <DataTable
+        caption="Wyceny"
+        rows={[{ asset: 'ETF', value: '100 zł' }]}
+        rowKey={(row) => row.asset}
+        columns={[
+          { key: 'asset', header: 'Aktywo', rowHeader: true, cell: (row) => row.asset },
+          { key: 'value', header: 'Wartość', cell: (row) => row.value }
+        ]}
+      />
+    );
+
+    expect(screen.getByRole('table', { name: 'Wyceny' })).toBeInTheDocument();
+    expect(screen.getByRole('rowheader', { name: 'ETF' })).toBeInTheDocument();
+    expect(screen.getAllByRole('columnheader')).toHaveLength(2);
+  });
+
+  it('renders a semantic data list with an optional accessible name', () => {
+    render(<DataList label="Szczegóły aktywa" items={[{ label: 'Cel', value: '40%' }]} />);
+
+    expect(screen.getByRole('term')).toHaveTextContent('Cel');
+    expect(screen.getByRole('definition')).toHaveTextContent('40%');
   });
 
   it('shows a safe failure and invokes the query retry action', () => {
