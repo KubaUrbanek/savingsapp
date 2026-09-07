@@ -22,10 +22,17 @@ function formatAllocationHeadline(targetAllocations) {
   ).join(' / ');
 }
 
-export function StockAllocationPanel({ entries, onAddStockValue, preferences, onPreferenceError }) {
+export function StockAllocationPanel({
+  entries,
+  investmentTypes = ['GIELDA'],
+  onAddStockValue,
+  preferences,
+  onPreferenceError
+}) {
   const allocationScrollHintId = React.useId();
   const contributionScrollHintId = React.useId();
   const [virtualContribution, setVirtualContribution] = React.useState('');
+  const [investmentType, setInvestmentType] = React.useState(() => investmentTypes[0]);
   const [targetAllocations, setTargetAllocations] = React.useState(() => preferences.stockAllocation());
   const contributionAmount = Number(virtualContribution || 0);
   const allocation = React.useMemo(
@@ -64,13 +71,10 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
     <section className="ledgerSection stockPanel">
       <SectionHeader
         className="stockHeader"
-        eyebrow="Giełda — rebalancing ETF"
+        eyebrow="ETF — Giełda, IKE i IKZE"
         title={<>Docelowy podział: {formatAllocationHeadline(targetAllocations)}</>}
         description={
-          <>
-            Panel używa najnowszej wartości każdej podkategorii Giełdy, więc możesz regularnie dopisywać aktualne wyceny
-            ETF bez nadpisywania historii.
-          </>
+          <>Panel sumuje ostatnie wyceny ETF osobno dla każdego właściciela i typu rachunku: Giełda, IKE oraz IKZE.</>
         }
         action={
           <div className="stockTotal">
@@ -119,7 +123,7 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
       </div>
 
       {allocation.total === 0 ? (
-        <p>Dodaj pierwsze wartości dla trzech ETF w typie „Giełda”, aby zobaczyć odchylenia od planu.</p>
+        <p>Dodaj pierwsze wartości ETF na rachunku Giełda, IKE lub IKZE, aby zobaczyć odchylenia od planu.</p>
       ) : (
         <>
           <p className="visuallyHidden" id={allocationScrollHintId}>
@@ -128,11 +132,11 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
           <div
             className="stockTable tableScroller"
             role="region"
-            aria-label="Przewijana docelowa alokacja giełdowa"
+            aria-label="Przewijana docelowa alokacja ETF"
             aria-describedby={allocationScrollHintId}
             tabIndex={0}
           >
-            <table aria-label="Docelowa alokacja giełdowa">
+            <table aria-label="Docelowa alokacja ETF">
               <thead>
                 <tr>
                   <th scope="col">ETF</th>
@@ -168,7 +172,7 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
               </tbody>
             </table>
           </div>
-          <div className="mobileAllocationList" aria-label="Docelowa alokacja giełdowa — widok mobilny">
+          <div className="mobileAllocationList" aria-label="Docelowa alokacja ETF — widok mobilny">
             {allocation.rows.map((row) => (
               <article className={`mobileAllocationCard ${row.difference >= 0 ? 'buy' : 'trim'}`} key={row.subcategory}>
                 <h3>{SUBCATEGORY_LABELS[row.subcategory]}</h3>
@@ -293,8 +297,25 @@ export function StockAllocationPanel({ entries, onAddStockValue, preferences, on
       )}
 
       <div className="quickStockActions" aria-label="Szybkie dodawanie ETF">
+        <Field
+          label="Typ rachunku dla nowej wyceny"
+          control={
+            <select value={investmentType} onChange={(event) => setInvestmentType(event.target.value)}>
+              {investmentTypes.map((type) => (
+                <option value={type} key={type}>
+                  {type === 'GIELDA' ? 'Giełda' : type}
+                </option>
+              ))}
+            </select>
+          }
+        />
         {STOCK_SUBCATEGORIES.map((subcategory) => (
-          <Button variant="secondary" type="button" key={subcategory} onClick={() => onAddStockValue(subcategory)}>
+          <Button
+            variant="secondary"
+            type="button"
+            key={subcategory}
+            onClick={() => onAddStockValue(investmentType, subcategory)}
+          >
             Dodaj wycenę: {SUBCATEGORY_LABELS[subcategory]}
           </Button>
         ))}
