@@ -41,3 +41,33 @@ test('entry factory creates immutable valid domain state with canonical null sub
   assert.equal(entry.valuePln, 10);
   assert.ok(Object.isFrozen(entry));
 });
+
+test('entry factory preserves null updatedAt for an entry that has not been modified', () => {
+  const entry = InvestmentEntry.create({
+    id: '1',
+    type: 'KONTO_BANKOWE',
+    owner: 'JAN',
+    valuePln: '10.00',
+    date: '2026-09-01',
+    createdAt: '2026-09-01T10:00:00Z',
+    updatedAt: null
+  });
+
+  assert.equal(entry.updatedAt, null);
+});
+
+test('entry factory validates a non-null updatedAt as a timestamp', () => {
+  assert.throws(
+    () =>
+      InvestmentEntry.create({
+        id: '1',
+        type: 'KONTO_BANKOWE',
+        owner: 'JAN',
+        valuePln: '10.00',
+        date: '2026-09-01',
+        createdAt: '2026-09-01T10:00:00Z',
+        updatedAt: 'not-a-timestamp'
+      }),
+    /updatedAt must be an ISO timestamp/
+  );
+});
