@@ -71,10 +71,10 @@ export function Home({ dependencies }) {
   const entries = dataFrom(controller.entries, []);
   const operations = dataFrom(controller.operations, []);
   const reportError = React.useCallback(
-    (nextError, action = 'odświeżyć dane', nextStep = 'Odśwież stronę i spróbuj ponownie.') => {
+    (_nextError, action = 'odświeżyć dane', nextStep = 'Odśwież stronę i spróbuj ponownie.') => {
       setStatus('');
       pendingErrorFocusRef.current = true;
-      setError(`Nie udało się ${action}. ${nextError.message} ${nextStep}`);
+      setError(`Nie udało się ${action}. ${nextStep}`);
     },
     []
   );
