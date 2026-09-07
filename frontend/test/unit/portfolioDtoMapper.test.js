@@ -27,6 +27,7 @@ test('HTTP mappers translate entry and operation payloads into domain objects', 
     note: null
   });
   assert.equal(entry.valuePln, 100.25);
+  assert.equal(entry.updatedAt, common.createdAt);
   assert.equal(operation.amountPln, 50);
   assert.ok(Object.isFrozen(entry));
   assert.ok(Object.isFrozen(operation));
