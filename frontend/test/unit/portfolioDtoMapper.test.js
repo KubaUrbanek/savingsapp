@@ -32,6 +32,12 @@ test('HTTP mappers translate entry and operation payloads into domain objects', 
   assert.ok(Object.isFrozen(operation));
 });
 
+test('HTTP mapper accepts a null update timestamp for an entry that has never been updated', () => {
+  const entry = mapInvestmentDto({ ...common, valuePln: '100.25', updatedAt: null });
+
+  assert.equal(entry.updatedAt, null);
+});
+
 test('unknown enum strings and malformed optional values are explicit mapping errors', () => {
   assert.throws(() => mapInvestmentTypesDto({ values: ['GIELDA', 'CRYPTO'] }), MappingError);
   assert.throws(
