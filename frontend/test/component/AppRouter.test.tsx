@@ -177,7 +177,7 @@ describe('AppRouter', () => {
     await waitFor(() => expect(summary).toHaveTextContent('Data danych2026-09-03'));
     expect(summary.querySelector('.summaryTotal.metric')).toHaveTextContent(/Wartość portfela4\s?200,00\s*zł/);
     expect(scopeSwitcher.querySelectorAll('.button')).toHaveLength(3);
-    expect(form.querySelectorAll('.field')).toHaveLength(4);
+    expect(form.querySelectorAll('.field')).toHaveLength(5);
 
     fireEvent.click(screen.getByRole('button', { name: /zosia/i, pressed: false }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Portfel: zosia' })).toBeInTheDocument();
@@ -285,11 +285,12 @@ describe('AppRouter', () => {
     const together = screen.getByRole('button', { name: 'Razem', pressed: false });
     const type = await screen.findByRole('button', { name: 'Konto bankowe', pressed: true });
     const operationType = screen.getByLabelText('Rodzaj zmiany');
+    const operationReason = screen.getByLabelText('Skąd wynika zmiana?');
     const asset = screen.getByLabelText('Aktywo');
     const amount = screen.getByLabelText('Kwota w PLN');
     const date = screen.getByLabelText('Data');
     const save = screen.getByRole('button', { name: 'Zapisz zmianę' });
-    const controls = [owner, together, type, operationType, asset, amount, date, save];
+    const controls = [owner, together, type, operationType, operationReason, asset, amount, date, save];
 
     controls.forEach((control, index) => {
       control.focus();
@@ -325,6 +326,61 @@ describe('AppRouter', () => {
     expect(currentValue).toHaveAttribute('aria-invalid', 'true');
     expect(currentValue).toHaveAttribute('aria-describedby', message.id);
     expect(currentValue).toHaveFocus();
+  });
+
+  it('offers three primary actions and conditionally narrows the domain operation reason', async () => {
+    render(<AppRouter dependencies={dependencies()} />);
+
+    const action = await screen.findByLabelText('Rodzaj zmiany');
+    expect(Array.from(action.querySelectorAll('option'), (option) => option.textContent)).toEqual([
+      'Dodaj środki',
+      'Odejmij środki',
+      'Ustaw aktualną wartość'
+    ]);
+
+    let reason = screen.getByLabelText('Skąd wynika zmiana?');
+    expect(Array.from(reason.querySelectorAll('option'), (option) => [option.textContent, option.value])).toEqual([
+      ['Wpłata nowych środków', 'DEPOSIT'],
+      ['Zakup aktywa', 'BUY']
+    ]);
+
+    fireEvent.change(action, { target: { value: 'SUBTRACT' } });
+    reason = screen.getByLabelText('Skąd wynika zmiana?');
+    expect(Array.from(reason.querySelectorAll('option'), (option) => [option.textContent, option.value])).toEqual([
+      ['Wypłata środków', 'WITHDRAWAL'],
+      ['Sprzedaż aktywa', 'SELL']
+    ]);
+
+    fireEvent.change(action, { target: { value: 'VALUATION' } });
+    expect(screen.queryByLabelText('Skąd wynika zmiana?')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Aktualna wartość w PLN')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['ADD', 'DEPOSIT'],
+    ['ADD', 'BUY'],
+    ['SUBTRACT', 'WITHDRAWAL'],
+    ['SUBTRACT', 'SELL'],
+    ['VALUATION', 'VALUATION']
+  ])('maps the %s action to the %s domain command', async (actionValue, expectedKind) => {
+    const execute = vi.fn(async (command: unknown) => {
+      void command;
+      return { nextValue: 100, kind: expectedKind, atomic: true };
+    });
+    render(<AppRouter dependencies={dependencies({ recordPortfolioChange: { execute } })} />);
+
+    const action = await screen.findByLabelText('Rodzaj zmiany');
+    fireEvent.change(action, { target: { value: actionValue } });
+    if (actionValue !== 'VALUATION') {
+      fireEvent.change(screen.getByLabelText('Skąd wynika zmiana?'), { target: { value: expectedKind } });
+      fireEvent.change(screen.getByLabelText('Kwota w PLN'), { target: { value: '10' } });
+    } else {
+      fireEvent.change(screen.getByLabelText('Aktualna wartość w PLN'), { target: { value: '100' } });
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
+
+    await waitFor(() => expect(execute).toHaveBeenCalledTimes(1));
+    expect(execute.mock.calls[0]![0]).toMatchObject({ kind: expectedKind });
   });
 
   it('focuses the accessible error summary for a non-field failure', async () => {
