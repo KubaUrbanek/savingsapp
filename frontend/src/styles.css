@@ -1474,10 +1474,12 @@ a:focus-visible,
 .summaryGrid {
   position: relative;
   z-index: 1;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 8px;
 }
 
 .summaryCard {
+  min-width: 0;
   gap: 4px;
   padding: 12px 16px;
   border: 1px solid var(--color-surface-subtle);
@@ -2162,14 +2164,21 @@ body {
 .summaryPanel .summaryCard .metricValue,
 .summaryPanel .compactPerformance .metricValue {
   color: var(--color-on-portfolio);
+  overflow-wrap: anywhere;
 }
 
 .summaryPanel .headlineChange.metric {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
+  min-width: 0;
   padding: 0;
   border: 0;
+}
+
+.summaryPanel .headlineChange .metricValue {
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .summaryPanel .headlineChange.metric--positive .metricValue {
