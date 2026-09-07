@@ -572,11 +572,11 @@ export function Home({ dependencies }) {
               <SectionHeader
                 eyebrow="Jedno miejsce do aktualizacji"
                 titleId="quick-update-heading"
-                title="Co zmieniło się w portfelu?"
-                description="Wpłata i wypłata automatycznie zmienią stan. „Aktualna wycena” zapisuje zmianę rynku bez przepływu pieniędzy."
+                title="Zaktualizuj portfel"
+                description="Dodaj lub odejmij środki albo wpisz aktualną wartość wybranego składnika portfela."
               />
               <Field
-                label="Rodzaj zmiany"
+                label="Co chcesz zrobić?"
                 control={
                   <select
                     id="portfolio-change-operation-type"
@@ -628,7 +628,7 @@ export function Home({ dependencies }) {
                 />
               )}
               <Field
-                label="Aktywo"
+                label="Składnik portfela"
                 error={fieldErrors.type}
                 errorId="portfolio-change-type-error"
                 control={
@@ -655,7 +655,7 @@ export function Home({ dependencies }) {
               />
               {operationSubcategories.length > 0 && (
                 <Field
-                  label="Podkategoria"
+                  label="Rodzaj inwestycji"
                   error={fieldErrors.subcategory}
                   errorId="portfolio-change-subcategory-error"
                   control={
@@ -680,7 +680,7 @@ export function Home({ dependencies }) {
               )}
               {operationForm.action === 'VALUATION' ? (
                 <Field
-                  label="Aktualna wartość w PLN"
+                  label="Nowa wartość składnika"
                   error={fieldErrors.currentValuePln}
                   errorId="portfolio-change-current-value-error"
                   control={
@@ -701,7 +701,7 @@ export function Home({ dependencies }) {
                 />
               ) : (
                 <Field
-                  label="Kwota w PLN"
+                  label={operationForm.action === 'ADD' ? 'Kwota dodana' : 'Kwota odjęta'}
                   error={fieldErrors.amountPln}
                   errorId="portfolio-change-amount-error"
                   control={
@@ -722,7 +722,7 @@ export function Home({ dependencies }) {
                 />
               )}
               <Field
-                label="Data"
+                label="Data zmiany"
                 error={fieldErrors.date}
                 errorId="portfolio-change-date-error"
                 control={
@@ -746,7 +746,7 @@ export function Home({ dependencies }) {
                 busy={isSaving}
                 busyLabel="Zapisywanie…"
               >
-                Zapisz zmianę
+                Zaktualizuj portfel
               </Button>
             </form>
           </section>

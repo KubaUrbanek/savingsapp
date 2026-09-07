@@ -169,7 +169,7 @@ describe('AppRouter', () => {
     const heading = await screen.findByRole('heading', { level: 1, name: 'Portfel: jakub' });
     const scopeSwitcher = screen.getByRole('group', { name: 'Czyj portfel wyświetlić?' });
     const summary = document.querySelector('.summaryPanel')!;
-    const form = screen.getByRole('heading', { level: 2, name: 'Co zmieniło się w portfelu?' }).closest('form')!;
+    const form = screen.getByRole('heading', { level: 2, name: 'Zaktualizuj portfel' }).closest('form')!;
 
     expect(heading.compareDocumentPosition(scopeSwitcher) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(scopeSwitcher.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -258,7 +258,7 @@ describe('AppRouter', () => {
   it('associates a validation error with the invalid field and focuses it', async () => {
     const validationError = new PortfolioChangeValidationFailure(
       'amountPln',
-      'Kwota przekracza aktualną wartość aktywa.',
+      'Kwota przekracza aktualną wartość składnika portfela.',
       'INSUFFICIENT_PORTFOLIO_VALUE'
     );
     render(
@@ -267,9 +267,9 @@ describe('AppRouter', () => {
       />
     );
 
-    const amount = await screen.findByLabelText('Kwota w PLN');
+    const amount = await screen.findByLabelText('Kwota dodana');
     fireEvent.change(amount, { target: { value: '10' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zaktualizuj portfel' }));
 
     const message = await screen.findByText(validationError.message);
     expect(amount).toHaveAttribute('aria-invalid', 'true');
@@ -284,12 +284,12 @@ describe('AppRouter', () => {
     const owner = await screen.findByRole('button', { name: /jakub/i, pressed: true });
     const together = screen.getByRole('button', { name: 'Razem', pressed: false });
     const type = await screen.findByRole('button', { name: 'Konto bankowe', pressed: true });
-    const operationType = screen.getByLabelText('Rodzaj zmiany');
+    const operationType = screen.getByLabelText('Co chcesz zrobić?');
     const operationReason = screen.getByLabelText('Skąd wynika zmiana?');
-    const asset = screen.getByLabelText('Aktywo');
-    const amount = screen.getByLabelText('Kwota w PLN');
-    const date = screen.getByLabelText('Data');
-    const save = screen.getByRole('button', { name: 'Zapisz zmianę' });
+    const asset = screen.getByLabelText('Składnik portfela');
+    const amount = screen.getByLabelText('Kwota dodana');
+    const date = screen.getByLabelText('Data zmiany');
+    const save = screen.getByRole('button', { name: 'Zaktualizuj portfel' });
     const controls = [owner, together, type, operationType, operationReason, asset, amount, date, save];
 
     controls.forEach((control, index) => {
@@ -304,7 +304,7 @@ describe('AppRouter', () => {
   it('keeps validation feedback associated when the conditional valuation input is shown', async () => {
     const validationError = new PortfolioChangeValidationFailure(
       'currentValuePln',
-      'Podaj aktualną wartość aktywa.',
+      'Podaj nową wartość składnika.',
       'INVALID_CURRENT_VALUE'
     );
     render(
@@ -313,25 +313,31 @@ describe('AppRouter', () => {
       />
     );
 
-    await screen.findByLabelText('Kwota w PLN');
-    fireEvent.change(screen.getByLabelText('Rodzaj zmiany'), { target: { value: 'VALUATION' } });
+    await screen.findByLabelText('Kwota dodana');
+    fireEvent.change(screen.getByLabelText('Co chcesz zrobić?'), { target: { value: 'VALUATION' } });
 
-    const currentValue = screen.getByLabelText('Aktualna wartość w PLN');
+    const currentValue = screen.getByLabelText('Nowa wartość składnika');
     expect(currentValue).toHaveAttribute('id', 'portfolio-change-current-value');
     fireEvent.change(currentValue, { target: { value: '100' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zaktualizuj portfel' }));
 
     const message = await screen.findByText(validationError.message);
     expect(message).toHaveAttribute('id', 'portfolio-change-current-value-error');
     expect(currentValue).toHaveAttribute('aria-invalid', 'true');
     expect(currentValue).toHaveAttribute('aria-describedby', message.id);
-    expect(currentValue).toHaveFocus();
+    await waitFor(() => expect(currentValue).toHaveFocus());
   });
 
   it('offers three primary actions and conditionally narrows the domain operation reason', async () => {
     render(<AppRouter dependencies={dependencies()} />);
 
-    const action = await screen.findByLabelText('Rodzaj zmiany');
+    expect(await screen.findByRole('heading', { level: 2, name: 'Zaktualizuj portfel' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Dodaj lub odejmij środki albo wpisz aktualną wartość wybranego składnika portfela.')
+    ).toBeInTheDocument();
+    const action = await screen.findByLabelText('Co chcesz zrobić?');
+    expect(screen.getByLabelText('Składnik portfela')).toBeInTheDocument();
+    expect(screen.getByLabelText('Data zmiany')).toBeInTheDocument();
     expect(Array.from(action.querySelectorAll('option'), (option) => option.textContent)).toEqual([
       'Dodaj środki',
       'Odejmij środki',
@@ -345,6 +351,7 @@ describe('AppRouter', () => {
     ]);
 
     fireEvent.change(action, { target: { value: 'SUBTRACT' } });
+    expect(screen.getByLabelText('Kwota odjęta')).toBeInTheDocument();
     reason = screen.getByLabelText('Skąd wynika zmiana?');
     expect(Array.from(reason.querySelectorAll('option'), (option) => [option.textContent, option.value])).toEqual([
       ['Wypłata środków', 'WITHDRAWAL'],
@@ -353,7 +360,7 @@ describe('AppRouter', () => {
 
     fireEvent.change(action, { target: { value: 'VALUATION' } });
     expect(screen.queryByLabelText('Skąd wynika zmiana?')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Aktualna wartość w PLN')).toBeInTheDocument();
+    expect(screen.getByLabelText('Nowa wartość składnika')).toBeInTheDocument();
   });
 
   it.each([
@@ -369,15 +376,17 @@ describe('AppRouter', () => {
     });
     render(<AppRouter dependencies={dependencies({ recordPortfolioChange: { execute } })} />);
 
-    const action = await screen.findByLabelText('Rodzaj zmiany');
+    const action = await screen.findByLabelText('Co chcesz zrobić?');
     fireEvent.change(action, { target: { value: actionValue } });
     if (actionValue !== 'VALUATION') {
       fireEvent.change(screen.getByLabelText('Skąd wynika zmiana?'), { target: { value: expectedKind } });
-      fireEvent.change(screen.getByLabelText('Kwota w PLN'), { target: { value: '10' } });
+      fireEvent.change(screen.getByLabelText(actionValue === 'ADD' ? 'Kwota dodana' : 'Kwota odjęta'), {
+        target: { value: '10' }
+      });
     } else {
-      fireEvent.change(screen.getByLabelText('Aktualna wartość w PLN'), { target: { value: '100' } });
+      fireEvent.change(screen.getByLabelText('Nowa wartość składnika'), { target: { value: '100' } });
     }
-    fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zaktualizuj portfel' }));
 
     await waitFor(() => expect(execute).toHaveBeenCalledTimes(1));
     expect(execute.mock.calls[0]![0]).toMatchObject({ kind: expectedKind });
@@ -392,8 +401,8 @@ describe('AppRouter', () => {
       />
     );
 
-    fireEvent.change(await screen.findByLabelText('Kwota w PLN'), { target: { value: '10' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
+    fireEvent.change(await screen.findByLabelText('Kwota dodana'), { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Zaktualizuj portfel' }));
 
     const alert = await screen.findByRole('alert');
     await waitFor(() => expect(alert).toHaveTextContent('Awaria API'));
@@ -445,10 +454,10 @@ describe('AppRouter', () => {
       />
     );
 
-    fireEvent.change(await screen.findByLabelText('Kwota w PLN'), { target: { value: '10' } });
-    fireEvent.change(screen.getByLabelText('Data'), { target: { value: '2026-09-04' } });
+    fireEvent.change(await screen.findByLabelText('Kwota dodana'), { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText('Data zmiany'), { target: { value: '2026-09-04' } });
     waitForProjection = true;
-    fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zaktualizuj portfel' }));
     const liveStatus = screen.getByLabelText('Informacje o operacjach').querySelector('[role="status"]');
     expect(liveStatus).not.toBeNull();
     expect(liveStatus).toHaveTextContent('Zapisywanie…');
@@ -479,7 +488,7 @@ describe('AppRouter', () => {
     const appDependencies = dependencies({ exportDatabaseBackup: { execute: exportDatabaseBackup } });
     render(<AppRouter dependencies={appDependencies} />);
 
-    await screen.findByLabelText('Kwota w PLN');
+    await screen.findByLabelText('Kwota dodana');
     await waitFor(() => expect(appDependencies.preferences.selectOwner).toHaveBeenCalledTimes(2));
     fireEvent.click(screen.getByRole('button', { name: 'Eksportuj bazę' }));
     const exportingButton = screen.getByRole('button', { name: 'Eksportowanie…' });
@@ -509,7 +518,7 @@ describe('AppRouter', () => {
       />
     );
 
-    await screen.findByLabelText('Kwota w PLN');
+    await screen.findByLabelText('Kwota dodana');
     const fileInput = document.querySelector('input[type="file"]');
     expect(fileInput).not.toBeNull();
     if (!fileInput) throw new Error('Import file input was not rendered.');
@@ -539,7 +548,7 @@ describe('AppRouter', () => {
     const recordPortfolioChange = vi.fn(() => operation.promise);
     render(<AppRouter dependencies={dependencies({ recordPortfolioChange: { execute: recordPortfolioChange } })} />);
 
-    const amount = await screen.findByLabelText('Kwota w PLN');
+    const amount = await screen.findByLabelText('Kwota dodana');
     fireEvent.change(amount, { target: { value: '10' } });
     const form = amount.closest('form')!;
     fireEvent.submit(form);
@@ -550,7 +559,7 @@ describe('AppRouter', () => {
     expect(recordPortfolioChange).toHaveBeenCalledOnce();
 
     settle(operation);
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Zapisz zmianę' })).toBeEnabled());
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Zaktualizuj portfel' })).toBeEnabled());
     expect(form).toHaveAttribute('aria-busy', 'false');
   });
 

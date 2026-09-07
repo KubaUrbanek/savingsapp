@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 import React from 'react';
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AppRouter } from '../../src/app/AppRouter.js';
 import { GlobalAllocationPanel } from '../../src/presentation/components/GlobalAllocationPanel.js';
 import { HouseholdDashboard } from '../../src/presentation/components/HouseholdDashboard.js';
@@ -61,6 +61,13 @@ describe('automated accessibility checks', () => {
     const { container } = render(<AppRouter dependencies={dependencies} />);
 
     await screen.findByRole('heading', { level: 1, name: 'Portfel: jakub' });
+    expect(await screen.findByRole('heading', { level: 2, name: 'Zaktualizuj portfel' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Co chcesz zrobić?')).toBeInTheDocument();
+    expect(screen.getByLabelText('Składnik portfela')).toBeInTheDocument();
+    expect(screen.getByLabelText('Rodzaj inwestycji')).toBeInTheDocument();
+    expect(screen.getByLabelText('Kwota dodana')).toBeInTheDocument();
+    expect(screen.getByLabelText('Data zmiany')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Zaktualizuj portfel' })).toBeInTheDocument();
     await expectNoAccessibilityViolations(container);
   });
 

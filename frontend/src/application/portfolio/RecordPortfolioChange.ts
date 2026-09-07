@@ -52,19 +52,20 @@ function positiveNumber(value, field) {
 
 function resultingValue(command) {
   if (!Object.values(PortfolioChangeKind).includes(command?.kind)) {
-    throw new PortfolioChangeValidationFailure('operationType', 'Wybierz rodzaj zmiany.', 'UNKNOWN_CHANGE_KIND');
+    throw new PortfolioChangeValidationFailure('operationType', 'Wybierz, co chcesz zrobić.', 'UNKNOWN_CHANGE_KIND');
   }
-  if (!command.asset?.type) throw new PortfolioChangeValidationFailure('type', 'Wybierz aktywo.', 'ASSET_REQUIRED');
+  if (!command.asset?.type)
+    throw new PortfolioChangeValidationFailure('type', 'Wybierz składnik portfela.', 'ASSET_REQUIRED');
   if (!command.asset?.owner)
-    throw new PortfolioChangeValidationFailure('owner', 'Wybierz właściciela.', 'OWNER_REQUIRED');
-  if (!command.asset?.date) throw new PortfolioChangeValidationFailure('date', 'Wybierz datę.', 'DATE_REQUIRED');
+    throw new PortfolioChangeValidationFailure('owner', 'Wybierz portfel użytkownika.', 'OWNER_REQUIRED');
+  if (!command.asset?.date) throw new PortfolioChangeValidationFailure('date', 'Wybierz datę zmiany.', 'DATE_REQUIRED');
 
   if (command.kind === PortfolioChangeKind.VALUATION) {
     const value = Number(command.valuePln);
     if (!Number.isFinite(value) || value < 0) {
       throw new PortfolioChangeValidationFailure(
         'currentValuePln',
-        'Wartość nie może być ujemna.',
+        'Nowa wartość składnika nie może być ujemna.',
         'NON_NEGATIVE_VALUE_REQUIRED'
       );
     }
@@ -77,7 +78,7 @@ function resultingValue(command) {
   if (subtracts && amount > previous) {
     throw new PortfolioChangeValidationFailure(
       'amountPln',
-      'Kwota przekracza aktualną wartość aktywa.',
+      'Kwota przekracza aktualną wartość składnika portfela.',
       'INSUFFICIENT_PORTFOLIO_VALUE'
     );
   }
