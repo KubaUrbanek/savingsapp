@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React from 'react';
-import { FALLBACK_USERS, subcategoriesFor } from '../../domain/portfolio/constants.js';
+import { ETF_INVESTMENT_TYPES, FALLBACK_USERS, subcategoriesFor } from '../../domain/portfolio/constants.js';
 import { HouseholdPortfolio, OwnerPortfolio, PortfolioScopeKind } from '../../application/PortfolioScope.js';
 import { buildCurrentSnapshot } from '../../domain/portfolio/snapshot.js';
 import { usePortfolioController } from '../portfolio/hooks/usePortfolioController.js';
@@ -224,17 +224,17 @@ export function Home({ dependencies }) {
       });
   }
 
-  function prepareStockEntry(subcategory) {
+  function prepareStockEntry(type, subcategory) {
     setOperationForm((current) => ({
       ...current,
       action: 'VALUATION',
       operationType: 'VALUATION',
-      type: 'GIELDA',
+      type,
       subcategory,
       currentValuePln: '',
       date: today()
     }));
-    setTypeFilter('GIELDA');
+    setTypeFilter(type);
     setSubcategoryFilter(subcategory);
     setStatus(`Wpisz aktualną wartość ETF: ${SUBCATEGORY_LABELS[subcategory]}.`);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -778,7 +778,7 @@ export function Home({ dependencies }) {
             </QueryBoundary>
           </div>
 
-          {types.includes('GIELDA') && (
+          {types.some((type) => ETF_INVESTMENT_TYPES.includes(type)) && (
             <div aria-busy={projectionAffects(PortfolioQuery.SNAPSHOT)}>
               <QueryBoundary
                 state={controller.snapshot}
@@ -790,6 +790,7 @@ export function Home({ dependencies }) {
                 {(loadedEntries) => (
                   <StockAllocationPanel
                     entries={loadedEntries}
+                    investmentTypes={ETF_INVESTMENT_TYPES.filter((type) => types.includes(type))}
                     onAddStockValue={prepareStockEntry}
                     preferences={preferences}
                     onPreferenceError={reportError}
