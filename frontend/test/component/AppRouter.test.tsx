@@ -396,7 +396,9 @@ describe('AppRouter', () => {
     render(
       <AppRouter
         dependencies={dependencies({
-          recordPortfolioChange: { execute: async () => Promise.reject(new Error('Awaria API')) }
+          recordPortfolioChange: {
+            execute: async () => Promise.reject(new Error('Awaria API: MappingError zawiera surowy payload'))
+          }
         })}
       />
     );
@@ -405,10 +407,12 @@ describe('AppRouter', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Zaktualizuj portfel' }));
 
     const alert = await screen.findByRole('alert');
-    await waitFor(() => expect(alert).toHaveTextContent('Awaria API'));
+    await waitFor(() => expect(alert).toHaveFocus());
     expect(alert).toHaveFocus();
     expect(alert).toHaveTextContent('Nie udało się zapisać zmiany');
     expect(alert).toHaveTextContent('Sprawdź dane i spróbuj ponownie');
+    expect(alert).not.toHaveTextContent('Awaria API');
+    expect(alert).not.toHaveTextContent('MappingError');
   });
 
   it('distinguishes an accepted command from synchronized CQRS projections', async () => {
@@ -531,7 +535,10 @@ describe('AppRouter', () => {
     operation.reject(new Error('Zły plik'));
 
     const alert = await screen.findByRole('alert');
-    await waitFor(() => expect(alert).toHaveTextContent('Zły plik'));
+    await waitFor(() => expect(alert).toHaveFocus());
+    expect(alert).toHaveTextContent('Nie udało się zaimportować bazy danych');
+    expect(alert).toHaveTextContent('Sprawdź plik kopii i spróbuj ponownie');
+    expect(alert).not.toHaveTextContent('Zły plik');
     expect(alert).not.toHaveTextContent('Nie udało się zapisać');
     expect(alert).toHaveFocus();
     expect(screen.getByRole('button', { name: 'Importuj i nadpisz' })).toBeEnabled();
