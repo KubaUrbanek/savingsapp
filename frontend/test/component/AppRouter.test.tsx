@@ -64,23 +64,81 @@ describe('AppRouter', () => {
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content');
   });
 
-  it('links the local portfolio navigation to stable section destinations', () => {
+  it('exposes one active ARIA tab panel and supports click and keyboard navigation', async () => {
     render(<AppRouter dependencies={dependencies()} />);
 
-    const navigation = screen.getByRole('navigation', { name: 'Nawigacja po sekcjach portfela' });
-    const destinations = {
-      Podsumowanie: 'portfolio-summary',
-      Aktualizacja: 'portfolio-update',
-      Analiza: 'portfolio-analysis',
-      Alokacja: 'portfolio-allocation',
-      Historia: 'portfolio-history'
-    };
+    const tablist = screen.getByRole('tablist', { name: 'Sekcje portfela' });
+    const summary = screen.getByRole('tab', { name: 'Podsumowanie' });
+    const update = screen.getByRole('tab', { name: 'Aktualizacja' });
+    expect(tablist).toContainElement(summary);
+    expect(summary).toHaveAttribute('aria-selected', 'true');
+    expect(summary).toHaveAttribute('aria-controls', 'portfolio-panel-summary');
+    expect(screen.getByRole('tabpanel', { name: 'Podsumowanie' })).toHaveAttribute('aria-labelledby', summary.id);
+    expect(document.getElementById('portfolio-panel-update')).toHaveAttribute('hidden');
 
-    for (const [name, id] of Object.entries(destinations)) {
-      expect(navigation).toContainElement(screen.getByRole('link', { name }));
-      expect(screen.getByRole('link', { name })).toHaveAttribute('href', `#${id}`);
-      expect(document.getElementById(id)).toBeInTheDocument();
-    }
+    fireEvent.click(update);
+    expect(update).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tabpanel', { name: 'Aktualizacja' })).toBeVisible();
+    expect(summary).not.toHaveFocus();
+
+    fireEvent.keyDown(update, { key: 'End' });
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Historia' })).toHaveFocus());
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Historia' }), { key: 'Home' });
+    await waitFor(() => expect(summary).toHaveFocus());
+    fireEvent.keyDown(summary, { key: 'ArrowLeft' });
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Historia' })).toHaveFocus());
+  });
+
+  it('keeps update form and portfolio filters while switching tabs', async () => {
+    render(<AppRouter dependencies={dependencies()} />);
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
+    const amount = await screen.findByLabelText('Kwota dodana');
+    fireEvent.change(amount, { target: { value: '123.45' } });
+    fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
+
+    expect(screen.getByLabelText('Kwota dodana')).toHaveValue(123.45);
+    expect(screen.getByRole('button', { name: 'Konto bankowe', pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /jakub/i, pressed: true })).toBeInTheDocument();
+  });
+
+  it('opens the update tab from an empty-state action', async () => {
+    render(<AppRouter dependencies={dependencies()} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Dodaj wycenę' }));
+    expect(screen.getByRole('tab', { name: 'Aktualizacja' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('prepares a stock valuation in the update tab without scrolling', async () => {
+    const scrollTo = vi.spyOn(window, 'scrollTo');
+    render(
+      <AppRouter
+        dependencies={dependencies({
+          loadReferenceData: { execute: async () => ({ users: ['jakub'], types: ['GIELDA'] }) },
+          loadPortfolio: {
+            execute: async () => [
+              {
+                id: 'stock',
+                owner: 'jakub',
+                type: 'GIELDA',
+                subcategory: 'ZLOTO',
+                date: '2026-09-03',
+                valuePln: 100
+              }
+            ]
+          }
+        })}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Alokacja' }));
+    const stockAction = (await screen.findAllByRole('button', { name: /Dodaj wycenę:/ }))[1]!;
+    fireEvent.click(stockAction);
+    expect(screen.getByRole('tab', { name: 'Aktualizacja' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByLabelText('Co chcesz zrobić?')).toHaveValue('VALUATION');
+    expect(screen.getByLabelText('Składnik portfela')).toHaveValue('GIELDA');
+    expect(document.getElementById('portfolio-change-subcategory')).toHaveValue('RYNKI_ROZWINIETE');
+    expect(scrollTo).not.toHaveBeenCalled();
   });
 
   it.each([
@@ -169,7 +227,7 @@ describe('AppRouter', () => {
     const heading = await screen.findByRole('heading', { level: 1, name: 'Portfel: jakub' });
     const scopeSwitcher = screen.getByRole('group', { name: 'Czyj portfel wyświetlić?' });
     const summary = document.querySelector('.summaryPanel')!;
-    const form = screen.getByRole('heading', { level: 2, name: 'Zaktualizuj portfel' }).closest('form')!;
+    const form = document.querySelector('.quickUpdate form')!;
 
     expect(heading.compareDocumentPosition(scopeSwitcher) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(scopeSwitcher.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
@@ -186,6 +244,8 @@ describe('AppRouter', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Razem', pressed: false }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Portfel całego gospodarstwa' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Razem', pressed: true })).toBeInTheDocument();
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Podsumowanie', 'Analiza']);
+    expect(document.getElementById('portfolio-panel-update')).not.toBeInTheDocument();
   });
 
   it('clears the previous owner data while the newly selected owner is loading', async () => {
@@ -266,6 +326,7 @@ describe('AppRouter', () => {
         dependencies={dependencies({ recordPortfolioChange: { execute: async () => Promise.reject(validationError) } })}
       />
     );
+    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
 
     const amount = await screen.findByLabelText('Kwota dodana');
     fireEvent.change(amount, { target: { value: '10' } });
@@ -280,6 +341,7 @@ describe('AppRouter', () => {
 
   it('keeps the pilot controls in visual keyboard order and exposes a visible focus target', async () => {
     render(<AppRouter dependencies={dependencies()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
 
     const owner = await screen.findByRole('button', { name: /jakub/i, pressed: true });
     const together = screen.getByRole('button', { name: 'Razem', pressed: false });
@@ -312,6 +374,7 @@ describe('AppRouter', () => {
         dependencies={dependencies({ recordPortfolioChange: { execute: async () => Promise.reject(validationError) } })}
       />
     );
+    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
 
     await screen.findByLabelText('Kwota dodana');
     fireEvent.change(screen.getByLabelText('Co chcesz zrobić?'), { target: { value: 'VALUATION' } });
@@ -330,6 +393,7 @@ describe('AppRouter', () => {
 
   it('offers three primary actions and conditionally narrows the domain operation reason', async () => {
     render(<AppRouter dependencies={dependencies()} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
 
     expect(await screen.findByRole('heading', { level: 2, name: 'Zaktualizuj portfel' })).toBeInTheDocument();
     expect(
@@ -375,6 +439,7 @@ describe('AppRouter', () => {
       return { nextValue: 100, kind: expectedKind, atomic: true };
     });
     render(<AppRouter dependencies={dependencies({ recordPortfolioChange: { execute } })} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
 
     const action = await screen.findByLabelText('Co chcesz zrobić?');
     fireEvent.change(action, { target: { value: actionValue } });
@@ -402,6 +467,7 @@ describe('AppRouter', () => {
         })}
       />
     );
+    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
 
     fireEvent.change(await screen.findByLabelText('Kwota dodana'), { target: { value: '10' } });
     fireEvent.click(screen.getByRole('button', { name: 'Zaktualizuj portfel' }));
@@ -457,6 +523,7 @@ describe('AppRouter', () => {
         })}
       />
     );
+    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
 
     fireEvent.change(await screen.findByLabelText('Kwota dodana'), { target: { value: '10' } });
     fireEvent.change(screen.getByLabelText('Data zmiany'), { target: { value: '2026-09-04' } });
@@ -473,8 +540,8 @@ describe('AppRouter', () => {
     expect(status).not.toBeNull();
     if (!status) throw new Error('The portfolio command status was not rendered.');
     await waitFor(() => expect(status).toHaveTextContent('Aktualizujemy podsumowanie'));
-    expect(document.getElementById('portfolio-summary')).toHaveAttribute('aria-busy', 'true');
-    expect(document.getElementById('portfolio-allocation')).toHaveAttribute('aria-busy', 'true');
+    expect(document.getElementById('portfolio-panel-summary')).toHaveAttribute('aria-busy', 'true');
+    expect(document.getElementById('portfolio-panel-allocation')).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByRole('button', { name: /jakub/i, pressed: true })).toBeEnabled();
 
     refreshedEntries.resolve([projectedEntry]);
@@ -554,6 +621,7 @@ describe('AppRouter', () => {
     const operation = deferred();
     const recordPortfolioChange = vi.fn(() => operation.promise);
     render(<AppRouter dependencies={dependencies({ recordPortfolioChange: { execute: recordPortfolioChange } })} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
 
     const amount = await screen.findByLabelText('Kwota dodana');
     fireEvent.change(amount, { target: { value: '10' } });
@@ -596,6 +664,7 @@ describe('AppRouter', () => {
         })}
       />
     );
+    fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
 
     const deleteButton = await screen.findByRole('button', { name: 'Usuń' });
     deleteButton.focus();
@@ -633,6 +702,7 @@ describe('AppRouter', () => {
       deleteInvestmentEntry: { execute: deleteEntry }
     });
     render(<AppRouter dependencies={appDependencies} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
 
     await waitFor(() => expect(appDependencies.preferences.selectOwner).toHaveBeenCalledTimes(2));
     const buttons = await screen.findAllByRole('button', { name: 'Usuń' });
@@ -675,6 +745,7 @@ describe('AppRouter', () => {
         })}
       />
     );
+    fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
 
     const deleteButton = await screen.findByRole('button', { name: 'Usuń' });
     fireEvent.click(deleteButton);
@@ -718,6 +789,7 @@ describe('AppRouter', () => {
       deleteInvestmentOperation: { execute: deleteOperation }
     });
     render(<AppRouter dependencies={appDependencies} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
 
     await waitFor(() => expect(appDependencies.preferences.selectOwner).toHaveBeenCalledTimes(2));
     const deleteButtons = await screen.findAllByRole('button', { name: 'Usuń' });
