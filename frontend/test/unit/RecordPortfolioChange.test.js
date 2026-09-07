@@ -12,7 +12,7 @@ import {
 
 const asset = { type: 'GOTOWKA', owner: 'JAN', subcategory: null, date: '2026-09-01' };
 
-test('supports every explicit command variant and delegates one semantic command', async () => {
+test('preserves all five domain operation kinds and their distinct value calculations', async () => {
   const calls = [];
   const useCase = new RecordPortfolioChange({
     recordPortfolioChange: async (change) => {
@@ -38,6 +38,7 @@ test('supports every explicit command variant and delegates one semantic command
     calls.map(({ command }) => command.kind),
     ['DEPOSIT', 'WITHDRAWAL', 'VALUATION', 'BUY', 'SELL']
   );
+  assert.equal(new Set(calls.map(({ command }) => command.kind)).size, 5);
 });
 
 test('returns a field-addressable failure instead of clamping an overdrawn withdrawal', async () => {

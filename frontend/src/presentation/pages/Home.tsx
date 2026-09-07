@@ -42,6 +42,7 @@ export function Home({ dependencies }) {
   const errorSummaryRef = React.useRef(null);
   const pendingErrorFocusRef = React.useRef(false);
   const [operationForm, setOperationForm] = React.useState({
+    action: 'ADD',
     operationType: 'DEPOSIT',
     type: '',
     subcategory: '',
@@ -226,6 +227,7 @@ export function Home({ dependencies }) {
   function prepareStockEntry(subcategory) {
     setOperationForm((current) => ({
       ...current,
+      action: 'VALUATION',
       operationType: 'VALUATION',
       type: 'GIELDA',
       subcategory,
@@ -575,26 +577,56 @@ export function Home({ dependencies }) {
               />
               <Field
                 label="Rodzaj zmiany"
-                error={fieldErrors.operationType}
-                errorId="portfolio-change-operation-type-error"
                 control={
                   <select
                     id="portfolio-change-operation-type"
-                    ref={(element) => {
-                      fieldRefs.current.operationType = element;
-                    }}
-                    value={operationForm.operationType}
+                    value={operationForm.action}
                     disabled={isSaving}
-                    onChange={(event) => setOperationForm({ ...operationForm, operationType: event.target.value })}
+                    onChange={(event) => {
+                      const action = event.target.value;
+                      setOperationForm({
+                        ...operationForm,
+                        action,
+                        operationType: action === 'ADD' ? 'DEPOSIT' : action === 'SUBTRACT' ? 'WITHDRAWAL' : 'VALUATION'
+                      });
+                    }}
                   >
-                    <option value="DEPOSIT">Wpłata — zwiększ stan</option>
-                    <option value="WITHDRAWAL">Wypłata — zmniejsz stan</option>
-                    <option value="VALUATION">Aktualna wycena — policz zysk lub stratę</option>
-                    <option value="BUY">Kupno — zwiększ stan</option>
-                    <option value="SELL">Sprzedaż — zmniejsz stan</option>
+                    <option value="ADD">Dodaj środki</option>
+                    <option value="SUBTRACT">Odejmij środki</option>
+                    <option value="VALUATION">Ustaw aktualną wartość</option>
                   </select>
                 }
               />
+              {operationForm.action !== 'VALUATION' && (
+                <Field
+                  label="Skąd wynika zmiana?"
+                  error={fieldErrors.operationType}
+                  errorId="portfolio-change-operation-type-error"
+                  control={
+                    <select
+                      id="portfolio-change-operation-reason"
+                      ref={(element) => {
+                        fieldRefs.current.operationType = element;
+                      }}
+                      value={operationForm.operationType}
+                      disabled={isSaving}
+                      onChange={(event) => setOperationForm({ ...operationForm, operationType: event.target.value })}
+                    >
+                      {operationForm.action === 'ADD' ? (
+                        <>
+                          <option value="DEPOSIT">Wpłata nowych środków</option>
+                          <option value="BUY">Zakup aktywa</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="WITHDRAWAL">Wypłata środków</option>
+                          <option value="SELL">Sprzedaż aktywa</option>
+                        </>
+                      )}
+                    </select>
+                  }
+                />
+              )}
               <Field
                 label="Aktywo"
                 error={fieldErrors.type}
@@ -646,7 +678,7 @@ export function Home({ dependencies }) {
                   }
                 />
               )}
-              {operationForm.operationType === 'VALUATION' ? (
+              {operationForm.action === 'VALUATION' ? (
                 <Field
                   label="Aktualna wartość w PLN"
                   error={fieldErrors.currentValuePln}

@@ -18,7 +18,7 @@ export const InvestmentEntry = Object.freeze({
       valuePln: Money.positive(valuePln, 'valuePln'),
       date: ValuationDate.parse(date),
       createdAt: timestamp(createdAt, 'createdAt'),
-      updatedAt: updatedAt === null ? null : timestamp(updatedAt, 'updatedAt')
+      updatedAt: updatedAt == null ? null : timestamp(updatedAt, 'updatedAt')
     });
   }
 });

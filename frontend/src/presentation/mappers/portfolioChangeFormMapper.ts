@@ -12,10 +12,11 @@ export function mapPortfolioChangeForm(form, owner, currentEntries) {
     (entry) => entry.type === form.type && (entry.subcategory || null) === subcategory
   );
   const previousValue = Number(latest?.valuePln || 0);
-  const factory = factories[form.operationType];
+  const operationType = form.action === 'VALUATION' ? 'VALUATION' : form.operationType;
+  const factory = factories[operationType];
 
-  if (!factory) return { kind: form.operationType, asset };
-  return form.operationType === 'VALUATION'
+  if (!factory) return { kind: operationType, asset };
+  return operationType === 'VALUATION'
     ? factory(asset, form.currentValuePln)
     : factory(asset, form.amountPln, previousValue);
 }
