@@ -35,6 +35,8 @@ export function Home({ dependencies }) {
   const [portfolioScope, setPortfolioScope] = React.useState(() => OwnerPortfolio(preferences.selectedOwner()));
   const [typeFilter, setTypeFilter] = React.useState('');
   const [subcategoryFilter, setSubcategoryFilter] = React.useState('');
+  const [activeTab, setActiveTab] = React.useState('summary');
+  const tabRefs = React.useRef({});
   const [status, setStatus] = React.useState('');
   const [error, setError] = React.useState('');
   const [fieldErrors, setFieldErrors] = React.useState({});
@@ -145,6 +147,38 @@ export function Home({ dependencies }) {
     controller.projection.status === 'refreshing' ? 'refreshing' : controller.projection.data?.phase;
   const projectionAffects = (query) =>
     projectionPhase === 'refreshing' && controller.projection.data?.affectedQueries.includes(query);
+  const availableTabs = isHouseholdView
+    ? [
+        { id: 'summary', label: 'Podsumowanie' },
+        { id: 'analysis', label: 'Analiza' }
+      ]
+    : [
+        { id: 'summary', label: 'Podsumowanie' },
+        { id: 'update', label: 'Aktualizacja' },
+        { id: 'allocation', label: 'Alokacja' },
+        { id: 'history', label: 'Historia' }
+      ];
+
+  React.useEffect(() => {
+    if (isHouseholdView && activeTab !== 'summary' && activeTab !== 'analysis') setActiveTab('summary');
+  }, [isHouseholdView, activeTab]);
+
+  function selectTab(tabId, moveFocus = false) {
+    setActiveTab(tabId);
+    if (moveFocus) requestAnimationFrame(() => tabRefs.current[tabId]?.focus());
+  }
+
+  function handleTabKeyDown(event) {
+    const currentIndex = availableTabs.findIndex((tab) => tab.id === activeTab);
+    let nextIndex;
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % availableTabs.length;
+    else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + availableTabs.length) % availableTabs.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = availableTabs.length - 1;
+    else return;
+    event.preventDefault();
+    selectTab(availableTabs[nextIndex].id, true);
+  }
   const visibleStatus =
     controller.mutation.status === 'loading'
       ? status
@@ -237,7 +271,7 @@ export function Home({ dependencies }) {
     setTypeFilter(type);
     setSubcategoryFilter(subcategory);
     setStatus(`Wpisz aktualną wartość ETF: ${SUBCATEGORY_LABELS[subcategory]}.`);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    selectTab('update');
   }
 
   function confirmDeletion({ recordType, type, subcategory, date, amountLabel, amount }) {
@@ -439,21 +473,35 @@ export function Home({ dependencies }) {
           )}
         </section>
 
-        {!isHouseholdView && (
-          <nav className="sectionNavigation" aria-label="Nawigacja po sekcjach portfela">
-            <a href="#portfolio-summary">Podsumowanie</a>
-            <a href="#portfolio-update">Aktualizacja</a>
-            <a href="#portfolio-analysis">Analiza</a>
-            <a href="#portfolio-allocation">Alokacja</a>
-            <a href="#portfolio-history">Historia</a>
-          </nav>
-        )}
+        <div className="sectionNavigation" role="tablist" aria-label="Sekcje portfela">
+          {availableTabs.map((tab) => (
+            <Button
+              variant="quiet"
+              key={tab.id}
+              ref={(element) => {
+                tabRefs.current[tab.id] = element;
+              }}
+              id={`portfolio-tab-${tab.id}`}
+              role="tab"
+              type="button"
+              aria-selected={activeTab === tab.id}
+              aria-controls={`portfolio-panel-${tab.id}`}
+              tabIndex={activeTab === tab.id ? 0 : -1}
+              onClick={() => selectTab(tab.id)}
+              onKeyDown={handleTabKeyDown}
+            >
+              {tab.label}
+            </Button>
+          ))}
+        </div>
 
         {!isHouseholdView && (
           <article
             className="summaryPanel sectionAnchor"
-            id="portfolio-summary"
-            aria-labelledby="portfolio-summary-heading"
+            id="portfolio-panel-summary"
+            role="tabpanel"
+            aria-labelledby="portfolio-tab-summary"
+            hidden={activeTab !== 'summary'}
             aria-busy={projectionAffects(PortfolioQuery.SNAPSHOT) || projectionAffects(PortfolioQuery.PERFORMANCE)}
           >
             <QueryBoundary
@@ -463,9 +511,14 @@ export function Home({ dependencies }) {
               emptyTitle="Portfel nie ma jeszcze wyceny"
               emptyDescription="Dodaj pierwszą aktualną wycenę, aby zobaczyć wartość i strukturę portfela."
               emptyAction={
-                <a className="button button--primary queryStateAction" href="#portfolio-update">
+                <Button
+                  variant="primary"
+                  className="queryStateAction"
+                  type="button"
+                  onClick={() => selectTab('update')}
+                >
                   Dodaj wycenę
-                </a>
+                </Button>
               }
               onRetry={controller.retry.snapshot}
             >
@@ -527,6 +580,15 @@ export function Home({ dependencies }) {
                 </>
               )}
             </QueryBoundary>
+            <QueryBoundary
+              state={controller.snapshot}
+              skeletonShape="chart"
+              onRetry={controller.retry.snapshot}
+              emptyTitle="Brak danych do analizy"
+              emptyDescription="Wykres pojawi się po zapisaniu pierwszej wyceny."
+            >
+              {(loadedEntries) => <SummaryChart entries={loadedEntries} types={types} />}
+            </QueryBoundary>
           </article>
         )}
       </header>
@@ -546,7 +608,13 @@ export function Home({ dependencies }) {
       </div>
 
       {isHouseholdView ? (
-        <div aria-busy={projectionAffects(PortfolioQuery.SNAPSHOT)}>
+        <div
+          id="portfolio-panel-summary"
+          role="tabpanel"
+          aria-labelledby="portfolio-tab-summary"
+          hidden={activeTab !== 'summary'}
+          aria-busy={projectionAffects(PortfolioQuery.SNAPSHOT)}
+        >
           <QueryBoundary
             state={controller.snapshot}
             skeletonShape="section"
@@ -567,7 +635,13 @@ export function Home({ dependencies }) {
         </div>
       ) : (
         <>
-          <section className="quickUpdate sectionAnchor" id="portfolio-update" aria-labelledby="quick-update-heading">
+          <section
+            className="quickUpdate sectionAnchor"
+            id="portfolio-panel-update"
+            role="tabpanel"
+            aria-labelledby="portfolio-tab-update"
+            hidden={activeTab !== 'update'}
+          >
             <form className="ledgerSection formPanel unifiedForm" onSubmit={submitOperation} aria-busy={isSaving}>
               <SectionHeader
                 eyebrow="Jedno miejsce do aktualizacji"
@@ -752,8 +826,11 @@ export function Home({ dependencies }) {
           </section>
 
           <div
-            id="portfolio-allocation"
+            id="portfolio-panel-allocation"
             className="sectionAnchor"
+            role="tabpanel"
+            aria-labelledby="portfolio-tab-allocation"
+            hidden={activeTab !== 'allocation'}
             aria-busy={projectionAffects(PortfolioQuery.SNAPSHOT)}
           >
             <QueryBoundary
@@ -763,9 +840,14 @@ export function Home({ dependencies }) {
               emptyTitle="Brak danych do alokacji"
               emptyDescription="Dodaj wycenę, aby zobaczyć podział portfela."
               emptyAction={
-                <a className="button button--primary queryStateAction" href="#portfolio-update">
+                <Button
+                  variant="primary"
+                  className="queryStateAction"
+                  type="button"
+                  onClick={() => selectTab('update')}
+                >
                   Dodaj wycenę
-                </a>
+                </Button>
               }
             >
               {(loadedEntries) => (
@@ -776,56 +858,59 @@ export function Home({ dependencies }) {
                 />
               )}
             </QueryBoundary>
+            {types.some((type) => ETF_INVESTMENT_TYPES.includes(type)) && (
+              <div aria-busy={projectionAffects(PortfolioQuery.SNAPSHOT)}>
+                <QueryBoundary
+                  state={controller.snapshot}
+                  skeletonShape="section"
+                  onRetry={controller.retry.snapshot}
+                  emptyTitle="Brak danych o akcjach"
+                  emptyDescription="Dodaj wycenę ETF, aby zobaczyć szczegóły."
+                >
+                  {(loadedEntries) => (
+                    <StockAllocationPanel
+                      entries={loadedEntries}
+                      investmentTypes={ETF_INVESTMENT_TYPES.filter((type) => types.includes(type))}
+                      onAddStockValue={prepareStockEntry}
+                      preferences={preferences}
+                      onPreferenceError={reportError}
+                    />
+                  )}
+                </QueryBoundary>
+              </div>
+            )}
           </div>
-
-          {types.some((type) => ETF_INVESTMENT_TYPES.includes(type)) && (
-            <div aria-busy={projectionAffects(PortfolioQuery.SNAPSHOT)}>
-              <QueryBoundary
-                state={controller.snapshot}
-                skeletonShape="section"
-                onRetry={controller.retry.snapshot}
-                emptyTitle="Brak danych o akcjach"
-                emptyDescription="Dodaj wycenę ETF, aby zobaczyć szczegóły."
-              >
-                {(loadedEntries) => (
-                  <StockAllocationPanel
-                    entries={loadedEntries}
-                    investmentTypes={ETF_INVESTMENT_TYPES.filter((type) => types.includes(type))}
-                    onAddStockValue={prepareStockEntry}
-                    preferences={preferences}
-                    onPreferenceError={reportError}
-                  />
-                )}
-              </QueryBoundary>
-            </div>
-          )}
         </>
       )}
 
-      <div id="portfolio-analysis" className="sectionAnchor" aria-busy={projectionAffects(PortfolioQuery.SNAPSHOT)}>
+      <div
+        id="portfolio-panel-analysis"
+        className="sectionAnchor"
+        role="tabpanel"
+        aria-labelledby="portfolio-tab-analysis"
+        hidden={!isHouseholdView || activeTab !== 'analysis'}
+        aria-busy={projectionAffects(PortfolioQuery.SNAPSHOT)}
+      >
         <QueryBoundary
           state={controller.snapshot}
           skeletonShape="chart"
           onRetry={controller.retry.snapshot}
           emptyTitle="Brak danych do analizy"
           emptyDescription="Wykres pojawi się po zapisaniu pierwszej wyceny."
-          emptyAction={
-            !isHouseholdView && (
-              <a className="button button--primary queryStateAction" href="#portfolio-update">
-                Dodaj wycenę
-              </a>
-            )
-          }
         >
           {(loadedEntries) => <SummaryChart entries={loadedEntries} types={types} />}
         </QueryBoundary>
       </div>
 
       {!isHouseholdView && (
-        <>
+        <div
+          id="portfolio-panel-history"
+          role="tabpanel"
+          aria-labelledby="portfolio-tab-history"
+          hidden={activeTab !== 'history'}
+        >
           <section
             className="ledgerSection entriesPanel operationList sectionAnchor"
-            id="portfolio-history"
             aria-busy={projectionAffects(PortfolioQuery.OPERATIONS)}
           >
             <div className="entriesHeader">
@@ -889,9 +974,14 @@ export function Home({ dependencies }) {
               emptyTitle="Brak wycen dla wybranej osoby"
               emptyDescription="Dodaj pierwszą wycenę, aby rozpocząć historię."
               emptyAction={
-                <a className="button button--primary queryStateAction" href="#portfolio-update">
+                <Button
+                  variant="primary"
+                  className="queryStateAction"
+                  type="button"
+                  onClick={() => selectTab('update')}
+                >
                   Dodaj wycenę
-                </a>
+                </Button>
               }
             >
               {() => (
@@ -931,7 +1021,7 @@ export function Home({ dependencies }) {
               )}
             </QueryBoundary>
           </section>
-        </>
+        </div>
       )}
 
       <section className="ledgerSection databasePanel">
