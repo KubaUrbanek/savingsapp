@@ -1,7 +1,7 @@
 // @ts-nocheck
-import { GLOBAL_ASSET_CLASSES, STOCK_SUBCATEGORIES } from '../constants.js';
+import { ETF_INVESTMENT_TYPES, GLOBAL_ASSET_CLASSES, STOCK_SUBCATEGORIES } from '../constants.js';
 import { globalAssetClass } from '../classification.js';
-import { buildCurrentSnapshot, isNewerEntry } from '../snapshot.js';
+import { buildCurrentSnapshot } from '../snapshot.js';
 
 /** Pure portfolio allocation calculations. */
 export const AllocationPlanningService = Object.freeze({
@@ -29,20 +29,27 @@ export const AllocationPlanningService = Object.freeze({
     };
   },
   stocks(entries, targets) {
-    const latest = Object.fromEntries(STOCK_SUBCATEGORIES.map((key) => [key, null]));
-    entries
-      .filter((entry) => entry.type === 'GIELDA' && STOCK_SUBCATEGORIES.includes(entry.subcategory))
-      .forEach((entry) => {
-        if (isNewerEntry(entry, latest[entry.subcategory])) latest[entry.subcategory] = entry;
-      });
-    const total = Object.values(latest).reduce((sum, entry) => sum + Number(entry?.valuePln || 0), 0);
+    const currentEntries = buildCurrentSnapshot(
+      entries.filter(
+        (entry) => ETF_INVESTMENT_TYPES.includes(entry.type) && STOCK_SUBCATEGORIES.includes(entry.subcategory)
+      )
+    );
+    const aggregates = Object.fromEntries(
+      STOCK_SUBCATEGORIES.map((subcategory) => [subcategory, { currentValue: 0, latestDate: null }])
+    );
+    currentEntries.forEach((entry) => {
+      const aggregate = aggregates[entry.subcategory];
+      aggregate.currentValue += Number(entry.valuePln);
+      if (!aggregate.latestDate || entry.date > aggregate.latestDate) aggregate.latestDate = entry.date;
+    });
+    const total = Object.values(aggregates).reduce((sum, aggregate) => sum + aggregate.currentValue, 0);
     return {
       total,
       rows: STOCK_SUBCATEGORIES.map((subcategory) => ({
         subcategory,
-        currentValue: Number(latest[subcategory]?.valuePln || 0),
+        currentValue: aggregates[subcategory].currentValue,
         targetWeight: Number(targets[subcategory] || 0),
-        latestDate: latest[subcategory]?.date || null
+        latestDate: aggregates[subcategory].latestDate
       }))
     };
   }

@@ -141,6 +141,33 @@ describe('AppRouter', () => {
     expect(scrollTo).not.toHaveBeenCalled();
   });
 
+  it('renders ETF allocation when retirement account types are available without Giełda', async () => {
+    render(
+      <AppRouter
+        dependencies={dependencies({
+          loadReferenceData: { execute: async () => ({ users: ['jakub'], types: ['IKE', 'IKZE'] }) },
+          loadPortfolio: {
+            execute: async () => [
+              {
+                id: 'ike-entry',
+                owner: 'jakub',
+                type: 'IKE',
+                subcategory: 'ZLOTO',
+                date: '2026-09-01',
+                createdAt: '2026-09-01T10:00:00Z',
+                valuePln: 1000
+              }
+            ]
+          }
+        })}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Alokacja' }));
+    expect(await screen.findByText('ETF — Giełda, IKE i IKZE')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Typ rachunku dla nowej wyceny' })).toHaveValue('IKE');
+  });
+
   it.each([
     ['/', 'Portfele | Oszczędności'],
     ['/about', 'Informacje | Oszczędności'],
