@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppRouter } from '../../src/app/AppRouter.js';
 import { PortfolioChangeValidationFailure } from '../../src/application/portfolio/RecordPortfolioChange.js';
@@ -225,7 +225,7 @@ describe('AppRouter', () => {
     expect(screen.getByRole('button', { name: '3-letnie', pressed: true })).toBeInTheDocument();
   });
 
-  it('orders the workspace context, scope switcher, summary and quick-update form without changing scope behavior', async () => {
+  it('renders a semantic portfolio summary and keeps the workspace scope behavior', async () => {
     render(
       <AppRouter
         dependencies={dependencies({
@@ -246,6 +246,16 @@ describe('AppRouter', () => {
                     }
                   ]
                 : []
+          },
+          loadPortfolioPerformance: {
+            execute: async () => ({
+              operations: [],
+              performance: {
+                monthlyResultPln: 125,
+                monthlyReturnRatePercent: 2.5,
+                nominalResultPln: -340
+              }
+            })
           }
         })}
       />
@@ -253,14 +263,23 @@ describe('AppRouter', () => {
 
     const heading = await screen.findByRole('heading', { level: 1, name: 'Portfel: jakub' });
     const scopeSwitcher = screen.getByRole('group', { name: 'Czyj portfel wyświetlić?' });
-    const summary = document.querySelector('.summaryPanel')!;
+    const summary = document.querySelector<HTMLElement>('.summaryPanel')!;
     const form = document.querySelector('.quickUpdate form')!;
 
     expect(heading.compareDocumentPosition(scopeSwitcher) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(scopeSwitcher.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(summary.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    await waitFor(() => expect(summary).toHaveTextContent('Data danych2026-09-03'));
-    expect(summary.querySelector('.summaryTotal.metric')).toHaveTextContent(/Wartość portfela4\s?200,00\s*zł/);
+    const summaryView = within(summary);
+    expect(summaryView.getByText('Aktualny stan')).toBeVisible();
+    expect(summaryView.getByRole('heading', { level: 2, name: 'Wszystkie inwestycje' })).toBeVisible();
+    expect(summaryView.getByText('Data danych').parentElement).toHaveTextContent('2026-09-03');
+
+    const portfolioValue = summaryView.getByRole('region', { name: 'Wartość portfela' });
+    expect(portfolioValue).toHaveTextContent(/Wartość portfela4\s?200,00\s*zł/);
+
+    const results = summaryView.getByRole('region', { name: 'Wyniki' });
+    await waitFor(() => expect(results).toHaveTextContent(/Zmiana w tym miesiącu\+125,00\s*zł\+2,5%/));
+    expect(results).toHaveTextContent(/Łączny wynik inwestycji-340,00\s*zł/);
     expect(scopeSwitcher.querySelectorAll('.button')).toHaveLength(3);
     expect(form.querySelectorAll('.field')).toHaveLength(5);
 
