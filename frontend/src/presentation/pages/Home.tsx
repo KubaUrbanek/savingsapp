@@ -524,7 +524,7 @@ export function Home({ dependencies }) {
             >
               {() => (
                 <>
-                  <div className="summaryHeading">
+                  <header className="summaryHeading">
                     <div>
                       <p className="eyebrow">Aktualny stan</p>
                       <h2 id="portfolio-summary-heading">{activePortfolioLabel}</h2>
@@ -533,50 +533,62 @@ export function Home({ dependencies }) {
                       <span>Data danych</span>
                       <strong>{latestDataDate || 'Brak wycen'}</strong>
                     </p>
-                  </div>
-                  <Metric className="summaryTotal" label="Wartość portfela" value={formatMoney(totalValue)} />
-                  <div className="summaryGrid">
-                    {types.map((type) => (
-                      <Metric
-                        className="summaryCard"
-                        key={type}
-                        label={TYPE_LABELS[type] || type}
-                        value={formatMoney(totalsByType[type] || 0)}
-                      />
-                    ))}
-                  </div>
-                  <QueryBoundary
-                    state={controller.performance}
-                    skeletonShape="summary"
-                    loadingLabel="Wczytywanie wyniku portfela…"
-                    onRetry={controller.retry.performance}
-                    isEmpty={(result) => result == null}
-                    emptyTitle="Brak danych o wyniku"
-                    emptyDescription="Wynik pojawi się po zapisaniu operacji i wyceny."
-                  >
-                    {(loadedPerformance) => (
-                      <>
-                        <Metric
-                          className="headlineChange"
-                          label="Zmiana w tym miesiącu"
-                          value={formatSignedMoney(loadedPerformance.monthlyResultPln)}
-                          tone={Number(loadedPerformance.monthlyResultPln) >= 0 ? 'positive' : 'negative'}
-                          detail={formatPercent(
-                            loadedPerformance.monthlyReturnRatePercent == null
-                              ? NaN
-                              : Number(loadedPerformance.monthlyReturnRatePercent)
-                          )}
-                        />
-                        <div className="performanceGrid compactPerformance">
+                  </header>
+                  <section className="summaryPrimary" aria-labelledby="portfolio-value-heading">
+                    <Metric
+                      className="summaryTotal"
+                      label={<span id="portfolio-value-heading">Wartość portfela</span>}
+                      value={formatMoney(totalValue)}
+                    />
+                  </section>
+                  <div className="summarySupporting">
+                    <section className="summarySection" aria-labelledby="portfolio-types-heading">
+                      <h3 id="portfolio-types-heading">Wartości według typu</h3>
+                      <div className="summaryGrid">
+                        {types.map((type) => (
                           <Metric
-                            label="Łączny wynik inwestycji"
-                            value={formatSignedMoney(loadedPerformance.nominalResultPln)}
-                            tone={Number(loadedPerformance.nominalResultPln) >= 0 ? 'positive' : 'negative'}
+                            className="summaryCard"
+                            key={type}
+                            label={TYPE_LABELS[type] || type}
+                            value={formatMoney(totalsByType[type] || 0)}
                           />
-                        </div>
-                      </>
-                    )}
-                  </QueryBoundary>
+                        ))}
+                      </div>
+                    </section>
+                    <section className="summarySection" aria-labelledby="portfolio-results-heading">
+                      <h3 id="portfolio-results-heading">Wyniki</h3>
+                      <QueryBoundary
+                        state={controller.performance}
+                        skeletonShape="summary"
+                        loadingLabel="Wczytywanie wyniku portfela…"
+                        onRetry={controller.retry.performance}
+                        isEmpty={(result) => result == null}
+                        emptyTitle="Brak danych o wyniku"
+                        emptyDescription="Wynik pojawi się po zapisaniu operacji i wyceny."
+                      >
+                        {(loadedPerformance) => (
+                          <div className="summaryResults">
+                            <Metric
+                              className="headlineChange"
+                              label="Zmiana w tym miesiącu"
+                              value={formatSignedMoney(loadedPerformance.monthlyResultPln)}
+                              tone={Number(loadedPerformance.monthlyResultPln) >= 0 ? 'positive' : 'negative'}
+                              detail={formatPercent(
+                                loadedPerformance.monthlyReturnRatePercent == null
+                                  ? NaN
+                                  : Number(loadedPerformance.monthlyReturnRatePercent)
+                              )}
+                            />
+                            <Metric
+                              label="Łączny wynik inwestycji"
+                              value={formatSignedMoney(loadedPerformance.nominalResultPln)}
+                              tone={Number(loadedPerformance.nominalResultPln) >= 0 ? 'positive' : 'negative'}
+                            />
+                          </div>
+                        )}
+                      </QueryBoundary>
+                    </section>
+                  </div>
                 </>
               )}
             </QueryBoundary>

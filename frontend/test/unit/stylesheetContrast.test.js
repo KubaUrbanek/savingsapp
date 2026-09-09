@@ -73,7 +73,8 @@ test('calm ledger hierarchy keeps supporting sections open and the current balan
   );
   assert.match(
     stylesheet,
-    /\.summaryPanel,\s*\.householdHero\s*{[^}]*background:\s*var\(--color-portfolio-strong\)[^}]*box-shadow:\s*var\(--elevation-portfolio\)/s
+    /\.summaryPanel\s*{[^}]*border-top:\s*4px solid var\(--color-portfolio\)[^}]*background:\s*var\(--color-surface\)[^}]*color:\s*var\(--color-ink\)/s
   );
+  assert.doesNotMatch(stylesheet, /min-height:\s*(?:440|620)px/);
   assert.match(stylesheet, /\.chartBar\s*{[^}]*fill:\s*var\(--color-portfolio\)[^}]*filter:\s*none/s);
 });
