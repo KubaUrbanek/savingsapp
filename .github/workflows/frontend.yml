@@ -1,31 +1,74 @@
-name: Frontend
+name: CI
 on:
   push:
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Check out changes
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Check diff whitespace
+        run: git diff --check HEAD^ HEAD
+        working-directory: .
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
-      - uses: actions/setup-java@v4
+      - name: Install frontend dependencies
+        run: npm ci
+      - name: Check lint and architecture boundaries
+        run: npm run lint
+      - name: Check frontend formatting
+        run: npm run format:check
+      - name: Check workflow formatting
+        run: npx prettier --check '../.github/workflows/*.{yml,yaml}'
+      - name: Check TypeScript
+        run: npm run typecheck
+      - name: Run frontend unit and architecture tests
+        run: npm run test:unit
+      - name: Run component and accessibility tests
+        run: npm run test:component
+      - name: Build frontend
+        run: npm run build
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 21
           cache: maven
-      - run: mvn -B clean package
+      - name: Run backend tests and build the application JAR
+        run: mvn -B clean package
         working-directory: .
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser
+      - name: Install Chromium for browser tests
+        run: npx playwright install --with-deps chromium
+      - name: Run desktop and mobile browser tests
+        run: npm run test:browser
+      - name: Upload test reports and failure traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verification-reports
+          path: |
+            backend/target/surefire-reports/
+            frontend/playwright-report/
+            frontend/test-results/
+          if-no-files-found: ignore
+          retention-days: 14
