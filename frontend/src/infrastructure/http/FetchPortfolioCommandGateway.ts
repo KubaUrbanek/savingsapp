@@ -1,38 +1,38 @@
 // @ts-nocheck
-export class PortfolioChangePersistenceFailure extends Error {
-  constructor(message, operationPersisted = false) {
-    super(message);
-    this.name = 'PortfolioChangePersistenceFailure';
-    this.operationPersisted = operationPersisted;
-    this.atomic = false;
-  }
-}
-
-// The current API has separate operation and valuation endpoints. This adapter
-// deliberately exposes that limitation instead of promising transactional work.
+/** Retries of the same intent retain their identifier, including lost HTTP responses. */
 export class FetchPortfolioCommandGateway {
-  constructor(entries, operations) {
-    this.entries = entries;
-    this.operations = operations;
+  constructor(http, idGenerator = () => crypto.randomUUID(), pending = undefined) {
+    this.http = http;
+    this.idGenerator = idGenerator;
+    this.requestIds = new WeakMap();
+    this.pending = pending;
   }
-
-  async recordPortfolioChange({ command, nextValue }) {
-    const asset = command.asset;
-    let operationPersisted = false;
-    try {
-      if (command.kind !== 'VALUATION') {
-        await this.operations.save({ ...asset, operationType: command.kind, amountPln: Number(command.amountPln) });
-        operationPersisted = true;
-      }
-      await this.entries.save({ ...asset, valuePln: nextValue });
-      return { nextValue, kind: command.kind, atomic: command.kind === 'VALUATION' };
-    } catch (error) {
-      throw new PortfolioChangePersistenceFailure(
-        operationPersisted
-          ? 'Zapisano operację, ale nie udało się zapisać wyceny. Odśwież dane przed ponowną próbą.'
-          : error.message,
-        operationPersisted
-      );
-    }
+  async recordPortfolioChange({ command }) {
+    const body = {
+      kind: command.kind,
+      ...command.asset,
+      amountPln: command.amountPln == null ? undefined : Number(command.amountPln),
+      valuePln: command.valuePln == null ? undefined : Number(command.valuePln),
+      cashType: command.cashType
+    };
+    const payload = JSON.stringify(body);
+    // Stable non-sensitive key: no raw portfolio data is persisted in session storage.
+    const bytes = new TextEncoder().encode(payload);
+    const signature = this.pending
+      ? Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)))
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('')
+      : payload;
+    if (!this.requestIds.has(command)) this.requestIds.set(command, this.pending?.get(signature) || this.idGenerator());
+    const requestId = this.requestIds.get(command);
+    this.pending?.put(signature, requestId);
+    const result = await this.http.json('/portfolio-changes', { method: 'POST', body: { requestId, ...body } });
+    if (!result || typeof result.nextValue !== 'number' || !Number.isFinite(result.nextValue) || result.atomic !== true)
+      throw new TypeError('Nieprawidłowa odpowiedź zapisu portfela.');
+    this.pending?.remove(signature);
+    return result;
+  }
+  delete(id) {
+    return this.http.json(`/portfolio-changes/${encodeURIComponent(id)}`, { method: 'DELETE' });
   }
 }

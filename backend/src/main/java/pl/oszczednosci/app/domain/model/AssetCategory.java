@@ -8,7 +8,7 @@ public record AssetCategory(InvestmentType type, InvestmentSubcategory subcatego
     private static final List<InvestmentSubcategory> MARKETS = List.of(InvestmentSubcategory.ZLOTO,
             InvestmentSubcategory.RYNKI_ROZWINIETE, InvestmentSubcategory.RYNKI_ROZWIJAJACE_SIE);
     private static final Map<InvestmentType, List<InvestmentSubcategory>> ALLOWED = Map.of(
-            InvestmentType.GIELDA, MARKETS, InvestmentType.IKE, MARKETS, InvestmentType.IKZE, MARKETS,
+            InvestmentType.GIELDA, MARKETS, InvestmentType.IKE, List.of(InvestmentSubcategory.values()), InvestmentType.IKZE, List.of(InvestmentSubcategory.values()),
             InvestmentType.OBLIGACJE, List.of(InvestmentSubcategory.TRZYLETNIE,
                     InvestmentSubcategory.DZIESIECIOLETNIE, InvestmentSubcategory.DWUNASTOLETNIE));
 

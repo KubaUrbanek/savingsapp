@@ -31,7 +31,14 @@ export const InvestmentSubcategory = enumType('investment subcategory', [
   'DZIESIECIOLETNIE',
   'DWUNASTOLETNIE'
 ]);
-export const OperationType = enumType('operation type', ['DEPOSIT', 'WITHDRAWAL', 'BUY', 'SELL', 'VALUATION']);
+export const OperationType = enumType('operation type', [
+  'INITIAL',
+  'DEPOSIT',
+  'WITHDRAWAL',
+  'BUY',
+  'SELL',
+  'VALUATION'
+]);
 
 const MARKETS = Object.freeze([
   InvestmentSubcategory.ZLOTO,
@@ -45,8 +52,18 @@ const ALLOWED = Object.freeze({
     InvestmentSubcategory.DWUNASTOLETNIE
   ]),
   GIELDA: MARKETS,
-  IKE: MARKETS,
-  IKZE: MARKETS
+  IKE: Object.freeze([
+    ...MARKETS,
+    InvestmentSubcategory.TRZYLETNIE,
+    InvestmentSubcategory.DZIESIECIOLETNIE,
+    InvestmentSubcategory.DWUNASTOLETNIE
+  ]),
+  IKZE: Object.freeze([
+    ...MARKETS,
+    InvestmentSubcategory.TRZYLETNIE,
+    InvestmentSubcategory.DZIESIECIOLETNIE,
+    InvestmentSubcategory.DWUNASTOLETNIE
+  ])
 });
 
 // A missing subcategory has one representation in the domain: null.
@@ -73,9 +90,18 @@ export const InvestmentClassificationPolicy = Object.freeze({
   },
   globalAssetClass({ type, subcategory }) {
     const category = this.classify(type, subcategory);
-    if (category.type === InvestmentType.OBLIGACJE) return 'BONDS';
+    if (
+      category.type === InvestmentType.OBLIGACJE ||
+      [
+        InvestmentSubcategory.TRZYLETNIE,
+        InvestmentSubcategory.DZIESIECIOLETNIE,
+        InvestmentSubcategory.DWUNASTOLETNIE
+      ].includes(category.subcategory)
+    )
+      return 'BONDS';
     if (category.subcategory === InvestmentSubcategory.ZLOTO) return 'GOLD';
     if ([InvestmentType.GIELDA, InvestmentType.IKE, InvestmentType.IKZE].includes(category.type)) return 'STOCKS';
+    if (['PPK', 'PPO'].includes(category.type)) return 'UNCLASSIFIED';
     return 'CASH';
   }
 });

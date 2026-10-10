@@ -34,7 +34,7 @@ test('portfolio loader resolves every owner in a household with the same filters
   assert.deepEqual(result, [{ owner: 'JAKUB' }, { owner: 'ZOSIA' }]);
 });
 
-test('operations and performance are loaded only for an explicit owner scope', async () => {
+test('household performance resolves each real owner instead of inventing a household owner', async () => {
   const calls = [];
   const useCase = new LoadPortfolioPerformance(
     {
@@ -56,8 +56,10 @@ test('operations and performance are loaded only for an explicit owner scope', a
     ['operations', { owner: 'JAKUB', type: 'IKE' }],
     ['performance', { owner: 'JAKUB', type: 'IKE' }]
   ]);
-  assert.throws(
-    () => useCase.execute({ scope: HouseholdPortfolio(['JAKUB', 'ZOSIA']) }),
-    /require an owner portfolio scope/
+  calls.length = 0;
+  await useCase.execute({ scope: HouseholdPortfolio(['JAKUB', 'ZOSIA']) });
+  assert.deepEqual(
+    calls.map(([, filters]) => filters.owner),
+    ['JAKUB', 'JAKUB', 'ZOSIA', 'ZOSIA']
   );
 });

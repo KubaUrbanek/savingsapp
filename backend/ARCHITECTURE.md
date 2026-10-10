@@ -4,13 +4,13 @@
 
 The backend uses Clean Architecture with DDD tactical patterns. Dependencies point inward: **adapters → application → domain**. The domain owns policy, the application owns use cases and ports, adapters translate technologies, and `configuration` is the composition root.
 
-| Package | Allowed dependencies |
-| --- | --- |
-| `domain.model`, `domain.service` | JDK and `domain` only; never application, adapters, configuration, Spring, Jakarta, or Jackson |
-| `application.port.*`, `application.usecase`, `application.exception` | JDK, domain, and application; never adapters, configuration, Spring/Jakarta, or Jackson |
-| `adapter.in.web` | input ports/commands/results, domain, its own DTOs/mappers, Spring/Jakarta web APIs; never use-case implementations, outbound adapters, or configuration |
-| `adapter.out.persistence[.json]` | output ports, domain, application persistence/import exceptions, its records/mappers and Jackson/filesystem APIs; never input ports, web, use-case implementations, or configuration |
-| `configuration` and bootstrap | any layer only to wire objects/framework behavior; no business policy |
+| Package                                                              | Allowed dependencies                                                                                                                                                                 |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `domain.model`, `domain.service`                                     | JDK and `domain` only; never application, adapters, configuration, Spring, Jakarta, or Jackson                                                                                       |
+| `application.port.*`, `application.usecase`, `application.exception` | JDK, domain, and application; never adapters, configuration, Spring/Jakarta, or Jackson                                                                                              |
+| `adapter.in.web`                                                     | input ports/commands/results, domain, its own DTOs/mappers, Spring/Jakarta web APIs; never use-case implementations, outbound adapters, or configuration                             |
+| `adapter.out.persistence[.json]`                                     | output ports, domain, application persistence/import exceptions, its records/mappers and Jackson/filesystem APIs; never input ports, web, use-case implementations, or configuration |
+| `configuration` and bootstrap                                        | any layer only to wire objects/framework behavior; no business policy                                                                                                                |
 
 Architecture tests encode these boundaries. Introduce an inward-owned abstraction instead of granting an inner layer an exception.
 
@@ -84,11 +84,11 @@ The lock does not coordinate processes or hosts. JSON offers neither database is
 
 ## Test expectations
 
-* **Domain unit:** construct domain objects/services directly; cover boundaries, every invariant, and calculation statuses without Spring/filesystem.
-* **Use-case:** invoke input ports with fake repositories, clock, IDs, and services; verify orchestration, criteria, not-found behavior, and transaction intent.
-* **Adapter contract:** apply reusable port contracts to every repository implementation, including CRUD, filters, ordering, preservation, and errors.
-* **Integration:** exercise HTTP binding/error translation and wired JSON behavior using temporary files; add Spring end-to-end tests for configuration crossings.
-* **Architecture:** protect inward dependencies, port/adapter separation, framework-free inner layers, and controller/DTO/mapper placement. Change `ArchitectureTest` only with this policy.
+- **Domain unit:** construct domain objects/services directly; cover boundaries, every invariant, and calculation statuses without Spring/filesystem.
+- **Use-case:** invoke input ports with fake repositories, clock, IDs, and services; verify orchestration, criteria, not-found behavior, and transaction intent.
+- **Adapter contract:** apply reusable port contracts to every repository implementation, including CRUD, filters, ordering, preservation, and errors.
+- **Integration:** exercise HTTP binding/error translation and wired JSON behavior using temporary files; add Spring end-to-end tests for configuration crossings.
+- **Architecture:** protect inward dependencies, port/adapter separation, framework-free inner layers, and controller/DTO/mapper placement. Change `ArchitectureTest` only with this policy.
 
 Run `mvn test` from the repository root. Behavior changes need tests at the lowest useful level and affected contract/integration levels.
 
@@ -110,3 +110,13 @@ Example: add **rename an operation note**.
 **Status:** Accepted. We organize one Spring Boot deployable by inward-facing packages. Domain objects enforce validity, application ports form stable seams, adapters contain volatile transport/persistence details, and explicit configuration composes them. This enables framework-free tests and persistence replacement, at the cost of ports, DTOs, and mapping code.
 
 JSON was selected for simple local deployment, readable backups, and atomic whole-document replacement. One versioned document containing both aggregate collections makes export/import and single-process consistency straightforward and permits legacy entry-array migration. Tradeoffs are whole-file I/O, an in-JVM-only lock, no cross-process concurrency, limited querying/scalability, and explicit migration/validation. Adopt a transactional database adapter when volume, concurrent writers, partial updates, or recovery needs dominate, while preserving the ports and domain semantics.
+
+## Portfolio events and performance (October 2026)
+
+`RecordPortfolioChangeUseCase` commits one event with `InvestmentUnitOfWork.update`. The inbound request UUID is its stable idempotency identity; additional transfer-leg IDs come from `IdGenerator`. Operation and generated valuation share an ID; `groupId` connects the two sides of a transfer. The store validates complete groups on write and import. Independent legacy records remain readable. Both legacy delete routes and the event delete route remove complete groups and replay generated balances; editing a linked valuation through the legacy PUT route is rejected.
+
+`PortfolioChangeCalculator` is the pure historical replay policy. Explicit valuations (including an initial value) anchor balances; generated event valuations are rebuilt chronologically. Overdrawn histories fail before the atomic replacement. `INITIAL` stores a declared acquisition basis, including zero; it is not a current-period deposit. A later initial declaration is a new calculation baseline for that asset.
+
+Performance reads both collections from one unit-of-work snapshot. Per-asset purchases are negative investment cash flows and sales positive; internal pairs cancel in an unfiltered owner portfolio. Unknown acquisition history and missing monthly opening valuations produce nullable results. Actual balances already include costs, so fees/taxes are reported separately without deducting them from nominal profit again.
+
+`PortfolioPlanUseCase` persists an independently validated two-level plan for each owner or household. Backup v2 includes plans and operation groups; the adapter migrates v1 and legacy arrays. JSON records remain adapter-owned, and all imported plans/groups pass domain and collection validation.

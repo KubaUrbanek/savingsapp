@@ -44,11 +44,11 @@ export function StockAllocationPanel({
 
   React.useEffect(() => {
     try {
-      preferences.changeStockAllocation(targetAllocations);
+      if (isAllocationValid) preferences.changeStockAllocation(targetAllocations);
     } catch (error) {
       onPreferenceError(error);
     }
-  }, [targetAllocations, preferences, onPreferenceError]);
+  }, [targetAllocations, isAllocationValid, preferences, onPreferenceError]);
 
   function changeTargetAllocation(subcategory, value) {
     setTargetAllocations((current) => ({

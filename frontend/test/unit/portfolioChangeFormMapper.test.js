@@ -21,14 +21,15 @@ for (const [action, operationType] of operationCases) {
         date: '2026-09-01'
       },
       'JAN',
-      [{ type: 'GIELDA', subcategory: 'ETF', valuePln: 100 }]
+      [{ type: 'GIELDA', subcategory: 'ETF', valuePln: 100, date: '2026-08-01', createdAt: '2026-08-01T00:00:00Z' }]
     );
 
     assert.deepEqual(command, {
       kind: operationType,
       asset: { type: 'GIELDA', owner: 'JAN', subcategory: 'ETF', date: '2026-09-01' },
       amountPln: '25.50',
-      previousValue: 100
+      previousValue: 100,
+      cashType: undefined
     });
   });
 }

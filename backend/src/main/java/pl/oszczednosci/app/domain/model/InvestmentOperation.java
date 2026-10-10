@@ -7,6 +7,7 @@ import java.util.Objects;
 /** Immutable framework-independent cash operation aggregate. */
 public final class InvestmentOperation {
     private final InvestmentOperationId id;
+    private final java.util.UUID groupId;
     private final InvestmentOperationType operationType;
     private final AssetCategory category;
     private final OwnerId owner;
@@ -19,12 +20,17 @@ public final class InvestmentOperation {
 
     private InvestmentOperation(InvestmentOperationId id, InvestmentOperationType operationType, AssetCategory category,
             OwnerId owner, Money amount, Money fee, Money tax, LocalDate date, String note, Instant createdAt) {
+        this(id,operationType,category,owner,amount,fee,tax,date,note,createdAt,null);
+    }
+    private InvestmentOperation(InvestmentOperationId id, InvestmentOperationType operationType, AssetCategory category,
+            OwnerId owner, Money amount, Money fee, Money tax, LocalDate date, String note, Instant createdAt, java.util.UUID groupId) {
+        this.groupId = groupId;
         this.id = Objects.requireNonNull(id, "Investment operation id is required");
         this.operationType = Objects.requireNonNull(operationType, "Operation type is required");
         this.category = Objects.requireNonNull(category, "Asset category is required");
         this.owner = Objects.requireNonNull(owner, "Portfolio owner is required");
         this.amount = Objects.requireNonNull(amount, "Operation amount is required");
-        if (amount.amount().signum() <= 0) throw new IllegalArgumentException("Operation amount must be positive");
+        if (amount.amount().signum() < 0 || (amount.isZero() && operationType != InvestmentOperationType.INITIAL)) throw new IllegalArgumentException("Operation amount must be positive");
         this.fee = Objects.requireNonNull(fee, "Operation fee is required");
         this.tax = Objects.requireNonNull(tax, "Operation tax is required");
         this.date = Objects.requireNonNull(date, "Operation date is required");
@@ -51,6 +57,10 @@ public final class InvestmentOperation {
         return normalized.isEmpty() ? null : normalized;
     }
 
+    public InvestmentOperation withGroup(java.util.UUID groupId) {
+        return new InvestmentOperation(id, operationType, category, owner, amount, fee, tax, date, note, createdAt, Objects.requireNonNull(groupId));
+    }
+    public java.util.UUID getGroupId() { return groupId; }
     public InvestmentOperationId id() { return id; }
     public AssetCategory category() { return category; }
     public OwnerId owner() { return owner; }

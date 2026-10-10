@@ -109,4 +109,40 @@ class WebAdapterConfigurationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(id));
     }
+    @Test
+    void atomicChangeHttpContractSupportsRetryUndoZeroBalanceAndPlans() throws Exception {
+        String change="""
+          {"requestId":"ddc36cab-a704-4a38-b5ac-e39711ab5bb9","kind":"INITIAL","owner":"jakub","type":"KONTO_BANKOWE","date":"2026-09-06","amountPln":1000,"valuePln":1100}
+          """;
+        mvc.perform(post("/api/portfolio-changes").contentType(MediaType.APPLICATION_JSON).content(change))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.atomic").value(true)).andExpect(jsonPath("$.nextValue").value(1100));
+        mvc.perform(post("/api/portfolio-changes").contentType(MediaType.APPLICATION_JSON).content(change)).andExpect(status().isOk());
+        mvc.perform(get("/api/investment-operations").queryParam("owner","jakub")).andExpect(jsonPath("$.length()").value(1));
+        mvc.perform(get("/api/portfolio-performance").queryParam("owner","jakub"))
+            .andExpect(jsonPath("$.nominalResultPln").value(100)).andExpect(jsonPath("$.depositsTotalPln").value(1000));
+        mvc.perform(put("/api/portfolio-plans").queryParam("scope","jakub").contentType(MediaType.APPLICATION_JSON)
+            .content("{\"bonds\":60,\"stocks\":40,\"gold\":0,\"developed\":80,\"emerging\":20}"))
+            .andExpect(status().isOk());
+        mvc.perform(put("/api/portfolio-plans").queryParam("scope","jakub").contentType(MediaType.APPLICATION_JSON)
+            .content("{\"bonds\":80,\"stocks\":30,\"gold\":20,\"developed\":80,\"emerging\":20}"))
+            .andExpect(status().isBadRequest());
+        mvc.perform(put("/api/portfolio-plans").queryParam("scope","jakub").contentType(MediaType.APPLICATION_JSON).content("{}"))
+            .andExpect(status().isBadRequest());
+        mvc.perform(get("/api/portfolio-plans").queryParam("scope","jakub")).andExpect(jsonPath("$.bonds").value(60));
+        mvc.perform(delete("/api/portfolio-changes/ddc36cab-a704-4a38-b5ac-e39711ab5bb9")).andExpect(status().isNoContent());
+        mvc.perform(get("/api/investments").queryParam("owner","jakub")).andExpect(jsonPath("$").isEmpty());
+        mvc.perform(get("/api/investment-operations").queryParam("owner","jakub")).andExpect(jsonPath("$").isEmpty());
+        mvc.perform(get("/api/portfolio-plans").queryParam("scope","jakub")).andExpect(jsonPath("$.bonds").value(60));
+    }
+
+    @Test
+    void snapshotWithoutBasisReturnsNullProfitAndNewChangesRejectFutureDates() throws Exception {
+        mvc.perform(post("/api/investments").contentType(MediaType.APPLICATION_JSON).content(ENTRY)).andExpect(status().isCreated());
+        mvc.perform(get("/api/portfolio-performance").queryParam("owner","jakub"))
+            .andExpect(jsonPath("$.nominalResultPln").doesNotExist()).andExpect(jsonPath("$.xirrStatus").value("INCOMPLETE_HISTORY"));
+        mvc.perform(post("/api/portfolio-changes").contentType(MediaType.APPLICATION_JSON).content("""
+            {"requestId":"30c36cab-a704-4a38-b5ac-e39711ab5bb9","kind":"DEPOSIT","owner":"jakub","type":"KONTO_BANKOWE","date":"2999-01-01","amountPln":100}
+            """)).andExpect(status().isBadRequest());
+    }
+
 }

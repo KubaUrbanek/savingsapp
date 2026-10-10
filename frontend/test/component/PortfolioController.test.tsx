@@ -57,7 +57,7 @@ describe('usePortfolioController projection synchronization', () => {
   it.each([
     ['recordPortfolioChange', [2, 1, 0]],
     ['deleteInvestmentEntry', [2, 1, 0]],
-    ['deleteInvestmentOperation', [0, 1, 0]],
+    ['deleteInvestmentOperation', [2, 1, 0]],
     ['importDatabaseBackup', [2, 1, 1]]
   ])('invalidates the complete affectedQueries map for %s', async (name, increments) => {
     const useCases = makeUseCases();

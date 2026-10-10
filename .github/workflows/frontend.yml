@@ -20,3 +20,12 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+      - run: mvn -B clean package
+        working-directory: .
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
