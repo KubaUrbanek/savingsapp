@@ -4,34 +4,35 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppRouter } from '../../src/app/AppRouter.js';
 import { PortfolioChangeValidationFailure } from '../../src/application/portfolio/RecordPortfolioChange.js';
-
+import { expectNoAccessibilityViolations } from './accessibility.js';
 function deferred() {
-  let resolve!: (value: unknown) => void;
-  let reject!: (reason?: unknown) => void;
-  const promise = new Promise<unknown>((resolvePromise, rejectPromise) => {
-    resolve = resolvePromise;
-    reject = rejectPromise;
+  let resolve!: (value: unknown) => void, reject!: (reason?: unknown) => void;
+  const promise = new Promise<unknown>((yes, no) => {
+    resolve = yes;
+    reject = no;
   });
   return { promise, resolve, reject };
 }
-
+const entry = {
+  id: 'entry',
+  owner: 'jakub',
+  type: 'KONTO_BANKOWE',
+  subcategory: null,
+  valuePln: 100,
+  date: '2026-09-01',
+  createdAt: '2026-09-01T00:00:00Z'
+};
+const operation = { ...entry, id: 'op', operationType: 'DEPOSIT', amountPln: 100 };
 function dependencies(overrides = {}) {
   return {
-    preferences: {
-      selectedOwner: () => 'jakub',
-      selectOwner: vi.fn(),
-      globalAllocation: () => ({ BONDS: 50, STOCKS: 30, GOLD: 20 }),
-      changeGlobalAllocation: vi.fn(),
-      stockAllocation: () => ({ ZLOTO: 40, RYNKI_ROZWINIETE: 30, RYNKI_ROZWIJAJACE_SIE: 30 }),
-      changeStockAllocation: vi.fn(),
-      householdGoal: () => 500000,
-      changeHouseholdGoal: vi.fn()
-    },
+    preferences: { selectedOwner: () => 'jakub', selectOwner: vi.fn() },
     useCases: {
-      loadReferenceData: { execute: async () => ({ users: ['jakub'], types: ['KONTO_BANKOWE'] }) },
-      loadPortfolio: { execute: async () => [] },
+      loadReferenceData: {
+        execute: async () => ({ users: ['jakub', 'zosia'], types: ['KONTO_BANKOWE', 'GIELDA', 'IKE', 'IKZE'] })
+      },
+      loadPortfolio: { execute: async () => [entry] },
       loadPortfolioPerformance: { execute: async () => ({ operations: [], performance: null }) },
-      recordPortfolioChange: { execute: async () => ({ nextValue: 10, kind: 'DEPOSIT', atomic: true }) },
+      recordPortfolioChange: { execute: async () => ({ nextValue: 110, kind: 'DEPOSIT', atomic: true }) },
       deleteInvestmentEntry: { execute: async () => undefined },
       deleteInvestmentOperation: { execute: async () => undefined },
       importDatabaseBackup: { execute: async () => undefined },
@@ -40,809 +41,469 @@ function dependencies(overrides = {}) {
     }
   };
 }
-
-describe('AppRouter', () => {
-  beforeEach(() => {
-    window.history.pushState({}, '', '/');
-  });
-
-  afterEach(() => {
-    cleanup();
-    vi.restoreAllMocks();
-  });
-
-  it('renders the about route', () => {
+async function openForm(value?: string) {
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Dodaj zmianę' })).toBeEnabled());
+  fireEvent.click(screen.getByRole('button', { name: 'Dodaj zmianę' }));
+  const dialog = await screen.findByRole('dialog', { name: 'Dodaj zmianę' });
+  if (value) fireEvent.change(screen.getByLabelText('Kwota — zł'), { target: { value } });
+  return dialog;
+}
+beforeEach(() => window.history.pushState({}, '', '/'));
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
+describe('Savings workspace', () => {
+  it('renders about', () => {
     window.history.pushState({}, '', '/about');
     render(<AppRouter dependencies={{}} />);
     expect(screen.getByText(/Portfele bez logowania/i)).toBeTruthy();
   });
-
-  it('links past the header to the stable main-content destination', () => {
+  it('provides a stable skip link', () => {
     render(<AppRouter dependencies={dependencies()} />);
-
     expect(screen.getByRole('link', { name: 'Przejdź do treści' })).toHaveAttribute('href', '#main-content');
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content');
   });
-
-  it('exposes one active ARIA tab panel and supports click and keyboard navigation', async () => {
-    render(<AppRouter dependencies={dependencies()} />);
-
-    const tablist = screen.getByRole('tablist', { name: 'Sekcje portfela' });
-    const summary = screen.getByRole('tab', { name: 'Podsumowanie' });
-    const update = screen.getByRole('tab', { name: 'Aktualizacja' });
-    expect(tablist).toContainElement(summary);
-    expect(summary).toHaveAttribute('aria-selected', 'true');
-    expect(summary).toHaveAttribute('aria-controls', 'portfolio-panel-summary');
-    expect(screen.getByRole('tabpanel', { name: 'Podsumowanie' })).toHaveAttribute('aria-labelledby', summary.id);
-    expect(document.getElementById('portfolio-panel-update')).toHaveAttribute('hidden');
-
-    fireEvent.click(update);
-    expect(update).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('tabpanel', { name: 'Aktualizacja' })).toBeVisible();
-    expect(summary).not.toHaveFocus();
-
-    fireEvent.keyDown(update, { key: 'End' });
-    await waitFor(() => expect(screen.getByRole('tab', { name: 'Ustawienia' })).toHaveFocus());
-    fireEvent.keyDown(screen.getByRole('tab', { name: 'Ustawienia' }), { key: 'Home' });
-    await waitFor(() => expect(summary).toHaveFocus());
-    fireEvent.keyDown(summary, { key: 'ArrowLeft' });
-    await waitFor(() => expect(screen.getByRole('tab', { name: 'Ustawienia' })).toHaveFocus());
-  });
-
-  it('keeps update form and portfolio filters while switching tabs', async () => {
-    render(<AppRouter dependencies={dependencies()} />);
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
-    const amount = await screen.findByLabelText('Kwota dodana');
-    fireEvent.change(amount, { target: { value: '123.45' } });
-    fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
-
-    expect(screen.getByLabelText('Kwota dodana')).toHaveValue(123.45);
-    expect(screen.getByRole('button', { name: 'Wszystkie inwestycje', pressed: true })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /jakub/i, pressed: true })).toBeInTheDocument();
-  });
-
-  it('opens the update tab from an empty-state action', async () => {
-    render(<AppRouter dependencies={dependencies()} />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Dodaj wycenę' }));
-    expect(screen.getByRole('tab', { name: 'Aktualizacja' })).toHaveAttribute('aria-selected', 'true');
-  });
-
-  it('uses one budget planner for retirement accounts as well as brokerage holdings', async () => {
-    render(
-      <AppRouter
-        dependencies={dependencies({
-          loadReferenceData: { execute: async () => ({ users: ['jakub'], types: ['IKE', 'IKZE'] }) },
-          loadPortfolio: {
-            execute: async () => [
-              {
-                id: 'ike',
-                owner: 'jakub',
-                type: 'IKE',
-                subcategory: 'ZLOTO',
-                valuePln: 1000,
-                date: '2026-09-01',
-                createdAt: '2026-09-01T00:00:00Z'
-              }
-            ]
-          }
-        })}
-      />
-    );
-    fireEvent.click(screen.getByRole('tab', { name: 'Co dokupić?' }));
-    expect(await screen.findByRole('table', { name: 'Co kupić według mojego planu' })).toBeVisible();
-    expect(screen.getByLabelText('Mam do zainwestowania — zł')).toBeVisible();
-    expect(screen.queryByText('ETF — Giełda, IKE i IKZE')).not.toBeInTheDocument();
-  });
-
   it.each([
     ['/', 'Portfele | Oszczędności'],
     ['/about', 'Informacje | Oszczędności'],
     ['/brak', 'Nie znaleziono strony | Oszczędności']
-  ])('sets the document title for %s', (path, title) => {
+  ])('sets title for %s', (path, title) => {
     window.history.pushState({}, '', path);
     render(<AppRouter dependencies={dependencies()} />);
-
     expect(document.title).toBe(title);
   });
-
-  it('focuses the primary heading after client-side navigation but not on initial load', async () => {
+  it('focuses the next route heading without stealing initial focus', async () => {
     render(
       <React.StrictMode>
         <AppRouter dependencies={dependencies()} />
       </React.StrictMode>
     );
-
-    const initialHeading = screen.getByRole('heading', { level: 1, name: 'Portfel: jakub' });
-    expect(initialHeading).not.toHaveFocus();
-
-    fireEvent.click(screen.getByRole('link', { name: 'Informacje' }));
-
-    const nextHeading = await screen.findByRole('heading', { level: 1, name: 'Portfele bez logowania.' });
-    await waitFor(() => expect(nextHeading).toHaveFocus());
-    expect(document.title).toBe('Informacje | Oszczędności');
+    expect(screen.getByRole('heading', { name: 'Oszczędności: Jakub' })).not.toHaveFocus();
+    fireEvent.click(screen.getByRole('button', { name: 'Ustawienia' }));
+    fireEvent.click(screen.getByRole('link', { name: 'Informacje o aplikacji' }));
+    await waitFor(() => expect(screen.getByRole('heading', { name: 'Portfele bez logowania.' })).toHaveFocus());
   });
-
-  it('names filter groups and announces each toggle button selected state', async () => {
+  it('uses three tabs with one visible panel and keyboard navigation', async () => {
+    render(<AppRouter dependencies={dependencies()} />);
+    const summary = screen.getByRole('tab', { name: 'Przegląd' });
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Przegląd', 'Co dokupić?', 'Historia']);
+    expect(summary).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', summary.id);
+    fireEvent.keyDown(summary, { key: 'End' });
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Historia' })).toHaveFocus());
+    expect(screen.getByRole('tabpanel', { name: 'Historia' })).toBeVisible();
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Historia' }), { key: 'Home' });
+    await waitFor(() => expect(summary).toHaveFocus());
+    fireEvent.keyDown(summary, { key: 'ArrowLeft' });
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Historia' })).toHaveFocus());
+  });
+  it('keeps household plan, history and settings available', async () => {
+    render(<AppRouter dependencies={dependencies()} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Razem' }));
+    expect(screen.getByRole('heading', { name: 'Nasze oszczędności' })).toBeVisible();
+    fireEvent.click(screen.getByRole('tab', { name: 'Co dokupić?' }));
+    expect(screen.getByRole('tabpanel', { name: 'Co dokupić?' })).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Ustawienia' }));
+    expect(screen.getByRole('heading', { name: 'Ustawienia i kopia danych' })).toBeVisible();
+    expect(screen.getByRole('tab', { name: 'Co dokupić?' })).toHaveAttribute('tabindex', '0');
+    fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
+    expect(screen.getByRole('tabpanel', { name: 'Historia' })).toBeVisible();
+  });
+  it('starts existing savings with INITIAL and allows unknown contributions', async () => {
+    render(<AppRouter dependencies={dependencies({ loadPortfolio: { execute: async () => [] } })} />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Dodaj posiadane oszczędności' }));
+    expect(screen.getByLabelText('Co chcesz zrobić?')).toHaveValue('INITIAL');
+    expect(screen.getByLabelText('Ile masz teraz — zł')).toBeVisible();
+    expect(screen.getByLabelText('Ile łącznie wpłaciłem — zł')).toBeVisible();
+    fireEvent.click(screen.getByLabelText('Znam kwotę, którą wpłaciłem'));
+    expect(screen.queryByLabelText('Ile łącznie wpłaciłem — zł')).not.toBeInTheDocument();
+    expect(screen.getByText(/Nie pamiętasz wpłat/)).toBeVisible();
+  });
+  it('resets all investments safely and keeps filters separate from drafts', async () => {
+    render(
+      <AppRouter
+        dependencies={dependencies({
+          loadPortfolio: {
+            execute: async () => [entry, { ...entry, id: 'stock', type: 'GIELDA', subcategory: 'ZLOTO' }]
+          }
+        })}
+      />
+    );
+    fireEvent.click(await screen.findByText(/Filtruj inwestycje/));
+    fireEvent.click(await screen.findByRole('button', { name: 'Giełda' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Wszystkie inwestycje' }));
+    expect(screen.getByRole('button', { name: 'Wszystkie inwestycje' })).toHaveAttribute('aria-pressed', 'true');
+    await openForm('123.45');
+    expect(screen.getByLabelText('Inwestycja / rachunek')).toHaveValue('KONTO_BANKOWE');
+    fireEvent.click(screen.getByRole('button', { name: 'Anuluj' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Przegląd' }));
+    expect(screen.getByRole('button', { name: 'Wszystkie inwestycje' })).toHaveAttribute('aria-pressed', 'true');
+  });
+  it('clears owner filters before loading household performance', async () => {
+    const execute = vi.fn(async () => ({ operations: [], performance: null }));
+    render(
+      <AppRouter
+        dependencies={dependencies({
+          loadPortfolioPerformance: { execute },
+          loadPortfolio: {
+            execute: async () => [entry, { ...entry, id: 'stock', type: 'GIELDA', subcategory: 'ZLOTO' }]
+          }
+        })}
+      />
+    );
+    fireEvent.click(await screen.findByText(/Filtruj inwestycje/));
+    fireEvent.click(await screen.findByRole('button', { name: 'Giełda' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Razem' }));
+    await waitFor(() =>
+      expect(execute).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          scope: { kind: 'HOUSEHOLD', ownerIds: ['jakub', 'zosia'] },
+          filters: { type: undefined, subcategory: undefined }
+        })
+      )
+    );
+    expect(screen.queryByText(/Filtruj inwestycje/)).not.toBeInTheDocument();
+  });
+  it('displays the actual draft owner and clears fields when selecting another', async () => {
+    render(<AppRouter dependencies={dependencies()} />);
+    await openForm();
+    expect(screen.getByText('Zapisujesz dla:')).toHaveTextContent('Jakub');
+    fireEvent.click(screen.getByRole('button', { name: 'Anuluj' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Razem' }));
+    await openForm('100');
+    fireEvent.change(screen.getByLabelText('Zapisujesz dla'), { target: { value: 'zosia' } });
+    expect(screen.getByLabelText('Kwota — zł')).toHaveValue(null);
+    expect(screen.getByLabelText('Inwestycja / rachunek')).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Zapisz zmianę' })).toBeDisabled();
+  });
+  it('closes with Escape and restores focus', async () => {
+    render(<AppRouter dependencies={dependencies()} />);
+    const trigger = screen.getByRole('button', { name: 'Dodaj zmianę' });
+    await waitFor(() => expect(trigger).toBeEnabled());
+    trigger.focus();
+    const dialog = await openForm();
+    fireEvent(dialog, new Event('cancel', { bubbles: true, cancelable: true }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+  it('offers direct actions and accessible dialog controls', async () => {
+    render(<AppRouter dependencies={dependencies()} />);
+    const dialog = await openForm();
+    expect(
+      within(screen.getByLabelText('Co chcesz zrobić?'))
+        .getAllByRole('option')
+        .map((o) => o.textContent)
+    ).toEqual(['Posiadane oszczędności', 'Wpłaciłem', 'Kupiłem', 'Wypłaciłem', 'Sprzedałem', 'Aktualizuję wartość']);
+    fireEvent.change(screen.getByLabelText('Co chcesz zrobić?'), { target: { value: 'BUY' } });
+    expect(screen.getByLabelText('Płacę z konta')).toBeVisible();
+    fireEvent.change(screen.getByLabelText('Co chcesz zrobić?'), { target: { value: 'VALUATION' } });
+    expect(screen.queryByLabelText('Płacę z konta')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Ile masz teraz — zł')).toBeVisible();
+    await expectNoAccessibilityViolations(dialog);
+  });
+  it.each(['DEPOSIT', 'BUY', 'WITHDRAWAL', 'SELL', 'VALUATION', 'INITIAL'])('maps direct %s action', async (kind) => {
+    const execute = vi.fn(async () => ({ nextValue: 100, kind, atomic: true }));
+    render(<AppRouter dependencies={dependencies({ recordPortfolioChange: { execute } })} />);
+    await openForm();
+    fireEvent.change(screen.getByLabelText('Co chcesz zrobić?'), { target: { value: kind } });
+    if (['VALUATION', 'INITIAL'].includes(kind))
+      fireEvent.change(screen.getByLabelText('Ile masz teraz — zł'), { target: { value: '100' } });
+    if (kind === 'INITIAL')
+      fireEvent.change(screen.getByLabelText('Ile łącznie wpłaciłem — zł'), { target: { value: '90' } });
+    else if (kind !== 'VALUATION') fireEvent.change(screen.getByLabelText('Kwota — zł'), { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
+    await waitFor(() =>
+      expect(execute).toHaveBeenCalledWith(
+        expect.objectContaining({ kind, asset: expect.objectContaining({ owner: 'jakub' }) })
+      )
+    );
+  });
+  it.each([
+    ['DEPOSIT', 'amountPln', 'Kwota — zł'],
+    ['VALUATION', 'currentValuePln', 'Ile masz teraz — zł']
+  ])('associates and focuses %s validation', async (kind, field, label) => {
+    const failure = new PortfolioChangeValidationFailure(field, 'Niepoprawna kwota.', 'INVALID');
+    render(
+      <AppRouter
+        dependencies={dependencies({
+          recordPortfolioChange: {
+            execute: async () => {
+              throw failure;
+            }
+          }
+        })}
+      />
+    );
+    await openForm();
+    fireEvent.change(screen.getByLabelText('Co chcesz zrobić?'), { target: { value: kind } });
+    const input = screen.getByLabelText(label);
+    fireEvent.change(input, { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
+    await waitFor(() => expect(input).toHaveFocus());
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAccessibleDescription('Niepoprawna kwota.');
+  });
+  it('focuses sanitized general errors and keeps retry drafts', async () => {
+    render(
+      <AppRouter
+        dependencies={dependencies({
+          recordPortfolioChange: {
+            execute: async () => {
+              throw new Error('private database path');
+            }
+          }
+        })}
+      />
+    );
+    await openForm('10');
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
+    const alert = await screen.findByRole('alert');
+    await waitFor(() => expect(alert).toHaveFocus());
+    expect(alert).toHaveTextContent('Nie udało się zapisać zmiany');
+    expect(alert).not.toHaveTextContent('private');
+    expect(screen.getByLabelText('Kwota — zł')).toHaveValue(10);
+  });
+  it.each(['resolved', 'rejected'])('deduplicates a %s save and unlocks controls', async (outcome) => {
+    const pending = deferred(),
+      execute = vi.fn(() => pending.promise);
+    render(<AppRouter dependencies={dependencies({ recordPortfolioChange: { execute } })} />);
+    await openForm('10');
+    const form = screen.getByLabelText('Kwota — zł').closest('form')!;
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    expect(execute).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Zapisywanie…' })).toBeDisabled();
+    expect(form).toHaveAttribute('aria-busy', 'true');
+    if (outcome === 'resolved') {
+      pending.resolve({ nextValue: 110, kind: 'DEPOSIT', atomic: true });
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    } else {
+      pending.reject(new Error('failure'));
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Zapisz zmianę' })).toBeEnabled());
+    }
+    expect(screen.getByRole('button', { name: 'Jakub' })).toBeEnabled();
+  });
+  it('clears old owner data while the new snapshot loads', async () => {
+    const pending = deferred();
+    render(
+      <AppRouter
+        dependencies={dependencies({
+          loadPortfolio: {
+            execute: ({ scope, filters }: { scope: { ownerId: string }; filters?: object }) =>
+              scope.ownerId === 'zosia' && !filters ? pending.promise : Promise.resolve([entry])
+          }
+        })}
+      />
+    );
+    await screen.findAllByText('100,00 zł');
+    fireEvent.click(screen.getByRole('button', { name: 'Zosia' }));
+    expect(screen.queryAllByText('100,00 zł')).toHaveLength(0);
+    pending.resolve([{ ...entry, owner: 'zosia', valuePln: 2800 }]);
+    await screen.findAllByText(/2800,00/);
+  });
+  it('keeps independent history available after snapshot failure', async () => {
+    render(
+      <AppRouter
+        dependencies={dependencies({
+          loadPortfolio: {
+            execute: ({ filters }: { filters?: object }) =>
+              filters ? Promise.resolve([entry]) : Promise.reject(new Error('private'))
+          }
+        })}
+      />
+    );
+    await screen.findByRole('alert');
+    fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
+    expect(await screen.findByRole('button', { name: 'Popraw' })).toBeEnabled();
+    expect(screen.queryByText('private')).not.toBeInTheDocument();
+  });
+  it('merges transfer legs into one correction with its original owner', async () => {
+    const buy = {
+        ...operation,
+        id: 'buy',
+        groupId: 'buy',
+        operationType: 'BUY',
+        owner: 'zosia',
+        type: 'GIELDA',
+        subcategory: 'ZLOTO'
+      },
+      cash = { ...operation, id: 'cash', groupId: 'buy', operationType: 'SELL', owner: 'zosia' };
+    const execute = vi.fn(async () => ({ nextValue: 125, kind: 'BUY', atomic: true }));
     render(
       <AppRouter
         dependencies={dependencies({
           loadPortfolio: {
             execute: async () => [
-              {
-                id: 'bond',
-                owner: 'jakub',
-                type: 'OBLIGACJE',
-                subcategory: 'TRZYLETNIE',
-                valuePln: 100,
-                date: '2026-09-01',
-                createdAt: '2026-09-01T00:00:00Z'
-              },
-              {
-                id: 'cash',
-                owner: 'jakub',
-                type: 'KONTO_BANKOWE',
-                subcategory: null,
-                valuePln: 100,
-                date: '2026-09-01',
-                createdAt: '2026-09-01T00:00:00Z'
-              }
+              { ...entry, id: 'buy', owner: 'zosia', type: 'GIELDA', subcategory: 'ZLOTO' },
+              { ...entry, id: 'cash', owner: 'zosia' }
             ]
           },
-          loadReferenceData: {
-            execute: async () => ({ users: ['jakub', 'zosia'], types: ['OBLIGACJE', 'KONTO_BANKOWE'] })
-          }
+          loadPortfolioPerformance: { execute: async () => ({ operations: [buy, cash], performance: null }) },
+          recordPortfolioChange: { execute }
         })}
       />
     );
-
-    const ownerGroup = await screen.findByRole('group', { name: 'Czyj portfel wyświetlić?' });
-    const typeGroup = await screen.findByRole('group', { name: 'Rodzaj inwestycji' });
-    fireEvent.click(await screen.findByRole('button', { name: 'Obligacje' }));
-    const subcategoryGroup = await screen.findByRole('group', { name: 'Podkategorie inwestycji' });
-    expect(ownerGroup).toHaveAccessibleName('Czyj portfel wyświetlić?');
-    expect(typeGroup).toHaveAccessibleName('Rodzaj inwestycji');
-    expect(subcategoryGroup).toHaveAccessibleName('Podkategorie inwestycji');
-
-    expect(screen.getByRole('button', { name: /jakub/i, pressed: true })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /zosia/i, pressed: false })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Obligacje', pressed: true })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Konto bankowe', pressed: false })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Wszystkie', pressed: true })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: '3-letnie' }));
-    expect(screen.getByRole('button', { name: 'Wszystkie', pressed: false })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '3-letnie', pressed: true })).toBeInTheDocument();
-  });
-
-  it('renders a semantic portfolio summary and keeps the workspace scope behavior', async () => {
-    render(
-      <AppRouter
-        dependencies={dependencies({
-          loadReferenceData: {
-            execute: async () => ({ users: ['jakub', 'zosia'], types: ['KONTO_BANKOWE'] })
-          },
-          loadPortfolio: {
-            execute: async ({ scope }: { scope: { kind: string; ownerId?: string } }) =>
-              scope.kind === 'OWNER'
-                ? [
-                    {
-                      id: `entry-${scope.ownerId}`,
-                      owner: scope.ownerId,
-                      type: 'KONTO_BANKOWE',
-                      subcategory: '',
-                      date: '2026-09-03',
-                      valuePln: scope.ownerId === 'jakub' ? 4200 : 2800
-                    }
-                  ]
-                : []
-          },
-          loadPortfolioPerformance: {
-            execute: async () => ({
-              operations: [],
-              performance: {
-                monthlyResultPln: 125,
-                monthlyReturnRatePercent: 2.5,
-                nominalResultPln: -340
-              }
-            })
-          }
-        })}
-      />
-    );
-
-    const heading = await screen.findByRole('heading', { level: 1, name: 'Portfel: jakub' });
-    const scopeSwitcher = screen.getByRole('group', { name: 'Czyj portfel wyświetlić?' });
-    const summary = document.querySelector<HTMLElement>('.summaryPanel')!;
-    const form = document.querySelector('.quickUpdate form')!;
-
-    expect(heading.compareDocumentPosition(scopeSwitcher) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(scopeSwitcher.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(summary.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    const summaryView = within(summary);
+    fireEvent.click(screen.getByRole('button', { name: 'Razem' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Popraw' }));
+    expect(screen.getByText('Zapisujesz dla:')).toHaveTextContent('Zosia');
+    expect(screen.getByLabelText('Inwestycja / rachunek')).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Kwota — zł'), { target: { value: '125' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz poprawkę' }));
     await waitFor(() =>
-      expect(summaryView.getAllByText('Mam teraz')[0]!.parentElement).toHaveTextContent(/4\s?200,00\s*zł/)
+      expect(execute).toHaveBeenCalledWith(
+        expect.objectContaining({ editId: 'buy', kind: 'BUY', asset: expect.objectContaining({ owner: 'zosia' }) })
+      )
     );
-    expect(summaryView.getByText('Wyceny z 2026-09-03')).toBeVisible();
-    expect(summaryView.getByText('Straciłem').parentElement).toHaveTextContent(/-340,00\s*zł/);
-    expect(summaryView.getByText('Wpłaciłem')).toBeVisible();
-    expect(scopeSwitcher.querySelectorAll('.button')).toHaveLength(3);
-
-    fireEvent.click(screen.getByRole('button', { name: /zosia/i, pressed: false }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Portfel: zosia' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /zosia/i, pressed: true })).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: 'Razem', pressed: false }));
-    expect(await screen.findByRole('heading', { level: 1, name: 'Portfel całego gospodarstwa' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Razem', pressed: true })).toBeInTheDocument();
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
-      'Podsumowanie',
-      'Historia wartości',
-      'Co dokupić?',
-      'Ustawienia'
-    ]);
-    expect(document.getElementById('portfolio-panel-update')).not.toBeInTheDocument();
   });
-
-  it('clears the previous owner data while the newly selected owner is loading', async () => {
-    const zosiaSnapshot = deferred();
+  it('uses the same planner for retirement accounts', async () => {
     render(
       <AppRouter
         dependencies={dependencies({
-          loadReferenceData: { execute: async () => ({ users: ['jakub', 'zosia'], types: ['KONTO_BANKOWE'] }) },
-          loadPortfolio: {
-            execute: async ({ scope, filters }: { scope: { ownerId: string }; filters?: object }) => {
-              if (scope.ownerId === 'zosia' && !filters) return zosiaSnapshot.promise;
-              return [
-                {
-                  id: `entry-${scope.ownerId}`,
-                  owner: scope.ownerId,
-                  type: 'KONTO_BANKOWE',
-                  subcategory: '',
-                  date: '2026-09-03',
-                  valuePln: scope.ownerId === 'jakub' ? 4200 : 2800
-                }
-              ];
-            }
-          }
+          loadPortfolio: { execute: async () => [{ ...entry, type: 'IKE', subcategory: 'ZLOTO' }] }
         })}
       />
     );
-
-    expect((await screen.findAllByText(/4200,00/)).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole('button', { name: /zosia/i, pressed: false }));
-
-    expect(screen.queryAllByText(/4200,00/)).toHaveLength(0);
-    expect(screen.getByRole('status', { name: 'Wczytywanie podsumowania portfela…' })).toBeInTheDocument();
-    zosiaSnapshot.resolve([
-      { id: 'entry-zosia', owner: 'zosia', type: 'KONTO_BANKOWE', subcategory: '', date: '2026-09-04', valuePln: 2800 }
-    ]);
-    expect((await screen.findAllByText(/2800,00/)).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('tab', { name: 'Co dokupić?' }));
+    expect(await screen.findByLabelText('Mam do zainwestowania — zł')).toBeVisible();
   });
-
-  it('keeps an independent section available when the snapshot query fails', async () => {
-    render(
-      <AppRouter
-        dependencies={dependencies({
-          loadPortfolio: {
-            execute: async ({ filters }: { filters?: object }) =>
-              filters
-                ? [
-                    {
-                      id: 'entry-jakub',
-                      owner: 'jakub',
-                      type: 'KONTO_BANKOWE',
-                      subcategory: '',
-                      date: '2026-09-03',
-                      valuePln: 4200
-                    }
-                  ]
-                : Promise.reject(new Error('wewnętrzny błąd snapshotu'))
-          }
-        })}
-      />
-    );
-
-    expect(await screen.findByText('Historia wycen: jakub')).toBeInTheDocument();
-    expect((await screen.findAllByText(/4200,00/)).length).toBeGreaterThan(0);
-    expect(
-      screen.getAllByRole('alert').some((alert) => alert.textContent?.includes('Nie udało się wczytać tej sekcji'))
-    ).toBe(true);
-    expect(screen.queryByText('wewnętrzny błąd snapshotu')).not.toBeInTheDocument();
-  });
-
-  it('associates a validation error with the invalid field and focuses it', async () => {
-    const validationError = new PortfolioChangeValidationFailure(
-      'amountPln',
-      'Kwota przekracza aktualną wartość składnika portfela.',
-      'INSUFFICIENT_PORTFOLIO_VALUE'
-    );
-    render(
-      <AppRouter
-        dependencies={dependencies({ recordPortfolioChange: { execute: async () => Promise.reject(validationError) } })}
-      />
-    );
-    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
-
-    const amount = await screen.findByLabelText('Kwota dodana');
-    fireEvent.change(amount, { target: { value: '10' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Zaktualizuj portfel' }));
-
-    const message = await screen.findByText(validationError.message);
-    expect(amount).toHaveAttribute('aria-invalid', 'true');
-    expect(amount).toHaveAttribute('aria-describedby', message.id);
-    expect(message).toHaveAttribute('id', 'portfolio-change-amount-error');
-    await waitFor(() => expect(amount).toHaveFocus());
-  });
-
-  it('keeps the pilot controls in visual keyboard order and exposes a visible focus target', async () => {
+  it('keeps the value chart collapsed until requested', async () => {
     render(<AppRouter dependencies={dependencies()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
-
-    const owner = await screen.findByRole('button', { name: /jakub/i, pressed: true });
-    const together = screen.getByRole('button', { name: 'Razem', pressed: false });
-    const type = await screen.findByRole('button', { name: 'Wszystkie inwestycje', pressed: true });
-    const operationType = screen.getByLabelText('Co chcesz zrobić?');
-    const operationReason = screen.getByLabelText('Skąd wynika zmiana?');
-    const asset = screen.getByLabelText('Składnik portfela');
-    const amount = screen.getByLabelText('Kwota dodana');
-    const date = screen.getByLabelText('Data zmiany');
-    const save = screen.getByRole('button', { name: 'Zaktualizuj portfel' });
-    await waitFor(() => expect(save).toBeEnabled());
-    const controls = [owner, together, type, operationType, operationReason, asset, amount, date, save];
-
-    controls.forEach((control, index) => {
-      control.focus();
-      expect(control).toHaveFocus();
-      if (index > 0) {
-        expect(controls[index - 1]!.compareDocumentPosition(control) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-      }
-    });
+    const summary = await screen.findByText('Zobacz historię wartości');
+    expect(summary.closest('details')).not.toHaveAttribute('open');
+    fireEvent.click(summary);
+    expect(summary.closest('details')).toHaveAttribute('open');
   });
-
-  it('keeps validation feedback associated when the conditional valuation input is shown', async () => {
-    const validationError = new PortfolioChangeValidationFailure(
-      'currentValuePln',
-      'Podaj nową wartość składnika.',
-      'INVALID_CURRENT_VALUE'
-    );
-    render(
-      <AppRouter
-        dependencies={dependencies({ recordPortfolioChange: { execute: async () => Promise.reject(validationError) } })}
-      />
-    );
-    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
-
-    await screen.findByLabelText('Kwota dodana');
-    fireEvent.change(screen.getByLabelText('Co chcesz zrobić?'), { target: { value: 'VALUATION' } });
-
-    const currentValue = screen.getByLabelText('Nowa wartość składnika');
-    expect(currentValue).toHaveAttribute('id', 'portfolio-change-current-value');
-    fireEvent.change(currentValue, { target: { value: '100' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Zaktualizuj portfel' }));
-
-    const message = await screen.findByText(validationError.message);
-    expect(message).toHaveAttribute('id', 'portfolio-change-current-value-error');
-    expect(currentValue).toHaveAttribute('aria-invalid', 'true');
-    expect(currentValue).toHaveAttribute('aria-describedby', message.id);
-    await waitFor(() => expect(currentValue).toHaveFocus());
+  it('cancels undo and restores focus', async () => {
+    const execute = vi.fn();
+    vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(<AppRouter dependencies={dependencies({ deleteInvestmentEntry: { execute } })} />);
+    fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
+    const button = await screen.findByRole('button', { name: 'Cofnij zmianę' });
+    fireEvent.click(button);
+    expect(execute).not.toHaveBeenCalled();
+    expect(button).toHaveFocus();
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('Jakub'));
   });
-
-  it('offers three primary actions and conditionally narrows the domain operation reason', async () => {
-    render(<AppRouter dependencies={dependencies()} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
-
-    expect(await screen.findByRole('heading', { level: 2, name: 'Zaktualizuj portfel' })).toBeInTheDocument();
-    expect(
-      screen.getByText('Dodaj lub odejmij środki albo wpisz aktualną wartość wybranego składnika portfela.')
-    ).toBeInTheDocument();
-    const action = await screen.findByLabelText('Co chcesz zrobić?');
-    expect(screen.getByLabelText('Składnik portfela')).toBeInTheDocument();
-    expect(screen.getByLabelText('Data zmiany')).toBeInTheDocument();
-    expect(Array.from(action.querySelectorAll('option'), (option) => option.textContent)).toEqual([
-      'Wpisz posiadane oszczędności',
-      'Dodaj środki — nowa wpłata lub zakup',
-      'Odejmij środki',
-      'Ustaw aktualną wartość'
-    ]);
-
-    let reason = screen.getByLabelText('Skąd wynika zmiana?');
-    expect(Array.from(reason.querySelectorAll('option'), (option) => [option.textContent, option.value])).toEqual([
-      ['Wpłata nowych środków', 'DEPOSIT'],
-      ['Zakup aktywa', 'BUY']
-    ]);
-
-    fireEvent.change(action, { target: { value: 'SUBTRACT' } });
-    expect(screen.getByLabelText('Kwota odjęta')).toBeInTheDocument();
-    reason = screen.getByLabelText('Skąd wynika zmiana?');
-    expect(Array.from(reason.querySelectorAll('option'), (option) => [option.textContent, option.value])).toEqual([
-      ['Wypłata środków', 'WITHDRAWAL'],
-      ['Sprzedaż aktywa', 'SELL']
-    ]);
-
-    fireEvent.change(action, { target: { value: 'VALUATION' } });
-    expect(screen.queryByLabelText('Skąd wynika zmiana?')).not.toBeInTheDocument();
-    expect(screen.getByLabelText('Nowa wartość składnika')).toBeInTheDocument();
-  });
-
-  it.each([
-    ['ADD', 'DEPOSIT'],
-    ['ADD', 'BUY'],
-    ['SUBTRACT', 'WITHDRAWAL'],
-    ['SUBTRACT', 'SELL'],
-    ['VALUATION', 'VALUATION']
-  ])('maps the %s action to the %s domain command', async (actionValue, expectedKind) => {
-    const execute = vi.fn(async (command: unknown) => {
-      void command;
-      return { nextValue: 100, kind: expectedKind, atomic: true };
-    });
-    render(<AppRouter dependencies={dependencies({ recordPortfolioChange: { execute } })} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
-
-    const action = await screen.findByLabelText('Co chcesz zrobić?');
-    fireEvent.change(action, { target: { value: actionValue } });
-    if (actionValue !== 'VALUATION') {
-      fireEvent.change(screen.getByLabelText('Skąd wynika zmiana?'), { target: { value: expectedKind } });
-      fireEvent.change(screen.getByLabelText(actionValue === 'ADD' ? 'Kwota dodana' : 'Kwota odjęta'), {
-        target: { value: '10' }
-      });
-    } else {
-      fireEvent.change(screen.getByLabelText('Nowa wartość składnika'), { target: { value: '100' } });
-    }
-    fireEvent.click(screen.getByRole('button', { name: 'Zaktualizuj portfel' }));
-
-    await waitFor(() => expect(execute).toHaveBeenCalledTimes(1));
-    expect(execute.mock.calls[0]![0]).toMatchObject({ kind: expectedKind });
-  });
-
-  it('focuses the accessible error summary for a non-field failure', async () => {
+  it.each(['entry', 'operation'])('confirms and deduplicates pending %s undo with context', async (record) => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const pending = deferred(),
+      execute = vi.fn(() => pending.promise);
     render(
       <AppRouter
         dependencies={dependencies({
-          recordPortfolioChange: {
-            execute: async () => Promise.reject(new Error('Awaria API: MappingError zawiera surowy payload'))
-          }
+          loadPortfolioPerformance: {
+            execute: async () => ({ operations: record === 'operation' ? [operation] : [], performance: null })
+          },
+          [record === 'operation' ? 'deleteInvestmentOperation' : 'deleteInvestmentEntry']: { execute }
         })}
       />
     );
-    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
-
-    fireEvent.change(await screen.findByLabelText('Kwota dodana'), { target: { value: '10' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Zaktualizuj portfel' }));
-
+    fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
+    const buttons = await screen.findAllByRole('button', { name: 'Cofnij zmianę' });
+    fireEvent.click(buttons[0]!);
+    fireEvent.click(buttons[0]!);
+    expect(execute).toHaveBeenCalledOnce();
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('2026-09-01'));
+    expect(screen.getByRole('button', { name: 'Cofanie…' })).toBeDisabled();
+    pending.reject(new Error('failure'));
+    await screen.findByText(/Nie udało się cofnąć/);
+    expect(screen.getAllByRole('button', { name: 'Cofnij zmianę' })[0]).toBeEnabled();
+  });
+  it('announces async export and blocks duplicate downloads', async () => {
+    const pending = deferred(),
+      execute = vi.fn(() => pending.promise);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+    render(<AppRouter dependencies={dependencies({ exportDatabaseBackup: { execute } })} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Ustawienia' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pobierz kopię danych' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pobieranie…' }));
+    expect(execute).toHaveBeenCalledOnce();
+    expect(screen.getByText('Przygotowujemy kopię danych…')).toHaveAttribute('role', 'status');
+    pending.resolve(new Blob());
+    await screen.findByText('Pobrano kopię danych.');
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:test');
+  });
+  it('confirms import, blocks duplicate uploads and focuses sanitized failures', async () => {
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const pending = deferred(),
+      execute = vi.fn(() => pending.promise);
+    render(<AppRouter dependencies={dependencies({ importDatabaseBackup: { execute } })} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Ustawienia' }));
+    const input = screen.getByLabelText('Wybierz plik kopii danych'),
+      file = new File(['{}'], 'backup.json', { type: 'application/json' });
+    fireEvent.change(input, { target: { files: [file] } });
+    fireEvent.change(input, { target: { files: [file] } });
+    expect(execute).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Przywracanie…' })).toBeDisabled();
+    pending.reject(new Error('private path'));
     const alert = await screen.findByRole('alert');
     await waitFor(() => expect(alert).toHaveFocus());
-    expect(alert).toHaveFocus();
-    expect(alert).toHaveTextContent('Nie udało się zapisać zmiany');
-    expect(alert).toHaveTextContent('ta sama próba nie zapisze zdarzenia dwukrotnie');
-    expect(alert).not.toHaveTextContent('Awaria API');
-    expect(alert).not.toHaveTextContent('MappingError');
+    expect(alert).toHaveTextContent('Nie udało się przywrócić kopii');
+    expect(alert).not.toHaveTextContent('private');
   });
 
-  it('distinguishes an accepted command from synchronized CQRS projections', async () => {
-    const acceptedCommand = deferred();
-    const refreshedEntries = deferred();
-    const refreshedSnapshot = deferred();
-    const refreshedPerformance = deferred();
-    let waitForProjection = false;
-    const entry = {
-      id: 'entry-jakub',
-      owner: 'jakub',
-      type: 'KONTO_BANKOWE',
-      subcategory: '',
-      date: '2026-09-03',
-      valuePln: 100
-    };
-    const projectedEntry = { ...entry, date: '2026-09-04', valuePln: 10 };
-    const projectedOperation = {
-      id: 'operation-1',
-      owner: 'jakub',
-      operationType: 'DEPOSIT',
-      type: 'KONTO_BANKOWE',
-      subcategory: '',
-      date: '2026-09-04',
-      amountPln: 10
-    };
-
+  it('distinguishes accepted writes from refreshed projections', async () => {
+    const accepted = deferred(),
+      refreshed = deferred();
+    let waiting = false;
     render(
       <AppRouter
         dependencies={dependencies({
-          recordPortfolioChange: { execute: () => acceptedCommand.promise },
-          loadPortfolio: {
-            execute: ({ filters }: { filters?: object }) => {
-              if (!waitForProjection) return Promise.resolve([entry]);
-              return filters ? refreshedEntries.promise : refreshedSnapshot.promise;
-            }
-          },
+          recordPortfolioChange: { execute: () => accepted.promise },
+          loadPortfolio: { execute: () => (waiting ? refreshed.promise : Promise.resolve([entry])) },
           loadPortfolioPerformance: {
             execute: () =>
-              waitForProjection ? refreshedPerformance.promise : Promise.resolve({ operations: [], performance: null })
+              waiting
+                ? refreshed.promise.then(() => ({ operations: [], performance: null }))
+                : Promise.resolve({ operations: [], performance: null })
           }
         })}
       />
     );
-    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
-
-    fireEvent.change(await screen.findByLabelText('Kwota dodana'), { target: { value: '10' } });
-    fireEvent.change(screen.getByLabelText('Data zmiany'), { target: { value: '2026-09-04' } });
-    waitForProjection = true;
-    fireEvent.click(screen.getByRole('button', { name: 'Zaktualizuj portfel' }));
-    const liveStatus = screen.getByLabelText('Informacje o operacjach').querySelector('[role="status"]');
-    expect(liveStatus).not.toBeNull();
-    expect(liveStatus).toHaveTextContent('Zapisywanie…');
-
-    acceptedCommand.resolve({ nextValue: 10, kind: 'DEPOSIT', atomic: true });
-
-    const savedMessage = await screen.findByText('Zmiana zapisana. Aktualizujemy podsumowanie…');
-    const status = savedMessage.closest('[role="status"]');
-    expect(status).not.toBeNull();
-    if (!status) throw new Error('The portfolio command status was not rendered.');
-    await waitFor(() => expect(status).toHaveTextContent('Aktualizujemy podsumowanie'));
+    await openForm('10');
+    waiting = true;
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
+    expect(screen.getByText('Zapisywanie…', { selector: '.inlineMessage' })).toHaveAttribute('role', 'status');
+    accepted.resolve({ id: 'saved', nextValue: 110, kind: 'DEPOSIT', atomic: true });
+    await screen.findByText('Zmiana zapisana. Odświeżamy oszczędności…');
     expect(document.getElementById('portfolio-panel-summary')).toHaveAttribute('aria-busy', 'true');
-    expect(document.getElementById('portfolio-panel-allocation')).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByRole('button', { name: /jakub/i, pressed: true })).toBeEnabled();
-
-    refreshedEntries.resolve([projectedEntry]);
-    refreshedSnapshot.resolve([projectedEntry]);
-    refreshedPerformance.resolve({ operations: [projectedOperation], performance: null });
-
-    await waitFor(() => expect(status).toHaveTextContent('Podsumowanie jest aktualne'));
-  });
-
-  it('announces progress and success for an asynchronous export', async () => {
-    const operation = deferred();
-    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
-    const revokeObjectURL = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
-    const exportDatabaseBackup = vi.fn(() => operation.promise);
-    const appDependencies = dependencies({ exportDatabaseBackup: { execute: exportDatabaseBackup } });
-    render(<AppRouter dependencies={appDependencies} />);
-
-    await screen.findByLabelText('Kwota dodana');
-    await waitFor(() => expect(appDependencies.preferences.selectOwner).toHaveBeenCalledTimes(2));
-    fireEvent.click(screen.getByRole('tab', { name: 'Ustawienia' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Pobierz kopię danych' }));
-    const exportingButton = screen.getByRole('button', { name: 'Eksportowanie…' });
-    fireEvent.click(exportingButton);
-    expect(exportingButton).toBeDisabled();
-    expect(exportDatabaseBackup).toHaveBeenCalledOnce();
-    const status = screen.getByRole('status');
-    expect(status).toHaveAttribute('aria-live', 'polite');
-    expect(status).toHaveTextContent('Przygotowywanie eksportu');
-
-    operation.resolve(new Blob());
-    await waitFor(() => expect(status).toHaveTextContent('Wyeksportowano bazę danych'));
-    expect(screen.getByRole('button', { name: 'Pobierz kopię danych' })).toBeEnabled();
-    createObjectURL.mockRestore();
-    revokeObjectURL.mockRestore();
-  });
-
-  it('announces import failures without save-related wording and focuses the alert', async () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const operation = deferred();
-    const importDatabaseBackup = vi.fn(() => operation.promise);
-    render(
-      <AppRouter
-        dependencies={dependencies({
-          importDatabaseBackup: { execute: importDatabaseBackup }
-        })}
-      />
-    );
-
-    await screen.findByLabelText('Kwota dodana');
-    fireEvent.click(screen.getByRole('tab', { name: 'Ustawienia' }));
-    const fileInput = document.querySelector('input[type="file"]');
-    expect(fileInput).not.toBeNull();
-    if (!fileInput) throw new Error('Import file input was not rendered.');
-    const file = new File(['{}'], 'backup.json', { type: 'application/json' });
-    fireEvent.change(fileInput, { target: { files: [file] } });
-    fireEvent.change(fileInput, { target: { files: [file] } });
-
-    expect(screen.getByRole('button', { name: 'Importowanie…' })).toBeDisabled();
-    expect(importDatabaseBackup).toHaveBeenCalledOnce();
-    operation.reject(new Error('Zły plik'));
-
-    const alert = await screen.findByRole('alert');
-    await waitFor(() => expect(alert).toHaveFocus());
-    expect(alert).toHaveTextContent('Nie udało się zaimportować bazy danych');
-    expect(alert).toHaveTextContent('Sprawdź plik kopii i spróbuj ponownie');
-    expect(alert).not.toHaveTextContent('Zły plik');
-    expect(alert).not.toHaveTextContent('Nie udało się zapisać');
-    expect(alert).toHaveFocus();
-    expect(screen.getByRole('button', { name: 'Przywróć z kopii' })).toBeEnabled();
-  });
-
-  it.each([
-    [
-      'resolved',
-      (operation: ReturnType<typeof deferred>) => operation.resolve({ nextValue: 10, kind: 'DEPOSIT', atomic: true })
-    ],
-    ['rejected', (operation: ReturnType<typeof deferred>) => operation.reject(new Error('Awaria zapisu'))]
-  ])('prevents duplicate saves and restores the form after a %s command', async (_outcome, settle) => {
-    const operation = deferred();
-    const recordPortfolioChange = vi.fn(() => operation.promise);
-    render(<AppRouter dependencies={dependencies({ recordPortfolioChange: { execute: recordPortfolioChange } })} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
-
-    const amount = await screen.findByLabelText('Kwota dodana');
-    fireEvent.change(amount, { target: { value: '10' } });
-    const form = amount.closest('form')!;
-    fireEvent.submit(form);
-    fireEvent.submit(form);
-
-    expect(form).toHaveAttribute('aria-busy', 'true');
-    expect(screen.getByRole('button', { name: 'Zapisywanie…' })).toBeDisabled();
-    expect(recordPortfolioChange).toHaveBeenCalledOnce();
-
-    settle(operation);
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Zaktualizuj portfel' })).toBeEnabled());
-    expect(form).toHaveAttribute('aria-busy', 'false');
-  });
-
-  it('cancels operation deletion and returns focus to the originating button', async () => {
-    const deleteOperation = vi.fn();
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false);
-    render(
-      <AppRouter
-        dependencies={dependencies({
-          loadPortfolioPerformance: {
-            execute: async () => ({
-              operations: [
-                {
-                  id: 'operation-1',
-                  operationType: 'DEPOSIT',
-                  type: 'KONTO_BANKOWE',
-                  subcategory: '',
-                  date: '2026-08-31',
-                  amountPln: 1250,
-                  note: 'Test'
-                }
-              ],
-              performance: null
-            })
-          },
-          deleteInvestmentOperation: { execute: deleteOperation }
-        })}
-      />
-    );
-    fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
-
-    const deleteButton = await screen.findByRole('button', { name: 'Usuń' });
-    deleteButton.focus();
-    fireEvent.click(deleteButton);
-
-    expect(deleteOperation).not.toHaveBeenCalled();
-    expect(deleteButton).toHaveFocus();
-    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/Typ rekordu: operacja/));
-    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/Aktywo: Konto bankowe/));
-    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/Data: 2026-08-31/));
-    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/Kwota: 1\s?250,00\s*zł/));
-  });
-
-  it('confirms valuation deletion with identifying context before invoking the command', async () => {
-    const deletion = deferred();
-    const deleteEntry = vi.fn(() => deletion.promise);
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true);
-    let deleted = false;
-    const appDependencies = dependencies({
-      loadPortfolio: {
-        execute: async () =>
-          deleted
-            ? []
-            : [
-                {
-                  id: 'entry-1',
-                  owner: 'jakub',
-                  type: 'KONTO_BANKOWE',
-                  subcategory: '',
-                  date: '2026-09-01',
-                  valuePln: 4321.5
-                }
-              ]
-      },
-      deleteInvestmentEntry: { execute: deleteEntry }
-    });
-    render(<AppRouter dependencies={appDependencies} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
-
-    await waitFor(() => expect(appDependencies.preferences.selectOwner).toHaveBeenCalledTimes(2));
-    const buttons = await screen.findAllByRole('button', { name: 'Usuń' });
-    const deleteButton = buttons.at(-1)!;
-    deleteButton.focus();
-    fireEvent.click(deleteButton);
-
-    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/Typ rekordu: wpis wyceny/));
-    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/Wartość: 4\s?321,50\s*zł/));
-    expect(deleteEntry).toHaveBeenCalledOnce();
-    expect(deleteEntry).toHaveBeenCalledWith('entry-1');
-    expect(deleteButton).toHaveFocus();
-    deleted = true;
-    deletion.resolve(undefined);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    refreshed.resolve([{ ...entry, valuePln: 110 }]);
     await screen.findByText('Zmiana zapisana. Podsumowanie jest aktualne.');
+    expect(document.getElementById('portfolio-panel-summary')).toHaveAttribute('aria-busy', 'false');
   });
-
-  it('disables a confirmed delete while pending and prevents duplicate submissions', async () => {
-    const deletion = deferred();
-    const deleteOperation = vi.fn(() => deletion.promise);
+  it('leaves unrelated history controls usable during an undo and restores the failed row', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const pending = deferred();
     render(
       <AppRouter
         dependencies={dependencies({
-          loadPortfolioPerformance: {
-            execute: async () => ({
-              operations: [
-                {
-                  id: 'operation-1',
-                  operationType: 'WITHDRAWAL',
-                  type: 'KONTO_BANKOWE',
-                  date: '2026-09-01',
-                  amountPln: 50
-                }
-              ],
-              performance: null
-            })
-          },
-          deleteInvestmentOperation: { execute: deleteOperation }
+          loadPortfolio: { execute: async () => [entry, { ...entry, id: 'second', date: '2026-09-02' }] },
+          deleteInvestmentEntry: { execute: () => pending.promise }
         })}
       />
     );
     fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
-
-    const deleteButton = await screen.findByRole('button', { name: 'Usuń' });
-    fireEvent.click(deleteButton);
-    fireEvent.click(deleteButton);
-
-    const pendingButton = await screen.findByRole('button', { name: 'Usuwanie…' });
-    expect(pendingButton).toBeDisabled();
-    expect(pendingButton.closest('.entryRow')).toHaveAttribute('aria-busy', 'true');
-    expect(deleteOperation).toHaveBeenCalledOnce();
-
-    deletion.resolve(undefined);
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Usuń' })).toBeEnabled());
+    const buttons = await screen.findAllByRole('button', { name: 'Cofnij zmianę' });
+    fireEvent.click(buttons[0]!);
+    expect(screen.getByRole('button', { name: 'Cofanie…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cofnij zmianę' })).toBeEnabled();
+    pending.reject(new Error('failure'));
+    await screen.findByText(/Nie udało się cofnąć/);
+    expect(
+      screen.getAllByRole('button', { name: 'Cofnij zmianę' }).every((button) => !button.hasAttribute('disabled'))
+    ).toBe(true);
   });
-
-  it('keeps unrelated rows usable and restores a delete control after rejection', async () => {
-    const deletion = deferred();
-    const deleteOperation = vi.fn(() => deletion.promise);
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-    const appDependencies = dependencies({
-      loadPortfolioPerformance: {
-        execute: async () => ({
-          operations: [
-            {
-              id: 'operation-1',
-              operationType: 'DEPOSIT',
-              type: 'KONTO_BANKOWE',
-              date: '2026-09-01',
-              amountPln: 50
-            },
-            {
-              id: 'operation-2',
-              operationType: 'WITHDRAWAL',
-              type: 'KONTO_BANKOWE',
-              date: '2026-09-02',
-              amountPln: 25
-            }
-          ],
-          performance: null
-        })
-      },
-      deleteInvestmentOperation: { execute: deleteOperation }
-    });
-    render(<AppRouter dependencies={appDependencies} />);
-    fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
-
-    await waitFor(() => expect(appDependencies.preferences.selectOwner).toHaveBeenCalledTimes(2));
-    const deleteButtons = await screen.findAllByRole('button', { name: 'Usuń' });
-    const firstDelete = deleteButtons[0]!;
-    const secondDelete = deleteButtons[1]!;
-    fireEvent.click(firstDelete);
-
-    expect(screen.getByRole('button', { name: 'Usuwanie…' })).toBeDisabled();
-    expect(secondDelete).toBeEnabled();
-    deletion.reject(new Error('Nie udało się usunąć'));
-
-    await waitFor(() => expect(firstDelete).toBeEnabled());
-    expect(secondDelete).toBeEnabled();
+  it('updates a holding value directly and prefills the correct asset and owner', async () => {
+    render(<AppRouter dependencies={dependencies()} />);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Aktualizuj wartość' }))[0]!);
+    expect(screen.getByLabelText('Co chcesz zrobić?')).toHaveValue('VALUATION');
+    expect(screen.getByLabelText('Ile masz teraz — zł')).toHaveValue(100);
+    expect(screen.getByText('Zapisujesz dla:')).toHaveTextContent('Jakub');
   });
 });

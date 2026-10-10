@@ -1,8 +1,10 @@
 // @ts-nocheck
 import React from 'react';
+import { Button } from './Button.js';
 import { Metric } from './Metric.js';
 import { DataTable } from './DataTable.js';
 import {
+  displayName,
   formatMoney,
   formatSignedMoney,
   formatUnsignedPercent,
@@ -11,7 +13,14 @@ import {
 } from '../viewModels/formatters.js';
 import { buildCurrentSnapshot } from '../../domain/portfolio/snapshot.js';
 import { today } from '../viewModels/formatters.js';
-export function PortfolioOverview({ entries, performance, assets = [], loading = false }) {
+export function PortfolioOverview({
+  entries,
+  performance,
+  assets = [],
+  loading = false,
+  onUpdate = undefined,
+  onCompleteBasis = undefined
+}) {
   const current = buildCurrentSnapshot(entries),
     total = current.reduce((s, e) => s + Number(e.valuePln), 0);
   const rows = current.map((e) => ({
@@ -43,7 +52,11 @@ export function PortfolioOverview({ entries, performance, assets = [], loading =
         <Metric
           label={known && performance.nominalResultPln < 0 ? 'Straciłem' : 'Zarobiłem'}
           value={
-            loading ? 'Wczytywanie…' : known ? formatSignedMoney(performance.nominalResultPln) : 'Brak danych o koszcie'
+            loading
+              ? 'Wczytywanie…'
+              : known
+                ? formatSignedMoney(performance.nominalResultPln)
+                : 'Brak danych o wpłatach'
           }
           tone={known ? (performance.nominalResultPln >= 0 ? 'positive' : 'negative') : 'neutral'}
           detail={
@@ -57,11 +70,8 @@ export function PortfolioOverview({ entries, performance, assets = [], loading =
           {metric(performance.contributedCapitalPln)}.
         </p>
       )}
-      {oldest && oldest < today() && (
-        <p className="dataFreshness">Część wycen jest starsza niż dzisiaj. Daty podajemy przy każdej inwestycji.</p>
-      )}
       <h2>Moje inwestycje</h2>
-      <div className="tableScroller" role="region" aria-label="Wartości i wyniki inwestycji" tabIndex={0}>
+      <div className="tableScroller holdingsTable" role="region" aria-label="Wartości i wyniki inwestycji" tabIndex={0}>
         <DataTable
           caption="Wpłaty, wartość i wynik każdej inwestycji"
           rows={rows}
@@ -75,7 +85,7 @@ export function PortfolioOverview({ entries, performance, assets = [], loading =
                 <>
                   {SUBCATEGORY_LABELS[e.subcategory] || TYPE_LABELS[e.type]}
                   <small>
-                    {TYPE_LABELS[e.type]} · {e.owner}
+                    {TYPE_LABELS[e.type]} · {displayName(e.owner)}
                   </small>
                 </>
               )
@@ -87,13 +97,56 @@ export function PortfolioOverview({ entries, performance, assets = [], loading =
               header: 'Zysk / strata',
               cell: (e) =>
                 e.performance?.nominalResultPln == null
-                  ? 'Brak danych o koszcie'
+                  ? 'Brak danych o wpłatach'
                   : formatSignedMoney(e.performance.nominalResultPln)
             },
-            { key: 'date', header: 'Data wyceny', cell: (e) => e.date }
+            { key: 'date', header: 'Data wyceny', cell: (e) => e.date },
+            {
+              key: 'action',
+              header: 'Zmiana',
+              cell: (e) => (
+                <>
+                  <Button onClick={() => onUpdate?.(e)}>Aktualizuj wartość</Button>
+                  {!loading && e.performance?.nominalResultPln == null && onCompleteBasis && (
+                    <Button variant="quiet" onClick={() => onCompleteBasis(e)}>
+                      Uzupełnij wpłaty
+                    </Button>
+                  )}
+                </>
+              )
+            }
           ]}
         />
       </div>
+      <ul className="holdingsCards" aria-label="Moje inwestycje">
+        {rows.map((e) => (
+          <li className="holdingCard" key={e.id}>
+            <h3>{SUBCATEGORY_LABELS[e.subcategory] || TYPE_LABELS[e.type]}</h3>
+            <small>
+              {TYPE_LABELS[e.type]} · {displayName(e.owner)}
+            </small>
+            <p className="holdingValue">{formatMoney(e.valuePln)}</p>
+            <p className="holdingResult">
+              {e.performance?.nominalResultPln == null
+                ? 'Brak danych o wpłatach'
+                : `Zysk / strata: ${formatSignedMoney(e.performance.nominalResultPln)}`}
+            </p>
+            <small>Wycena z {e.date}</small>
+            <details>
+              <summary>Wpłaty i szczegóły</summary>
+              <p>Wkład po wypłatach: {metric(e.performance?.contributedCapitalPln)}</p>
+            </details>
+            <div className="holdingActions">
+              <Button onClick={() => onUpdate?.(e)}>Aktualizuj wartość</Button>
+              {!loading && e.performance?.nominalResultPln == null && onCompleteBasis && (
+                <Button variant="quiet" onClick={() => onCompleteBasis(e)}>
+                  Uzupełnij wpłaty
+                </Button>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
       {performance?.monthlyResultPln != null && (
         <p>
           Wynik w tym miesiącu: <strong>{formatSignedMoney(performance.monthlyResultPln)}</strong>

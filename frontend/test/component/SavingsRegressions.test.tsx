@@ -23,7 +23,7 @@ describe('savings regressions', () => {
       <PortfolioOverview entries={[entry]} performance={{ nominalResultPln: null, contributedCapitalPln: null }} />
     );
     expect(screen.getAllByText('Mam teraz')[0]!.parentElement).toHaveTextContent('200,00');
-    expect(screen.getAllByText('Brak danych o koszcie')).toHaveLength(2);
+    expect(screen.getAllByText('Brak danych o wpłatach')).toHaveLength(3);
     expect(screen.queryByText('+200,00 zł')).not.toBeInTheDocument();
     expect(screen.getByText('Wyceny z 2026-09-01')).toBeVisible();
   });
@@ -36,10 +36,12 @@ describe('savings regressions', () => {
         useCases={{ loadPortfolioPlan: { execute: async () => plan }, savePortfolioPlan: { execute: save } }}
       />
     );
-    await screen.findByRole('table', { name: 'Co kupić według mojego planu' });
+    await waitFor(() => expect(screen.getByLabelText('Mam do zainwestowania — zł')).toBeEnabled());
+    fireEvent.click(screen.getByText('Zmień mój plan'));
+    fireEvent.change(screen.getByLabelText('Mam do zainwestowania — zł'), { target: { value: '100' } });
     fireEvent.change(screen.getByLabelText('Obligacje — % całego planu'), { target: { value: '80' } });
     expect(screen.getByRole('button', { name: 'Zapisz mój plan' })).toBeDisabled();
-    expect(screen.queryByRole('table', { name: 'Co kupić według mojego planu' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Proponowane zakupy' })).not.toBeInTheDocument();
     expect(save).not.toHaveBeenCalled();
   });
   it('budget and two-level plan have no detectable accessibility violations', async () => {
@@ -50,9 +52,9 @@ describe('savings regressions', () => {
         useCases={{ loadPortfolioPlan: { execute: async () => plan } }}
       />
     );
-    await screen.findByRole('table', { name: 'Co kupić według mojego planu' });
+    await waitFor(() => expect(screen.getByLabelText('Mam do zainwestowania — zł')).toBeEnabled());
     fireEvent.change(screen.getByLabelText('Mam do zainwestowania — zł'), { target: { value: '100' } });
-    expect(screen.getByText(/Dokup za łącznie 100,00/)).toBeVisible();
+    expect(container.querySelector('.purchaseTotal')).toHaveTextContent(/Dokup za łącznie 100,00/);
     await expectNoAccessibilityViolations(container);
   });
   it('keeps gold filter value, investment rows and chart in the same scope and hides inactive panels', async () => {
@@ -71,17 +73,19 @@ describe('savings regressions', () => {
       }
     };
     render(<AppRouter dependencies={deps} />);
+    fireEvent.click(await screen.findByText(/Filtruj inwestycje/));
     fireEvent.click(await screen.findByRole('button', { name: 'Giełda' }));
     fireEvent.click(screen.getByRole('button', { name: 'Złoto' }));
-    const summary = screen.getByRole('tabpanel', { name: 'Podsumowanie' });
+    const summary = screen.getByRole('tabpanel', { name: 'Przegląd' });
     await waitFor(() =>
       expect(within(summary).getAllByText('Mam teraz')[0]!.parentElement).toHaveTextContent('200,00')
     );
     expect(within(summary).queryByRole('rowheader', { name: /Rynki rozwinięte/ })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText('Zobacz historię wartości'));
     expect(within(summary).getByText('Aktualna suma').parentElement).toHaveTextContent('200,00');
-    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
-    expect(summary).not.toBeVisible();
-    expect(screen.getByRole('tabpanel', { name: 'Aktualizacja' })).toBeVisible();
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Dodaj zmianę' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Dodaj zmianę' }));
+    expect(screen.getByRole('dialog', { name: 'Dodaj zmianę' })).toBeVisible();
   });
   it('uses the same intent object on retry but a new one after a successful save', async () => {
     window.history.pushState({}, '', '/');
@@ -107,11 +111,12 @@ describe('savings regressions', () => {
         }}
       />
     );
-    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
-    fireEvent.change(await screen.findByLabelText('Kwota dodana'), { target: { value: '10' } });
-    fireEvent.click(screen.getByRole('button', { name: 'Zaktualizuj portfel' }));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Zaktualizuj portfel' })).toBeEnabled());
-    fireEvent.click(screen.getByRole('button', { name: 'Zaktualizuj portfel' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Dodaj zmianę' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Dodaj zmianę' }));
+    fireEvent.change(await screen.findByLabelText('Kwota — zł'), { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Zapisz zmianę' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
     await waitFor(() => expect(execute).toHaveBeenCalledTimes(2));
     expect(execute.mock.calls[0]?.[0]).toBe(execute.mock.calls[1]?.[0]);
   });

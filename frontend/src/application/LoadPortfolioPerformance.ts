@@ -12,7 +12,7 @@ export class LoadPortfolioPerformance {
     const owners = scope.kind === PortfolioScopeKind.OWNER ? [scope.ownerId] : scope.ownerIds;
     const results = await Promise.all(
       owners.map(async (owner) => {
-        const query = { owner, ...filters };
+        const query = scope.kind === PortfolioScopeKind.HOUSEHOLD ? { owner } : { owner, ...filters };
         const [operations, performance, entries] = await Promise.all([
           this.operations.findAll(query, { signal }),
           this.portfolioQuery.loadPerformance(query, { signal }),
@@ -34,7 +34,13 @@ export class LoadPortfolioPerformance {
       operations: results.flatMap((r) => r.operations),
       assets: results.flatMap((r) => r.assets),
       performance:
-        results.length === 1 ? results[0].performance : aggregatePerformance(results.map((r) => r.performance))
+        results.length === 1
+          ? results[0].performance
+          : aggregatePerformance(
+              results
+                .filter((r) => r.assets.length || r.operations.length || r.performance?.currentValuePln !== 0)
+                .map((r) => r.performance)
+            )
     };
   }
 }

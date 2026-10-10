@@ -5,11 +5,11 @@ import { subcategoriesFor } from '../../domain/portfolio/constants.js';
 const factories = { DEPOSIT: deposit, WITHDRAWAL: withdrawal, VALUATION: valuation, BUY: buy, SELL: sell };
 
 export function mapPortfolioChangeForm(form, owner, currentEntries) {
-  const choices = subcategoriesFor(form.type);
+  const choices = form.type ? subcategoriesFor(form.type) : [];
   const subcategory = choices.length ? form.subcategory : null;
   const asset = { type: form.type, owner, subcategory, date: form.date };
   const latest = [...currentEntries]
-    .filter((entry) => entry.date <= form.date)
+    .filter((entry) => entry.owner === owner && entry.date <= form.date)
     .sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || '').localeCompare(a.createdAt || ''))
     .find((entry) => entry.type === form.type && (entry.subcategory || null) === subcategory);
   const previousValue = Number(latest?.valuePln || 0);
@@ -17,7 +17,7 @@ export function mapPortfolioChangeForm(form, owner, currentEntries) {
     return form.costKnown === false
       ? valuation(asset, form.currentValuePln)
       : { kind: 'INITIAL', asset, valuePln: form.currentValuePln, amountPln: form.amountPln };
-  const operationType = form.action === 'VALUATION' ? 'VALUATION' : form.operationType;
+  const operationType = factories[form.action] ? form.action : form.operationType;
   const factory = factories[operationType];
 
   if (!factory) return { kind: operationType, asset };

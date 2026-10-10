@@ -270,3 +270,12 @@ The owner and household overview uses one filter scope for value, performance an
 `PurchasePlanningService` owns validated two-level target weights and purchases without sales. Gold is outside equity subweights; pension compositions are explicitly unknown, not cash. Purchases use water filling followed by cent distribution, conserve budget, and never sell. `PurchasePlanPanel` edits a draft, suppresses advice until the validated draft is saved, and loads server-side owner/household plans through application use cases. Browser legacy allocation preferences are no longer the portfolio's planning source of truth.
 
 The overview gives value, contributed amounts, result, individual holdings and dates. Backup operations live in Settings. Inactive ARIA panels use the HTML hidden attribute protected against component display overrides. Component and browser regressions must verify real panel visibility, not merely the presence of hidden attributes.
+
+
+### Simple savings workspace
+
+`Home` has three stable tabs (overview, purchase planning, chronological history) in both owner and household scopes. Settings are a separate header action; overview filters do not change a draft, history or planning. Household selection clears owner filters, and performance aggregation excludes entirely empty owners while preserving unknown profit for actual holdings with incomplete history.
+
+`PortfolioChangeDialog` provides explicit user actions, a visible owner, initial value with optional known contributions, field errors, native modal keyboard behavior and focus restoration. The HTTP gateway sends corrections with PUT and the event identifier; retries cannot create extra events. `portfolioHistory` merges primary operations, independent legacy operations and standalone valuations, hiding secondary transfer legs and generated valuations.
+
+On mobile, holdings and purchase recommendations use cards. The budget precedes recommendations, while allocation editing and the value chart are collapsible. Invalid or unsaved allocation drafts suppress advice. Backend replay validates corrections; the application does not reject an edit using a balance that already contains the old event.

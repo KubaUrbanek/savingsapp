@@ -76,7 +76,7 @@ function resultingValue(command) {
   const amount = positiveNumber(command.amountPln, 'amountPln');
   const previous = Number(command.previousValue || 0);
   const subtracts = command.kind === PortfolioChangeKind.WITHDRAWAL || command.kind === PortfolioChangeKind.SELL;
-  if (subtracts && amount > previous) {
+  if (!command.editId && subtracts && amount > previous) {
     throw new PortfolioChangeValidationFailure(
       'amountPln',
       'Kwota przekracza aktualną wartość składnika portfela.',

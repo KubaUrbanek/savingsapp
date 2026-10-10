@@ -60,15 +60,15 @@ describe('automated accessibility checks', () => {
     };
     const { container } = render(<AppRouter dependencies={dependencies} />);
 
-    await screen.findByRole('heading', { level: 1, name: 'Portfel: jakub' });
-    fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
-    expect(await screen.findByRole('heading', { level: 2, name: 'Zaktualizuj portfel' })).toBeInTheDocument();
+    await screen.findByRole('heading', { level: 1, name: 'Oszczędności: Jakub' });
+    fireEvent.click(screen.getByRole('button', { name: 'Dodaj zmianę' }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Dodaj zmianę' })).toBeInTheDocument();
     expect(screen.getByLabelText('Co chcesz zrobić?')).toBeInTheDocument();
-    expect(screen.getByLabelText('Składnik portfela')).toBeInTheDocument();
+    expect(screen.getByLabelText('Inwestycja / rachunek')).toBeInTheDocument();
     expect(document.getElementById('portfolio-change-subcategory')).toBeInTheDocument();
-    expect(screen.getByLabelText('Kwota dodana')).toBeInTheDocument();
+    expect(screen.getByLabelText('Kwota — zł')).toBeInTheDocument();
     expect(screen.getByLabelText('Data zmiany')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Zaktualizuj portfel' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Zapisz zmianę' })).toBeInTheDocument();
     await expectNoAccessibilityViolations(container);
   });
 

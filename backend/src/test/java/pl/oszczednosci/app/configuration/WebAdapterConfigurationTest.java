@@ -145,4 +145,19 @@ class WebAdapterConfigurationTest {
             """)).andExpect(status().isBadRequest());
     }
 
+
+    @Test void atomicCorrectionHttpContractPreservesIdentifierAndRejectsMismatchedBody() throws Exception {
+        String id="ddc36cab-a704-4a38-b5ac-e39711ab5bb9";
+        String change="""
+            {"requestId":"ddc36cab-a704-4a38-b5ac-e39711ab5bb9","kind":"INITIAL","owner":"jakub","type":"KONTO_BANKOWE","date":"2026-09-06","amountPln":1000,"valuePln":1100}
+            """;
+        mvc.perform(post("/api/portfolio-changes").contentType(MediaType.APPLICATION_JSON).content(change)).andExpect(status().isOk());
+        String corrected=change.replace("1000","900");
+        mvc.perform(put("/api/portfolio-changes/{id}",id).contentType(MediaType.APPLICATION_JSON).content(corrected))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(id)).andExpect(jsonPath("$.nextValue").value(1100));
+        mvc.perform(put("/api/portfolio-changes/{id}",id).contentType(MediaType.APPLICATION_JSON).content(corrected)).andExpect(status().isOk());
+        mvc.perform(get("/api/investment-operations").queryParam("owner","jakub")).andExpect(jsonPath("$.length()").value(1));
+        mvc.perform(get("/api/portfolio-performance").queryParam("owner","jakub")).andExpect(jsonPath("$.nominalResultPln").value(200));
+        mvc.perform(put("/api/portfolio-changes/{id}","30c36cab-a704-4a38-b5ac-e39711ab5bb9").contentType(MediaType.APPLICATION_JSON).content(corrected)).andExpect(status().isBadRequest());
+    }
 }

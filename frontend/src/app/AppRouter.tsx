@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React from 'react';
-import { BrowserRouter, Link, NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router-dom';
 import { Home } from '../presentation/pages/Home.jsx';
 import { About } from '../presentation/pages/About.jsx';
 import { NotFound } from '../presentation/pages/NotFound.jsx';
@@ -43,12 +43,6 @@ export function AppRouter({ dependencies }) {
               Oszczędności<small>Twój portfel</small>
             </span>
           </Link>
-          <nav aria-label="Główne">
-            <NavLink to="/" end>
-              Portfele
-            </NavLink>
-            <NavLink to="/about">Informacje</NavLink>
-          </nav>
         </div>
       </header>
       <RouteAnnouncement />

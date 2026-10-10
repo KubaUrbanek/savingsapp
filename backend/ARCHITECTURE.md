@@ -120,3 +120,10 @@ JSON was selected for simple local deployment, readable backups, and atomic whol
 Performance reads both collections from one unit-of-work snapshot. Per-asset purchases are negative investment cash flows and sales positive; internal pairs cancel in an unfiltered owner portfolio. Unknown acquisition history and missing monthly opening valuations produce nullable results. Actual balances already include costs, so fees/taxes are reported separately without deducting them from nominal profit again.
 
 `PortfolioPlanUseCase` persists an independently validated two-level plan for each owner or household. Backup v2 includes plans and operation groups; the adapter migrates v1 and legacy arrays. JSON records remain adapter-owned, and all imported plans/groups pass domain and collection validation.
+
+
+### Atomic event corrections
+
+`RecordPortfolioChangeUseCase.update` is exposed as PUT `/api/portfolio-changes/{id}`. The body request identifier must match the path. Owner, asset and operation kind are preserved (INITIAL may become a valuation when its basis is unknown). A standalone valuation can become INITIAL when contributions are supplied. Secondary transfer legs cannot be edited independently.
+
+Inside one locked unit of work, correction removes the old event, inserts its replacement with the original identifiers and creation order, then replays generated balances once. There is no intermediate replay of a deleted initial balance. Explicit valuations remain anchors; negative dependent balances reject the entire write. Independent legacy operations retain fees, taxes, notes and their separate valuations. Repeating a correction replaces the same event rather than inserting another.

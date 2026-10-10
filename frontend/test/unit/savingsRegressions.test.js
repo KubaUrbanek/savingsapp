@@ -155,8 +155,22 @@ test('atomic adapter sends one request and reuses id after a lost response', asy
 test('historical form mapping uses the most recent balance as of the entered date', () => {
   const form = { action: 'ADD', operationType: 'DEPOSIT', type: 'KONTO_BANKOWE', date: '2026-09-15', amountPln: '50' };
   const mapped = mapPortfolioChangeForm(form, 'jakub', [
-    { type: 'KONTO_BANKOWE', subcategory: null, valuePln: 1100, date: '2026-10-10', createdAt: '2026-10-10T00:00:00Z' },
-    { type: 'KONTO_BANKOWE', subcategory: null, valuePln: 1000, date: '2026-09-01', createdAt: '2026-09-01T00:00:00Z' }
+    {
+      owner: 'jakub',
+      type: 'KONTO_BANKOWE',
+      subcategory: null,
+      valuePln: 1100,
+      date: '2026-10-10',
+      createdAt: '2026-10-10T00:00:00Z'
+    },
+    {
+      owner: 'jakub',
+      type: 'KONTO_BANKOWE',
+      subcategory: null,
+      valuePln: 1000,
+      date: '2026-09-01',
+      createdAt: '2026-09-01T00:00:00Z'
+    }
   ]);
   assert.equal(mapped.previousValue, 1000);
   assert.equal(
