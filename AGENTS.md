@@ -17,7 +17,7 @@ These instructions apply to the entire repository. Keep changes focused, preserv
 1. Inspect the relevant architecture guide, nearby implementation, and tests before editing.
 2. Prefer the smallest coherent change. Do not perform unrelated refactors or reformat unrelated files.
 3. Add or update tests at the lowest useful layer for every behavior change. Include affected boundary, integration, component, or architecture tests where appropriate.
-4. Run the checks relevant to every area touched. Run the full build when a change crosses frontend/backend boundaries or alters packaging.
+4. Use GitHub Actions as the source of truth for complete validation. Run focused local checks when needed during implementation or debugging. Before merging, require successful CI for the current commit; do not repeat the entire suite locally when that exact commit has already passed CI.
 5. Keep `README.md`, architecture guides, API documentation, and domain documentation accurate.
 6. Review `git diff` and `git status` before committing. Do not commit generated output, dependencies, credentials, local data, editor files, or OS metadata.
 
@@ -45,6 +45,8 @@ These instructions apply to the entire repository. Keep changes focused, preserv
 - Follow the detailed layer, validation, error, naming, testing, and stylesheet rules in `frontend/ARCHITECTURE.md`.
 
 ## Testing and checks
+
+`.github/workflows/frontend.yml` runs complete validation for every push and pull request, including frontend unit/architecture, component/accessibility and desktop/mobile browser tests, all backend tests, formatting, lint, TypeScript, diff whitespace and production builds. It also retains test reports and browser failure traces/screenshots. Use the commands below for focused local verification, debugging, or when CI is unavailable; routine changes do not require a second full local run after successful CI for the same commit. A local full build remains useful when diagnosing packaging or serving the application locally.
 
 Run backend tests from the repository root:
 

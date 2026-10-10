@@ -4,9 +4,11 @@ export default defineConfig({
   testDir: './test/browser',
   workers: 1,
   fullyParallel: false,
+  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: 'http://localhost:8082',
     trace: 'retain-on-failure',
+    screenshot: 'only-on-failure',
     launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
       ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH, args: ['--no-sandbox'] }
       : {}

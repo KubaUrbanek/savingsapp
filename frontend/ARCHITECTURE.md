@@ -194,7 +194,7 @@ The controller knows the use-case contract but not `FetchPortfolioSummaryGateway
 7. Add a form/view-model mapper if raw UI values differ from the command/result.
 8. Add or extend a controller hook to call the injected use case and model async/cancellation/refresh behavior.
 9. Render the state in a focused component and assemble it in a page.
-10. Run all checks and add an architecture test when a new directory/import pattern is introduced.
+10. Require successful CI for the current commit and add an architecture test when a new directory/import pattern is introduced. Run focused local checks as needed during development.
 
 ## Required tests
 
@@ -203,7 +203,7 @@ The controller knows the use-case contract but not `FetchPortfolioSummaryGateway
 - **Component tests** (`test/component/`): observable rendering and user behavior through Testing Library, including loading, empty, success, validation, failure, retry/refresh, and relevant routing. Inject fake use cases; do not mock adapter internals.
 - **Architecture tests** (`test/unit/`): scan imports and fail on forbidden directions, direct `fetch`/`localStorage` outside infrastructure/composition, infrastructure imports in presentation, or React imports in domain/application. Update rules when adding a new architectural directory.
 
-For every change, run `npm run test`, `npm run typecheck`, `npm run lint`, `npm run format:check`, and `npm run build` from `frontend/`. A feature is not complete if the correct test level is missing even when the full suite passes.
+For every change, GitHub Actions runs `npm run test:unit`, `npm run test:component`, `npm run typecheck`, `npm run lint`, `npm run format:check`, `npm run build`, the complete Maven build and desktop/mobile browser tests against the packaged JAR. Browser tests use a temporary database; CI saves an HTML report and failure screenshots/traces. Require successful CI for the current commit before merging. Use focused local checks for development/debugging; do not repeat the full suite locally after that same commit passes CI. A feature is not complete if the correct test level is missing even when the full suite passes.
 
 ## Naming and directory example
 

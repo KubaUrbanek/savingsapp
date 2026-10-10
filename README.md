@@ -90,6 +90,18 @@ Aplikacja nie ma logowania ani autoryzacji: każdy klient z dostępem do serwera
 
 ## Testy
 
+Pipeline [CI](.github/workflows/frontend.yml) automatycznie sprawdza każdy push i pull request:
+
+- formatowanie frontendu i workflow, lint, TypeScript i białe znaki w diffie;
+- testy jednostkowe i architektury frontendu oraz testy komponentów i dostępności;
+- wszystkie testy backendu: domena, use case’y, kontrakty repozytoriów, HTTP i architektura;
+- produkcyjny build frontendu i kompletny JAR aplikacji;
+- testy Chromium na komputerze i telefonie, uruchamiane na JAR-ze z tymczasową bazą.
+
+Raporty backendu, raport HTML Playwright oraz zrzuty ekranu i ślady błędów przeglądarki są dostępne jako artefakt `verification-reports` przez 14 dni. Przed mergem wymagamy zielonego CI dla bieżącego commita. Nie trzeba powtarzać całego zestawu ręcznie po jego zaliczeniu; lokalnie uruchamiaj wybrane kontrole potrzebne do pracy lub diagnozy. Workflow można też uruchomić ręcznie z GitHub Actions.
+
+Pełny zestaw komend do lokalnej diagnostyki:
+
 ```bash
 mvn clean package
 cd frontend

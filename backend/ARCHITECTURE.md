@@ -90,7 +90,7 @@ The lock does not coordinate processes or hosts. JSON offers neither database is
 - **Integration:** exercise HTTP binding/error translation and wired JSON behavior using temporary files; add Spring end-to-end tests for configuration crossings.
 - **Architecture:** protect inward dependencies, port/adapter separation, framework-free inner layers, and controller/DTO/mapper placement. Change `ArchitectureTest` only with this policy.
 
-Run `mvn test` from the repository root. Behavior changes need tests at the lowest useful level and affected contract/integration levels.
+GitHub Actions runs all backend test levels during `mvn -B clean package` from the repository root and retains Surefire reports. Require successful CI for the current commit before merging; a second complete local run is unnecessary after that commit passes CI. Use `mvn test` or a targeted test selection locally when developing/debugging or when CI is unavailable. Behavior changes need tests at the lowest useful level and affected contract/integration levels.
 
 ## Naming and worked use-case example
 
