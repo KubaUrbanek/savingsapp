@@ -86,4 +86,80 @@ class RecordPortfolioChangeServiceTest {
   var result=new pl.oszczednosci.app.domain.service.PortfolioPerformanceCalculator(new pl.oszczednosci.app.domain.service.NumericalRateOfReturnCalculator()).calculate(history,new ValuationDate(LocalDate.parse("2026-10-10")));
   assertThat(result.nominalResult().amount()).isEqualByComparingTo("100");
  }
+
+ private RecordPortfolioChangeCommand correction(RecordPortfolioChangeCommand original, String amount, String value) {
+  return new RecordPortfolioChangeCommand(original.requestId(), original.kind(), original.owner(), original.type(), original.subcategory(), original.date(), amount == null ? null : new BigDecimal(amount), value == null ? null : new BigDecimal(value), original.cashType());
+ }
+ @Test void initialCorrectionReplaysDependentWithdrawalsWithoutDeletingTheirBasisFirst() {
+  var initial=c("INITIAL",InvestmentType.KONTO_BANKOWE,"2026-09-01","100","100"); service.record(initial);
+  service.record(c("WITHDRAWAL",InvestmentType.KONTO_BANKOWE,"2026-09-02","50",null));
+  service.update(initial.requestId(),correction(initial,"200","200"));
+  assertThat(value(InvestmentType.KONTO_BANKOWE,"2026-09-02")).isEqualByComparingTo("150");
+  assertThat(store.snapshot().operations()).hasSize(2); assertThat(store.snapshot().entries()).hasSize(2);
+  byte[] before=store.exportBackup();
+  assertThatThrownBy(()->service.update(initial.requestId(),correction(initial,"20","20"))).isInstanceOf(IllegalArgumentException.class);
+  assertThat(store.exportBackup()).isEqualTo(before);
+ }
+ @Test void purchaseCorrectionUpdatesBothLegsKeepsIdsAndCanBeRetriedAndUndone() {
+  service.record(c("INITIAL",InvestmentType.KONTO_BANKOWE,"2026-09-01","1000","1000"));
+  var buy=c("BUY",InvestmentType.GIELDA,"2026-09-02","100",null); service.record(buy);
+  var originalIds=store.snapshot().operations().stream().map(InvestmentOperation::getId).toList();
+  var change=correction(buy,"250",null);
+  service.update(buy.requestId(),change); service.update(buy.requestId(),change);
+  assertThat(store.snapshot().operations().stream().map(InvestmentOperation::getId)).containsExactlyInAnyOrderElementsOf(originalIds);
+  assertThat(value(InvestmentType.KONTO_BANKOWE,"2026-09-02")).isEqualByComparingTo("750");
+  assertThat(value(InvestmentType.GIELDA,"2026-09-02")).isEqualByComparingTo("250");
+  byte[] before=store.exportBackup();
+  assertThatThrownBy(()->service.update(buy.requestId(),correction(buy,"2000",null))).isInstanceOf(IllegalArgumentException.class);
+  assertThat(store.exportBackup()).isEqualTo(before);
+  service.delete(buy.requestId()); assertThat(value(InvestmentType.KONTO_BANKOWE,"2026-09-02")).isEqualByComparingTo("1000");
+ }
+ @Test void correctionsPreserveExplicitValuationsAndCreationOrder() {
+  var deposit=c("DEPOSIT",InvestmentType.KONTO_BANKOWE,"2026-09-01","100",null); service.record(deposit);
+  service.record(c("WITHDRAWAL",InvestmentType.KONTO_BANKOWE,"2026-09-01","20",null));
+  service.record(c("VALUATION",InvestmentType.KONTO_BANKOWE,"2026-09-02",null,"500"));
+  var created=store.snapshot().entries().stream().filter(e->e.getId().equals(deposit.requestId())).findFirst().orElseThrow().createdAt();
+  service.update(deposit.requestId(),correction(deposit,"200",null));
+  assertThat(value(InvestmentType.KONTO_BANKOWE,"2026-09-01")).isEqualByComparingTo("180");
+  assertThat(value(InvestmentType.KONTO_BANKOWE,"2026-09-02")).isEqualByComparingTo("500");
+  assertThat(store.snapshot().entries().stream().filter(e->e.getId().equals(deposit.requestId())).findFirst().orElseThrow().createdAt()).isEqualTo(created);
+ }
+ @Test void missingCorrectionReassignmentAndEditingTransferSecondaryAreRejectedAtomically() {
+  var initial=c("INITIAL",InvestmentType.KONTO_BANKOWE,"2026-09-01","1000","1000"); service.record(initial);
+  var buy=c("BUY",InvestmentType.GIELDA,"2026-09-02","100",null); service.record(buy);
+  byte[] before=store.exportBackup();
+  assertThatThrownBy(()->service.update(UUID.randomUUID(),correction(initial,"2000","2000"))).isInstanceOf(IllegalArgumentException.class);
+  var changedOwner=new RecordPortfolioChangeCommand(initial.requestId(),initial.kind(),OwnerId.of("zosia"),initial.type(),null,initial.date(),new BigDecimal("1000"),new BigDecimal("1000"),null);
+  assertThatThrownBy(()->service.update(initial.requestId(),changedOwner)).isInstanceOf(IllegalArgumentException.class);
+  var source=store.snapshot().operations().stream().filter(o->buy.requestId().equals(o.getGroupId())&&!buy.requestId().equals(o.getId())).findFirst().orElseThrow();
+  var secondary=new RecordPortfolioChangeCommand(source.getId(),"SELL",source.owner(),source.getType(),null,source.getDate(),new BigDecimal("100"),null,InvestmentType.KONTO_BANKOWE);
+  assertThatThrownBy(()->service.update(source.getId(),secondary)).isInstanceOf(IllegalArgumentException.class);
+  var absent=c("VALUATION",InvestmentType.KONTO_BANKOWE,"2026-09-01",null,"1");
+  assertThatThrownBy(()->service.update(absent.requestId(),absent)).isInstanceOf(InvestmentEntryNotFoundException.class);
+  assertThat(store.exportBackup()).isEqualTo(before);
+ }
+ @Test void correctingUnknownValuationToInitialCostDoesNotDuplicateValue() {
+  var valuation=c("VALUATION",InvestmentType.KONTO_BANKOWE,"2026-09-01",null,"500"); service.record(valuation);
+  var initial=new RecordPortfolioChangeCommand(valuation.requestId(),"INITIAL",valuation.owner(),valuation.type(),null,valuation.date(),new BigDecimal("400"),new BigDecimal("500"),null);
+  service.update(initial.requestId(),initial);
+  assertThat(store.snapshot().entries()).hasSize(1); assertThat(store.snapshot().operations()).hasSize(1);
+  assertThat(value(InvestmentType.KONTO_BANKOWE,"2026-09-01")).isEqualByComparingTo("500");
+ }
+ @Test void legacyCorrectionPreservesFeeTaxNoteAndDoesNotInventValuation() {
+  var operation=InvestmentOperation.create(new InvestmentOperationId(UUID.randomUUID()),InvestmentOperationType.DEPOSIT,AssetCategory.of(InvestmentType.KONTO_BANKOWE,null),OwnerId.of("jakub"),new Money(new BigDecimal("100")),new Money(new BigDecimal("2")),new Money(new BigDecimal("3")),LocalDate.parse("2026-09-01"),"Imported note",Instant.parse("2026-09-01T00:00:00Z"));
+  store.update(before->new InvestmentBackup(before.formatVersion(),before.entries(),List.of(operation),before.plans()));
+  var command=new RecordPortfolioChangeCommand(operation.getId(),"DEPOSIT",operation.owner(),operation.getType(),null,operation.getDate(),new BigDecimal("200"),null,null);
+  service.update(operation.getId(),command);
+  var corrected=store.snapshot().operations().getFirst();
+  assertThat(corrected.getAmountPln()).isEqualByComparingTo("200"); assertThat(corrected.fee()).isEqualTo(operation.fee()); assertThat(corrected.tax()).isEqualTo(operation.tax()); assertThat(corrected.getNote()).isEqualTo("Imported note");
+  assertThat(store.snapshot().entries()).isEmpty();
+ }
+
+ @Test void groupedCorrectionPreservesImportedFeesTaxesAndNotes() {
+  var initial=c("INITIAL",InvestmentType.KONTO_BANKOWE,"2026-09-01","1000","1000"); service.record(initial);
+  store.update(before->new InvestmentBackup(before.formatVersion(),before.entries(),before.operations().stream().map(o->InvestmentOperation.reconstitute(o.id(),o.getOperationType(),o.category(),o.owner(),o.amount(),new Money(new BigDecimal("2")),new Money(new BigDecimal("3")),o.getDate(),"Original note",o.getCreatedAt()).withGroup(o.getGroupId())).toList(),before.plans()));
+  service.update(initial.requestId(),correction(initial,"1200","1200"));
+  var corrected=store.snapshot().operations().getFirst();
+  assertThat(corrected.fee().amount()).isEqualByComparingTo("2"); assertThat(corrected.tax().amount()).isEqualByComparingTo("3"); assertThat(corrected.getNote()).isEqualTo("Original note");
+ }
 }

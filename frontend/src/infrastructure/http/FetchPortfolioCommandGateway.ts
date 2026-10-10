@@ -15,7 +15,7 @@ export class FetchPortfolioCommandGateway {
       valuePln: command.valuePln == null ? undefined : Number(command.valuePln),
       cashType: command.cashType
     };
-    const payload = JSON.stringify(body);
+    const payload = JSON.stringify({ editId: command.editId, ...body });
     // Stable non-sensitive key: no raw portfolio data is persisted in session storage.
     const bytes = new TextEncoder().encode(payload);
     const signature = this.pending
@@ -24,9 +24,10 @@ export class FetchPortfolioCommandGateway {
           .join('')
       : payload;
     if (!this.requestIds.has(command)) this.requestIds.set(command, this.pending?.get(signature) || this.idGenerator());
-    const requestId = this.requestIds.get(command);
+    const requestId = command.editId || this.requestIds.get(command);
     this.pending?.put(signature, requestId);
-    const result = await this.http.json('/portfolio-changes', { method: 'POST', body: { requestId, ...body } });
+    const url = command.editId ? `/portfolio-changes/${encodeURIComponent(command.editId)}` : '/portfolio-changes';
+    const result = await this.http.json(url, { method: command.editId ? 'PUT' : 'POST', body: { requestId, ...body } });
     if (!result || typeof result.nextValue !== 'number' || !Number.isFinite(result.nextValue) || result.atomic !== true)
       throw new TypeError('Nieprawidłowa odpowiedź zapisu portfela.');
     this.pending?.remove(signature);

@@ -29,7 +29,7 @@ export const formatMoney = (value) =>
   new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(Number(value));
 export const formatDateTime = (value) =>
   new Intl.DateTimeFormat('pl-PL', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
-export const displayName = (user) => user.charAt(0) + user.slice(1).toLowerCase();
+export const displayName = (user) => user.charAt(0).toUpperCase() + user.slice(1).toLowerCase();
 export const formatPercent = (value) =>
   !Number.isFinite(value)
     ? '—'

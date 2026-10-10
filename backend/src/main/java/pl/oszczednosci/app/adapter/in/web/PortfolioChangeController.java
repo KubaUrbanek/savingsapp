@@ -12,5 +12,8 @@ public final class PortfolioChangeController {
     @PostMapping public RecordPortfolioChangeResult record(@Valid @RequestBody RecordPortfolioChangeRequest r) {
         return changes.record(new RecordPortfolioChangeCommand(r.requestId(),r.kind(),OwnerId.fromExternal(r.owner()),r.type(),r.subcategory(),r.date(),r.amountPln(),r.valuePln(),r.cashType()));
     }
+    @PutMapping("/{id}") public RecordPortfolioChangeResult update(@PathVariable UUID id, @Valid @RequestBody RecordPortfolioChangeRequest r) {
+        return changes.update(id, new RecordPortfolioChangeCommand(r.requestId(),r.kind(),OwnerId.fromExternal(r.owner()),r.type(),r.subcategory(),r.date(),r.amountPln(),r.valuePln(),r.cashType()));
+    }
     @DeleteMapping("/{id}") @ResponseStatus(HttpStatus.NO_CONTENT) public void delete(@PathVariable UUID id) { changes.delete(id); }
 }

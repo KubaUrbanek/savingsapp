@@ -4,11 +4,11 @@ Aplikacja do kontroli oszczędności: ile wpłaciłem, ile mam, ile zarobiłem i
 
 ## Korzystanie
 
-- **Podsumowanie** zaczyna od całego portfela. Filtr osoby, rachunku i rodzaju inwestycji obejmuje wartość, wynik i historię wartości. Tabela pokazuje wkład po wypłatach, wartość, wynik i datę każdej inwestycji.
-- **Aktualizacja** pozwala wpisać stan początkowy (z kosztem lub bez znanego kosztu), wpłatę, wypłatę, wycenę lub zakup/sprzedaż finansowane wybranym kontem. IKE i IKZE mogą zawierać obligacje oraz aktywa rynkowe. Wycenę można ustawić na zero.
-- **Co dokupić?**: najpierw proporcje obligacje/akcje/opcjonalne złoto, potem podział samych akcji na rynki rozwinięte i rozwijające się. Podaj budżet; suma zakupów nie przekracza go, a plan nie wymaga sprzedaży. Wagi muszą sumować się do 100% na obu poziomach. Wagi zapisujemy dopiero po zatwierdzeniu.
-- **Historia** pozwala cofnąć całe zdarzenie z jego powiązanymi saldami. Ręczne wyceny pozostają historycznymi punktami odniesienia. Nie można cofnąć zdarzenia, jeśli spowodowałoby to ujemne saldo późniejszej operacji; najpierw popraw późniejsze zdarzenia.
-- **Ustawienia** zawierają kopię i przywracanie danych, a dla gospodarstwa również dotychczasowy wspólny cel.
+- **Przegląd** pokazuje wpłaty, obecną wartość i zysk lub stratę. Filtry rachunków i inwestycji są rozwijane tylko w tym widoku; wybór „Razem” pokazuje pełne wspólne oszczędności. Na telefonie inwestycje mają karty, na komputerze tabelę. Historię wartości można rozwinąć osobno.
+- **Dodaj zmianę** otwiera formularz z bezpośrednimi wyborami „Wpłaciłem”, „Kupiłem”, „Wypłaciłem”, „Sprzedałem” i „Aktualizuję wartość”. Właściciel wpisu jest zawsze widoczny. Przy pierwszym użyciu wpisz posiadane oszczędności i znaną kwotę wpłat; bez tej informacji wynik pozostaje nieznany. Zakup i sprzedaż przenoszą pieniądze między inwestycją a wybranym kontem. IKE i IKZE mogą zawierać obligacje oraz aktywa rynkowe. Wycena może wynosić zero.
+- **Co dokupić?** zaczyna od budżetu i konkretnych kwot zakupów. Zapisane proporcje obligacji/akcji/opcjonalnego złota i podział samych akcji na rynki rozwinięte i rozwijające się są poniżej; edycję otwiera „Zmień mój plan”. Suma zakupów mieści się w budżecie, bez sprzedaży. Wagi muszą sumować się do 100% na obu poziomach. Niepoprawny lub niezapisany plan nie generuje podpowiedzi. Szczegóły pokazują obecne udziały, cele i brakujące kwoty.
+- **Historia** łączy wpłaty, zakupy i wyceny chronologicznie. „Popraw” koryguje całe zdarzenie z powiązanymi saldami; „Cofnij zmianę” usuwa je po potwierdzeniu. Późniejsze operacje są przeliczane, a ręczne wyceny pozostają punktami odniesienia. Zmiana powodująca ujemne saldo jest odrzucana bez zapisu. Starsze niezależne operacje zachowują osobne wyceny oraz opłaty, podatki i notatki.
+- **Ustawienia** obok nagłówka zawierają pobieranie i przywracanie kopii danych oraz informacje o aplikacji. Wszystkie trzy zakładki są dostępne także w widoku wspólnym.
 
 ### Znaczenie liczb
 
@@ -57,6 +57,7 @@ Vite działa na http://localhost:5173 i kieruje `/api` do serwera 8080. Produkcy
 | GET/POST   | `/api/investment-operations`                                                                              | Historia lub niezależna operacja dla zgodności ze starszym API              |
 | DELETE     | `/api/investment-operations/{id}`                                                                         | Cofnięcie operacji; dla nowych zdarzeń obejmuje wszystkie powiązania        |
 | POST       | `/api/portfolio-changes`                                                                                  | Atomowy zapis operacji i wyceny, obu stron transferu lub stanu początkowego |
+| PUT        | `/api/portfolio-changes/{id}` | Atomowa korekta całego zdarzenia z zachowaniem identyfikatora |
 | DELETE     | `/api/portfolio-changes/{id}`                                                                             | Atomowe cofnięcie całego zdarzenia                                          |
 | GET        | `/api/portfolio-performance?owner=jakub`                                                                  | Wynik; opcjonalne `type`, `subcategory`, `date`                             |
 | GET/PUT    | `/api/portfolio-plans?scope=jakub`                                                                        | Plan osoby; `scope=household` dla wspólnego planu                           |
