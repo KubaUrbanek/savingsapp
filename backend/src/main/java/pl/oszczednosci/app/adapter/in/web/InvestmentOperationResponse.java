@@ -9,5 +9,5 @@ import pl.oszczednosci.app.domain.model.*;
 public record InvestmentOperationResponse(UUID id, InvestmentOperationType operationType,
         InvestmentType type, String owner, InvestmentSubcategory subcategory,
         BigDecimal amountPln, BigDecimal feePln, BigDecimal taxPln, LocalDate date,
-        String note, Instant createdAt) {
+        String note, Instant createdAt, UUID groupId) {
 }

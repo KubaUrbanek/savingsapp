@@ -4,8 +4,8 @@ export { mapCollectionDto, mapInvestmentDto, mapOperationDto } from './mappers/p
 export function mapPerformanceDto(dto) {
   return {
     ...dto,
-    monthlyResultPln: Number(dto.monthlyResultPln),
+    monthlyResultPln: dto.monthlyResultPln == null ? null : Number(dto.monthlyResultPln),
     monthlyReturnRatePercent: dto.monthlyReturnRatePercent == null ? null : Number(dto.monthlyReturnRatePercent),
-    nominalResultPln: Number(dto.nominalResultPln)
+    nominalResultPln: dto.nominalResultPln == null ? null : Number(dto.nominalResultPln)
   };
 }

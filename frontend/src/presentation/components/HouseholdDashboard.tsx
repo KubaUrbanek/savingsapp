@@ -41,9 +41,8 @@ export function HouseholdDashboard({ entries, users, types, preferences, onPrefe
           <p
             className={latestMonth?.changeAmount >= 0 ? 'householdChange positiveText' : 'householdChange negativeText'}
           >
-            {(latestMonth?.changeAmount || 0) >= 0 ? '↑ Zysk' : '↓ Strata'}:{' '}
-            {formatSignedMoney(latestMonth?.changeAmount || 0)} ({formatPercent(latestMonth?.changePercent)}) miesiąc do
-            miesiąca
+            Zmiana wartości: {formatSignedMoney(latestMonth?.changeAmount || 0)} (
+            {formatPercent(latestMonth?.changePercent)}) miesiąc do miesiąca
           </p>
         </div>
         <div className="ownershipList">

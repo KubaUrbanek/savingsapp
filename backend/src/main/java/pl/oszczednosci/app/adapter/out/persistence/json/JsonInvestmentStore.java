@@ -81,13 +81,16 @@ public final class JsonInvestmentStore implements InvestmentUnitOfWork, Investme
                 return backup(entries, List.of());
             }
             InvestmentBackupJsonDocument document = json.readValue(bytes, InvestmentBackupJsonDocument.class);
-            if (document.formatVersion() != InvestmentBackup.CURRENT_FORMAT_VERSION) {
+            if (document.formatVersion() != 1 && document.formatVersion() != InvestmentBackup.CURRENT_FORMAT_VERSION) {
                 throw new IllegalArgumentException("Unsupported backup format version: " + document.formatVersion());
             }
             if (document.entries() == null || document.operations() == null) {
                 throw new IllegalArgumentException("Backup must contain entries and operations");
             }
-            return backup(document.entries(), document.operations());
+            var parsed=backup(document.entries(), document.operations());
+            if(document.formatVersion()==2 && document.plans()==null) throw new IllegalArgumentException("Backup must contain plans");
+            var plans=document.plans()==null ? java.util.Map.<String,pl.oszczednosci.app.domain.model.PortfolioPlan>of() : document.plans().entrySet().stream().collect(java.util.stream.Collectors.toMap(java.util.Map.Entry::getKey,e->e.getValue().toDomain()));
+            return new InvestmentBackup(InvestmentBackup.CURRENT_FORMAT_VERSION,parsed.entries(),parsed.operations(),plans);
         } catch (RuntimeException exception) {
             if (imported) throw new MalformedImportException("Invalid investment backup document.", exception);
             throw new PersistenceException("Malformed investment store: " + path, exception);
@@ -113,6 +116,30 @@ public final class JsonInvestmentStore implements InvestmentUnitOfWork, Investme
         if (!backup.operations().stream().allMatch(operation -> operationIds.add(operation.id()))) {
             throw new IllegalArgumentException("Backup contains duplicate investment operation identifiers");
         }
+        validateGroups(backup);
+    }
+
+    private void validateGroups(InvestmentBackup backup) {
+        var groups=backup.operations().stream().filter(o->o.getGroupId()!=null).collect(java.util.stream.Collectors.groupingBy(pl.oszczednosci.app.domain.model.InvestmentOperation::getGroupId));
+        for(var group:groups.entrySet()) {
+            var primary=group.getValue().stream().filter(o->o.getId().equals(group.getKey())).findFirst().orElseThrow(()->new IllegalArgumentException("Missing primary portfolio event"));
+            boolean trade=primary.getOperationType()==pl.oszczednosci.app.domain.model.InvestmentOperationType.BUY || primary.getOperationType()==pl.oszczednosci.app.domain.model.InvestmentOperationType.SELL;
+            if(group.getValue().size()!=(trade?2:1)) throw new IllegalArgumentException("Invalid number of event legs");
+            for(var operation:group.getValue()) {
+                var entry=backup.entries().stream().filter(e->e.getId().equals(operation.getId())).findFirst().orElseThrow(()->new IllegalArgumentException("Missing linked event valuation"));
+                if(!entry.owner().equals(operation.owner()) || !entry.category().equals(operation.category()) || !entry.date().equals(operation.getDate())) throw new IllegalArgumentException("Event and valuation must describe the same asset and date");
+                if(!primary.owner().equals(operation.owner()) || !primary.getDate().equals(operation.getDate()) || !primary.amount().equals(operation.amount())) throw new IllegalArgumentException("Event legs must match");
+                if (trade && !primary.getId().equals(operation.getId())) {
+                    var opposite = primary.getOperationType() == pl.oszczednosci.app.domain.model.InvestmentOperationType.BUY
+                            ? pl.oszczednosci.app.domain.model.InvestmentOperationType.SELL
+                            : pl.oszczednosci.app.domain.model.InvestmentOperationType.BUY;
+                    boolean cash = operation.getType() == pl.oszczednosci.app.domain.model.InvestmentType.KONTO_BANKOWE
+                            || operation.getType() == pl.oszczednosci.app.domain.model.InvestmentType.KONTO_OSZCZEDNOSCIOWE;
+                    if (operation.getOperationType() != opposite || !cash || primary.category().equals(operation.category()))
+                        throw new IllegalArgumentException("Transfer legs must be opposite and use a different cash account");
+                }
+            }
+        }
     }
 
     private void write(InvestmentBackup backup) {
@@ -122,7 +149,7 @@ public final class JsonInvestmentStore implements InvestmentUnitOfWork, Investme
             temporary = Files.createTempFile(path.getParent(), path.getFileName().toString(), ".tmp");
             InvestmentBackupJsonDocument document = new InvestmentBackupJsonDocument(backup.formatVersion(),
                     backup.entries().stream().map(entryMapper::toRecord).toList(),
-                    backup.operations().stream().map(operationMapper::toRecord).toList());
+                    backup.operations().stream().map(operationMapper::toRecord).toList(), backup.plans().entrySet().stream().collect(java.util.stream.Collectors.toMap(java.util.Map.Entry::getKey,e->PortfolioPlanJsonRecord.from(e.getValue()))));
             json.writerWithDefaultPrettyPrinter().writeValue(temporary.toFile(), document);
             Files.move(temporary, path, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
         } catch (IOException exception) {
@@ -135,7 +162,7 @@ public final class JsonInvestmentStore implements InvestmentUnitOfWork, Investme
         try {
             InvestmentBackupJsonDocument document = new InvestmentBackupJsonDocument(backup.formatVersion(),
                     backup.entries().stream().map(entryMapper::toRecord).toList(),
-                    backup.operations().stream().map(operationMapper::toRecord).toList());
+                    backup.operations().stream().map(operationMapper::toRecord).toList(), backup.plans().entrySet().stream().collect(java.util.stream.Collectors.toMap(java.util.Map.Entry::getKey,e->PortfolioPlanJsonRecord.from(e.getValue()))));
             return json.writerWithDefaultPrettyPrinter().writeValueAsBytes(document);
         } catch (RuntimeException exception) {
             throw new PersistenceException("Unable to export investment backup: " + path, exception);

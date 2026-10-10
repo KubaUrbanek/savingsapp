@@ -8,15 +8,20 @@ export function mapPortfolioChangeForm(form, owner, currentEntries) {
   const choices = subcategoriesFor(form.type);
   const subcategory = choices.length ? form.subcategory : null;
   const asset = { type: form.type, owner, subcategory, date: form.date };
-  const latest = currentEntries.find(
-    (entry) => entry.type === form.type && (entry.subcategory || null) === subcategory
-  );
+  const latest = [...currentEntries]
+    .filter((entry) => entry.date <= form.date)
+    .sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || '').localeCompare(a.createdAt || ''))
+    .find((entry) => entry.type === form.type && (entry.subcategory || null) === subcategory);
   const previousValue = Number(latest?.valuePln || 0);
+  if (form.action === 'INITIAL')
+    return form.costKnown === false
+      ? valuation(asset, form.currentValuePln)
+      : { kind: 'INITIAL', asset, valuePln: form.currentValuePln, amountPln: form.amountPln };
   const operationType = form.action === 'VALUATION' ? 'VALUATION' : form.operationType;
   const factory = factories[operationType];
 
   if (!factory) return { kind: operationType, asset };
   return operationType === 'VALUATION'
     ? factory(asset, form.currentValuePln)
-    : factory(asset, form.amountPln, previousValue);
+    : { ...factory(asset, form.amountPln, previousValue), cashType: form.cashType };
 }

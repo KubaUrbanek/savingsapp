@@ -1,5 +1,6 @@
 // @ts-nocheck
 export const PortfolioChangeKind = Object.freeze({
+  INITIAL: 'INITIAL',
   DEPOSIT: 'DEPOSIT',
   WITHDRAWAL: 'WITHDRAWAL',
   VALUATION: 'VALUATION',
@@ -60,9 +61,9 @@ function resultingValue(command) {
     throw new PortfolioChangeValidationFailure('owner', 'Wybierz portfel użytkownika.', 'OWNER_REQUIRED');
   if (!command.asset?.date) throw new PortfolioChangeValidationFailure('date', 'Wybierz datę zmiany.', 'DATE_REQUIRED');
 
-  if (command.kind === PortfolioChangeKind.VALUATION) {
+  if (command.kind === PortfolioChangeKind.VALUATION || command.kind === PortfolioChangeKind.INITIAL) {
     const value = Number(command.valuePln);
-    if (!Number.isFinite(value) || value < 0) {
+    if (command.valuePln === '' || command.valuePln == null || !Number.isFinite(value) || value < 0) {
       throw new PortfolioChangeValidationFailure(
         'currentValuePln',
         'Nowa wartość składnika nie może być ujemna.',
@@ -92,6 +93,15 @@ export class RecordPortfolioChange {
 
   async execute(command) {
     const nextValue = resultingValue(command);
+    if (
+      command.kind === 'INITIAL' &&
+      (command.amountPln === '' || !Number.isFinite(Number(command.amountPln)) || Number(command.amountPln) < 0)
+    )
+      throw new PortfolioChangeValidationFailure(
+        'amountPln',
+        'Podaj koszt początkowy lub wybierz nieznany koszt.',
+        'INITIAL_COST_REQUIRED'
+      );
     return this.portfolioCommandGateway.recordPortfolioChange({ command, nextValue });
   }
 }

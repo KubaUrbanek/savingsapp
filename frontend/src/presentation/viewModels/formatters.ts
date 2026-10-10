@@ -18,7 +18,13 @@ export const SUBCATEGORY_LABELS = {
   DWUNASTOLETNIE: '12-letnie'
 };
 export const GLOBAL_ASSET_LABELS = { BONDS: 'Obligacje', STOCKS: 'Akcje', GOLD: 'Złoto' };
-export const OPERATION_LABELS = { DEPOSIT: 'Wpłata', WITHDRAWAL: 'Wypłata', BUY: 'Zakup', SELL: 'Sprzedaż' };
+export const OPERATION_LABELS = {
+  INITIAL: 'Stan początkowy',
+  DEPOSIT: 'Wpłata',
+  WITHDRAWAL: 'Wypłata',
+  BUY: 'Zakup',
+  SELL: 'Sprzedaż'
+};
 export const formatMoney = (value) =>
   new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(Number(value));
 export const formatDateTime = (value) =>

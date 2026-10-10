@@ -28,7 +28,7 @@ public class InvestmentWebMapper {
     public InvestmentOperationResponse toResponse(InvestmentOperation operation) {
         return new InvestmentOperationResponse(operation.getId(), operation.getOperationType(), operation.getType(),
                 operation.getOwner().value(), operation.getSubcategory(), operation.getAmountPln(), operation.getFeePln(),
-                operation.getTaxPln(), operation.getDate(), operation.getNote(), operation.getCreatedAt());
+                operation.getTaxPln(), operation.getDate(), operation.getNote(), operation.getCreatedAt(), operation.getGroupId());
     }
 
     public PortfolioPerformanceResponse toResponse(PortfolioPerformanceResult performance) {
@@ -36,6 +36,6 @@ public class InvestmentWebMapper {
                 performance.nominalResultPln(), performance.returnRatePercent(), performance.feesPln(),
                 performance.taxesPln(), performance.resultAfterFeesAndTaxesPln(),
                 performance.rateOfReturn().percent(), performance.rateOfReturn().status().name(),
-                performance.monthlyResultPln(), performance.monthlyReturnRatePercent());
+                performance.monthlyResultPln(), performance.monthlyReturnRatePercent(), performance.depositsTotalPln(), performance.withdrawalsTotalPln());
     }
 }

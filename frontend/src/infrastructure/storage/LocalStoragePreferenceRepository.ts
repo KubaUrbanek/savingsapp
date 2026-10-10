@@ -53,7 +53,10 @@ const defaults = () => ({
 
 function allocation(value, keys, field) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError(`${field} must be an object`);
-  return Object.fromEntries(keys.map((key) => [key, AllocationWeight.parse(value[key])]));
+  const weights = Object.fromEntries(keys.map((key) => [key, AllocationWeight.parse(value[key])]));
+  if (Math.abs(Object.values(weights).reduce((s, w) => s + w, 0) - 100) > 0.000001)
+    throw new TypeError('Allocation must total 100%');
+  return weights;
 }
 
 function validated(data) {

@@ -1,4 +1,7 @@
 // @ts-nocheck
+import { SessionStoragePendingChangeRepository } from '../infrastructure/storage/SessionStoragePendingChangeRepository.js';
+import { LoadPortfolioPlan, SavePortfolioPlan } from '../application/PortfolioPlanCommands.js';
+import { FetchPortfolioPlanGateway } from '../infrastructure/http/FetchPortfolioPlanGateway.js';
 import { LoadPortfolio } from '../application/LoadPortfolio.js';
 import { LoadPortfolioPerformance } from '../application/LoadPortfolioPerformance.js';
 import { LoadReferenceData } from '../application/LoadReferenceData.js';
@@ -30,14 +33,21 @@ export function createApplicationDependencies(browser = window) {
   const portfolioQuery = new FetchPortfolioQueryGateway(http);
   const referenceData = new FetchReferenceDataGateway(http);
   const backups = new FetchDatabaseBackupGateway(http);
-  const portfolioCommands = new FetchPortfolioCommandGateway(entries, operations);
+  const portfolioCommands = new FetchPortfolioCommandGateway(
+    http,
+    () => browser.crypto.randomUUID(),
+    new SessionStoragePendingChangeRepository(browser.sessionStorage)
+  );
+  const plans = new FetchPortfolioPlanGateway(http);
   const useCases = Object.freeze({
+    loadPortfolioPlan: new LoadPortfolioPlan(plans),
+    savePortfolioPlan: new SavePortfolioPlan(plans),
     loadPortfolio: new LoadPortfolio(entries),
-    loadPortfolioPerformance: new LoadPortfolioPerformance(operations, portfolioQuery),
+    loadPortfolioPerformance: new LoadPortfolioPerformance(operations, portfolioQuery, entries),
     loadReferenceData: new LoadReferenceData(referenceData),
     recordPortfolioChange: new RecordPortfolioChange(portfolioCommands),
-    deleteInvestmentEntry: new DeleteInvestmentEntry(entries),
-    deleteInvestmentOperation: new DeleteInvestmentOperation(operations),
+    deleteInvestmentEntry: new DeleteInvestmentEntry(portfolioCommands),
+    deleteInvestmentOperation: new DeleteInvestmentOperation(portfolioCommands),
     exportDatabaseBackup: new ExportDatabaseBackup(backups),
     importDatabaseBackup: new ImportDatabaseBackup(backups),
     loadGlobalAllocation: new LoadGlobalAllocation(

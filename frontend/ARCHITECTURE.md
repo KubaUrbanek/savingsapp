@@ -260,3 +260,13 @@ Use verbs for use cases (`Load`, `Record`, `Delete`, `Import`), technology prefi
 4. **Responsive overrides** live at the existing `860px` layout and `640px` compact breakpoints. Add a rule to the relevant existing breakpoint rather than creating a competing component definition. The final reduced-motion query remains the accessibility override for all animated elements.
 
 Keep selectors component-oriented and avoid generic element rules except for the intentional reset and document typography. Tokens are named by semantic role (`--color-success`, `--color-border`, `--radius-panel`) rather than by the component consuming them; aliases exist only for compatibility with established component rules and should not be expanded.
+
+## Savings workflow (October 2026)
+
+The owner and household overview uses one filter scope for value, performance and the chart. Performance uses nullable values for unknown basis/opening data; mappers preserve null. `LoadPortfolioPerformance` resolves actual owners and per-asset performance through injected repositories/query ports. `PerformanceAggregationService` propagates missing basis into combined results.
+
+`FetchPortfolioCommandGateway` sends one atomically committed command to the portfolio-change endpoint. It generates an intent UUID in infrastructure and retains it for retries; `Home` retains the same intent object after failure. Uncertain IDs are stored by `SessionStoragePendingChangeRepository` under a SHA-256 signature to survive reloads without storing financial payloads. The backend, not frontend preview arithmetic, decides authoritative balances on the event date.
+
+`PurchasePlanningService` owns validated two-level target weights and purchases without sales. Gold is outside equity subweights; pension compositions are explicitly unknown, not cash. Purchases use water filling followed by cent distribution, conserve budget, and never sell. `PurchasePlanPanel` edits a draft, suppresses advice until the validated draft is saved, and loads server-side owner/household plans through application use cases. Browser legacy allocation preferences are no longer the portfolio's planning source of truth.
+
+The overview gives value, contributed amounts, result, individual holdings and dates. Backup operations live in Settings. Inactive ARIA panels use the HTML hidden attribute protected against component display overrides. Component and browser regressions must verify real panel visibility, not merely the presence of hidden attributes.

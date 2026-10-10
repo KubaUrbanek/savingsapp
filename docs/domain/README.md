@@ -8,11 +8,11 @@ An **investment entry** is a dated PLN valuation snapshot for one asset category
 
 An asset category is a type plus a compatible subcategory:
 
-| Type | Subcategory rule |
-| --- | --- |
-| `OBLIGACJE` | requires `TRZYLETNIE`, `DZIESIECIOLETNIE`, or `DWUNASTOLETNIE` |
-| `GIELDA`, `IKE`, `IKZE` | requires `ZLOTO`, `RYNKI_ROZWINIETE`, or `RYNKI_ROZWIJAJACE_SIE` |
-| `KONTO_OSZCZEDNOSCIOWE`, `KONTO_BANKOWE`, `PPK`, `PPO` | must not have a subcategory |
+| Type                                                   | Subcategory rule                                                 |
+| ------------------------------------------------------ | ---------------------------------------------------------------- |
+| `OBLIGACJE`                                            | requires `TRZYLETNIE`, `DZIESIECIOLETNIE`, or `DWUNASTOLETNIE`   |
+| `GIELDA`, `IKE`, `IKZE`                                | requires `ZLOTO`, `RYNKI_ROZWINIETE`, or `RYNKI_ROZWIJAJACE_SIE` |
+| `KONTO_OSZCZEDNOSCIOWE`, `KONTO_BANKOWE`, `PPK`, `PPO` | must not have a subcategory                                      |
 
 ## Entries, operations, and filters
 
@@ -32,20 +32,20 @@ Deposits add and withdrawals subtract from contributed capital. For XIRR, a depo
 
 Portfolio query endpoints require `owner` unless stated otherwise.
 
-| Method | Path | Behavior |
-| --- | --- | --- |
-| `GET` | `/api/investment-types` | Lists investment types. |
-| `GET` | `/api/investment-subcategories?type=...` | Lists compatible subcategories. |
-| `GET` | `/api/investment-operation-types` | Lists operation types. |
-| `GET` | `/api/users` | Lists configured owners. |
-| `GET`, `POST` | `/api/investments` | Lists filtered entries or creates one. |
-| `PUT`, `DELETE` | `/api/investments/{id}` | Updates or deletes an entry. |
-| `GET`, `POST` | `/api/investment-operations` | Lists filtered operations or creates one. |
-| `DELETE` | `/api/investment-operations/{id}` | Deletes an operation. |
-| `GET` | `/api/portfolio-performance?owner=...&type=...&subcategory=...&valuationDate=...` | Calculates performance. |
-| `GET` | `/api/database/export` | Downloads the complete JSON backup. |
-| `POST` | `/api/database/import` | Replaces data from multipart field `file` (maximum 5 MiB). |
-| `GET` | `/api/hello`, `/api/status` | Connectivity and service metadata. |
+| Method          | Path                                                                              | Behavior                                                   |
+| --------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `GET`           | `/api/investment-types`                                                           | Lists investment types.                                    |
+| `GET`           | `/api/investment-subcategories?type=...`                                          | Lists compatible subcategories.                            |
+| `GET`           | `/api/investment-operation-types`                                                 | Lists operation types.                                     |
+| `GET`           | `/api/users`                                                                      | Lists configured owners.                                   |
+| `GET`, `POST`   | `/api/investments`                                                                | Lists filtered entries or creates one.                     |
+| `PUT`, `DELETE` | `/api/investments/{id}`                                                           | Updates or deletes an entry.                               |
+| `GET`, `POST`   | `/api/investment-operations`                                                      | Lists filtered operations or creates one.                  |
+| `DELETE`        | `/api/investment-operations/{id}`                                                 | Deletes an operation.                                      |
+| `GET`           | `/api/portfolio-performance?owner=...&type=...&subcategory=...&valuationDate=...` | Calculates performance.                                    |
+| `GET`           | `/api/database/export`                                                            | Downloads the complete JSON backup.                        |
+| `POST`          | `/api/database/import`                                                            | Replaces data from multipart field `file` (maximum 5 MiB). |
+| `GET`           | `/api/hello`, `/api/status`                                                       | Connectivity and service metadata.                         |
 
 Create returns `201`; successful deletes and import return `204`. Validation/malformed import returns structured `400`, missing aggregates `404`, and persistence errors a sanitized `500`.
 
@@ -54,3 +54,11 @@ Create returns `201`; successful deletes and import return `204`. Validation/mal
 The live store is JSON at `app.database.file` (default `./backend/data/investment-entries.json`), not H2/JPA/Flyway. A missing file is an empty store. Mutations use a JVM-wide per-path lock, read-modify-write the versioned document, write a temporary file, and atomically replace the live file. Separate entry and operation repositories share this unit of work and preserve the untouched collection.
 
 Export includes `formatVersion`, **all entries**, and **all operations** in one consistent document. Import validates version, required collections, domain rules, and unique IDs before replacing both collections; it does not merge. Legacy top-level entry arrays load as entries with no operations. Configuration-backed owners are not backed up. The backend also serves the built React SPA, forwards non-API extensionless routes, and permits local Vite CORS origins on port 5173.
+
+## Wpłaty, koszt i wynik
+
+`INITIAL` określa stan i znany koszt posiadanej inwestycji na datę rozpoczęcia śledzenia. Brak kosztu nie oznacza kosztu zero. Stan początkowy nie jest zyskiem miesiąca ani nową wpłatą. Wpłata/wypłata to przepływ zewnętrzny, a zakup/sprzedaż z konta to dwie strony przesunięcia wewnętrznego. Obie strony zapisują się i cofają razem. Późniejsze salda wynikające ze zdarzeń odtwarzamy chronologicznie; ręczne wyceny pozostają punktami odniesienia.
+
+Wynik pojedynczej inwestycji uwzględnia koszt zakupów i wpływy ze sprzedaży. W całym portfelu transfery się znoszą. Nieznany koszt lub brak wyceny nie pozwala obliczyć wyniku; brak wyceny otwarcia nie pozwala obliczyć wyniku miesiąca. Opłaty zawarte w rzeczywistym saldzie nie są odliczane ponownie.
+
+Plan: wagi obligacje/akcje/opcjonalne złoto, a wewnątrz akcji podział na rynki. Gotówka i nieznany skład PPK/PPO są pokazywane osobno. Brak do celu przy dzisiejszej wartości nie jest tą samą liczbą co zakup za nowy budżet. Zakupy są nieujemne, ograniczone budżetem i zaokrąglone do groszy.

@@ -13,5 +13,5 @@ public record PortfolioPerformanceResponse(
         BigDecimal xirrPercent,
         String xirrStatus,
         BigDecimal monthlyResultPln,
-        BigDecimal monthlyReturnRatePercent) {
+        BigDecimal monthlyReturnRatePercent, BigDecimal depositsTotalPln, BigDecimal withdrawalsTotalPln) {
 }

@@ -1,4 +1,6 @@
 // @ts-nocheck
+import { PortfolioOverview } from '../components/PortfolioOverview.js';
+import { PurchasePlanPanel } from '../components/PurchasePlanPanel.js';
 import React from 'react';
 import { ETF_INVESTMENT_TYPES, FALLBACK_USERS, subcategoriesFor } from '../../domain/portfolio/constants.js';
 import { HouseholdPortfolio, OwnerPortfolio, PortfolioScopeKind } from '../../application/PortfolioScope.js';
@@ -50,10 +52,13 @@ export function Home({ dependencies }) {
     subcategory: '',
     amountPln: '',
     currentValuePln: '',
+    costKnown: true,
+    cashType: 'KONTO_BANKOWE',
     date: today()
   });
   const importInputRef = React.useRef(null);
   const savingRef = React.useRef(false);
+  const retryCommandRef = React.useRef(null);
   const importingRef = React.useRef(false);
   const exportingRef = React.useRef(false);
   const [isSaving, setIsSaving] = React.useState(false);
@@ -69,7 +74,7 @@ export function Home({ dependencies }) {
   });
   const referenceData = dataFrom(controller.referenceData, { users: FALLBACK_USERS, types: [] });
   const { users, types } = referenceData;
-  const graphEntries = dataFrom(controller.snapshot, []);
+  const graphEntries = dataFrom(controller.snapshot, []).filter((entry) => entry.date <= today());
   const entries = dataFrom(controller.entries, []);
   const operations = dataFrom(controller.operations, []);
   const reportError = React.useCallback(
@@ -96,7 +101,6 @@ export function Home({ dependencies }) {
     if (controller.referenceData.status === 'success') {
       const { users: loadedUsers, types: loadedTypes } = controller.referenceData.data;
       const firstType = loadedTypes[0] || '';
-      setTypeFilter((current) => current || firstType);
 
       setOperationForm((current) => ({
         ...current,
@@ -110,7 +114,7 @@ export function Home({ dependencies }) {
           : OwnerPortfolio(loadedUsers.includes(current.ownerId) ? current.ownerId : loadedUsers[0])
       );
     }
-  }, [controller.referenceData.status]);
+  }, [controller.referenceData.status, controller.referenceData.data]);
 
   React.useEffect(() => {
     if (!isHouseholdView) {
@@ -125,7 +129,9 @@ export function Home({ dependencies }) {
 
   const currentEntries = buildCurrentSnapshot(graphEntries);
   const currentEntriesForView = typeFilter
-    ? currentEntries.filter((entry) => entry.type === typeFilter)
+    ? currentEntries.filter(
+        (entry) => entry.type === typeFilter && (!subcategoryFilter || entry.subcategory === subcategoryFilter)
+      )
     : currentEntries;
   const totalsByType = currentEntries.reduce((totals, entry) => {
     totals[entry.type] = (totals[entry.type] || 0) + Number(entry.valuePln);
@@ -150,13 +156,16 @@ export function Home({ dependencies }) {
   const availableTabs = isHouseholdView
     ? [
         { id: 'summary', label: 'Podsumowanie' },
-        { id: 'analysis', label: 'Analiza' }
+        { id: 'analysis', label: 'Historia wartości' },
+        { id: 'allocation', label: 'Co dokupić?' },
+        { id: 'settings', label: 'Ustawienia' }
       ]
     : [
         { id: 'summary', label: 'Podsumowanie' },
         { id: 'update', label: 'Aktualizacja' },
-        { id: 'allocation', label: 'Alokacja' },
-        { id: 'history', label: 'Historia' }
+        { id: 'allocation', label: 'Co dokupić?' },
+        { id: 'history', label: 'Historia' },
+        { id: 'settings', label: 'Ustawienia' }
       ];
 
   React.useEffect(() => {
@@ -280,7 +289,7 @@ export function Home({ dependencies }) {
       .join(' · ');
 
     return window.confirm(
-      `Czy na pewno chcesz usunąć ten rekord?\n\nTyp rekordu: ${recordType}\nAktywo: ${asset}\nData: ${date}\n${amountLabel}: ${formatMoney(amount)}`
+      `Czy na pewno chcesz cofnąć ten zapis? Powiązane operacje i salda zostaną cofnięte razem.\n\nTyp rekordu: ${recordType}\nAktywo: ${asset}\nData: ${date}\n${amountLabel}: ${formatMoney(amount)}`
     );
   }
 
@@ -326,7 +335,12 @@ export function Home({ dependencies }) {
   function submitOperation(event) {
     event.preventDefault();
     if (savingRef.current) return;
-    const command = mapPortfolioChangeForm(operationForm, selectedOwner, currentEntries);
+    const mapped = mapPortfolioChangeForm(operationForm, selectedOwner, graphEntries);
+    const command =
+      retryCommandRef.current && JSON.stringify(retryCommandRef.current) === JSON.stringify(mapped)
+        ? retryCommandRef.current
+        : mapped;
+    retryCommandRef.current = command;
     savingRef.current = true;
     setIsSaving(true);
     setError('');
@@ -335,6 +349,7 @@ export function Home({ dependencies }) {
     controller.commands
       .recordPortfolioChange(command)
       .then(({ nextValue, kind, atomic }) => {
+        retryCommandRef.current = null;
         setOperationForm((current) => ({ ...current, amountPln: '', currentValuePln: '' }));
         const saved =
           kind === 'VALUATION'
@@ -346,7 +361,14 @@ export function Home({ dependencies }) {
         setStatus('');
         if (fetchError instanceof PortfolioChangeValidationFailure) {
           setFieldErrors({ [fetchError.field]: fetchError.message });
-        } else reportError(fetchError, 'zapisać zmiany', 'Sprawdź dane i spróbuj ponownie.');
+        } else
+          reportError(
+            fetchError,
+            'zapisać zmiany',
+            fetchError.status === 400
+              ? fetchError.message
+              : 'Spróbuj ponownie — ta sama próba nie zapisze zdarzenia dwukrotnie.'
+          );
       })
       .finally(() => {
         savingRef.current = false;
@@ -428,18 +450,29 @@ export function Home({ dependencies }) {
                 Rodzaj inwestycji
               </p>
               <div className="typeNav" role="group" aria-labelledby="investment-type-filter-label">
-                {types.map((type) => (
-                  <Button
-                    variant="quiet"
-                    className={type === typeFilter ? 'typeTab active' : 'typeTab'}
-                    key={type}
-                    type="button"
-                    aria-pressed={type === typeFilter}
-                    onClick={() => changeType(type)}
-                  >
-                    {TYPE_LABELS[type] || type}
-                  </Button>
-                ))}
+                <Button
+                  variant="quiet"
+                  className={!typeFilter ? 'typeTab active' : 'typeTab'}
+                  type="button"
+                  aria-pressed={!typeFilter}
+                  onClick={() => changeType('')}
+                >
+                  Wszystkie inwestycje
+                </Button>
+                {types
+                  .filter((type) => currentEntries.some((e) => e.type === type) || type === typeFilter)
+                  .map((type) => (
+                    <Button
+                      variant="quiet"
+                      className={type === typeFilter ? 'typeTab active' : 'typeTab'}
+                      key={type}
+                      type="button"
+                      aria-pressed={type === typeFilter}
+                      onClick={() => changeType(type)}
+                    >
+                      {TYPE_LABELS[type] || type}
+                    </Button>
+                  ))}
               </div>
               {filterSubcategories.length > 0 && (
                 <div className="subtypeNav" role="group" aria-labelledby="investment-subcategory-filter-label">
@@ -524,71 +557,20 @@ export function Home({ dependencies }) {
             >
               {() => (
                 <>
-                  <header className="summaryHeading">
-                    <div>
-                      <p className="eyebrow">Aktualny stan</p>
-                      <h2 id="portfolio-summary-heading">{activePortfolioLabel}</h2>
-                    </div>
-                    <p className="dataFreshness">
-                      <span>Data danych</span>
-                      <strong>{latestDataDate || 'Brak wycen'}</strong>
-                    </p>
-                  </header>
-                  <section className="summaryPrimary" aria-labelledby="portfolio-value-heading">
-                    <Metric
-                      className="summaryTotal"
-                      label={<span id="portfolio-value-heading">Wartość portfela</span>}
-                      value={formatMoney(totalValue)}
-                    />
-                  </section>
-                  <div className="summarySupporting">
-                    <section className="summarySection" aria-labelledby="portfolio-types-heading">
-                      <h3 id="portfolio-types-heading">Wartości według typu</h3>
-                      <div className="summaryGrid">
-                        {types.map((type) => (
-                          <Metric
-                            className="summaryCard"
-                            key={type}
-                            label={TYPE_LABELS[type] || type}
-                            value={formatMoney(totalsByType[type] || 0)}
-                          />
-                        ))}
-                      </div>
-                    </section>
-                    <section className="summarySection" aria-labelledby="portfolio-results-heading">
-                      <h3 id="portfolio-results-heading">Wyniki</h3>
-                      <QueryBoundary
-                        state={controller.performance}
-                        skeletonShape="summary"
-                        loadingLabel="Wczytywanie wyniku portfela…"
-                        onRetry={controller.retry.performance}
-                        isEmpty={(result) => result == null}
-                        emptyTitle="Brak danych o wyniku"
-                        emptyDescription="Wynik pojawi się po zapisaniu operacji i wyceny."
-                      >
-                        {(loadedPerformance) => (
-                          <div className="summaryResults">
-                            <Metric
-                              className="headlineChange"
-                              label="Zmiana w tym miesiącu"
-                              value={formatSignedMoney(loadedPerformance.monthlyResultPln)}
-                              tone={Number(loadedPerformance.monthlyResultPln) >= 0 ? 'positive' : 'negative'}
-                              detail={formatPercent(
-                                loadedPerformance.monthlyReturnRatePercent == null
-                                  ? NaN
-                                  : Number(loadedPerformance.monthlyReturnRatePercent)
-                              )}
-                            />
-                            <Metric
-                              label="Łączny wynik inwestycji"
-                              value={formatSignedMoney(loadedPerformance.nominalResultPln)}
-                              tone={Number(loadedPerformance.nominalResultPln) >= 0 ? 'positive' : 'negative'}
-                            />
-                          </div>
-                        )}
-                      </QueryBoundary>
-                    </section>
-                  </div>
+                  <PortfolioOverview
+                    entries={currentEntriesForView}
+                    performance={dataFrom(controller.performance, null)}
+                    assets={controller.assets}
+                    loading={controller.performance.status === 'loading'}
+                  />
+                  {controller.performance.status === 'failure' && (
+                    <InlineMessage variant="warning">
+                      Nie udało się wczytać wyników.{' '}
+                      <Button type="button" onClick={controller.retry.performance}>
+                        Odśwież wyniki
+                      </Button>
+                    </InlineMessage>
+                  )}
                 </>
               )}
             </QueryBoundary>
@@ -599,25 +581,39 @@ export function Home({ dependencies }) {
               emptyTitle="Brak danych do analizy"
               emptyDescription="Wykres pojawi się po zapisaniu pierwszej wyceny."
             >
-              {(loadedEntries) => <SummaryChart entries={loadedEntries} types={types} />}
+              {(loadedEntries) => (
+                <SummaryChart
+                  key={`${typeFilter}:${subcategoryFilter}`}
+                  scopeLabel={activePortfolioLabel}
+                  entries={loadedEntries.filter(
+                    (e) =>
+                      e.date <= today() &&
+                      (!typeFilter || e.type === typeFilter) &&
+                      (!subcategoryFilter || e.subcategory === subcategoryFilter)
+                  )}
+                  types={types}
+                />
+              )}
             </QueryBoundary>
           </article>
         )}
       </header>
 
-      <div className="formFeedback" role="region" aria-label="Informacje o operacjach">
-        <InlineMessage variant={projectionPhase === 'pending' ? 'warning' : 'success'}>
-          {visibleStatus}
-          {projectionPhase === 'pending' && (
-            <Button variant="secondary" type="button" onClick={controller.retryProjection}>
-              Odśwież dotknięte sekcje
-            </Button>
-          )}
-        </InlineMessage>
-        <InlineMessage ref={errorSummaryRef} variant="error">
-          {error}
-        </InlineMessage>
-      </div>
+      {(visibleStatus || error) && (
+        <div className="formFeedback" role="region" aria-label="Informacje o operacjach">
+          <InlineMessage variant={projectionPhase === 'pending' ? 'warning' : 'success'}>
+            {visibleStatus}
+            {projectionPhase === 'pending' && (
+              <Button variant="secondary" type="button" onClick={controller.retryProjection}>
+                Odśwież dotknięte sekcje
+              </Button>
+            )}
+          </InlineMessage>
+          <InlineMessage ref={errorSummaryRef} variant="error">
+            {error}
+          </InlineMessage>
+        </div>
+      )}
 
       {isHouseholdView ? (
         <div
@@ -635,12 +631,11 @@ export function Home({ dependencies }) {
             emptyDescription="Dodaj wycenę w portfelu właściciela, aby zobaczyć wspólne podsumowanie."
           >
             {(loadedEntries) => (
-              <HouseholdDashboard
-                entries={loadedEntries}
-                users={users}
-                types={types}
-                preferences={preferences}
-                onPreferenceError={reportError}
+              <PortfolioOverview
+                entries={loadedEntries.filter((entry) => entry.date <= today())}
+                performance={dataFrom(controller.performance, null)}
+                assets={controller.assets}
+                loading={controller.performance.status === 'loading'}
               />
             )}
           </QueryBoundary>
@@ -673,17 +668,25 @@ export function Home({ dependencies }) {
                       setOperationForm({
                         ...operationForm,
                         action,
-                        operationType: action === 'ADD' ? 'DEPOSIT' : action === 'SUBTRACT' ? 'WITHDRAWAL' : 'VALUATION'
+                        operationType:
+                          action === 'ADD'
+                            ? 'DEPOSIT'
+                            : action === 'SUBTRACT'
+                              ? 'WITHDRAWAL'
+                              : action === 'INITIAL'
+                                ? 'INITIAL'
+                                : 'VALUATION'
                       });
                     }}
                   >
-                    <option value="ADD">Dodaj środki</option>
+                    <option value="INITIAL">Wpisz posiadane oszczędności</option>
+                    <option value="ADD">Dodaj środki — nowa wpłata lub zakup</option>
                     <option value="SUBTRACT">Odejmij środki</option>
                     <option value="VALUATION">Ustaw aktualną wartość</option>
                   </select>
                 }
               />
-              {operationForm.action !== 'VALUATION' && (
+              {!['VALUATION', 'INITIAL'].includes(operationForm.action) && (
                 <Field
                   label="Skąd wynika zmiana?"
                   error={fieldErrors.operationType}
@@ -764,7 +767,7 @@ export function Home({ dependencies }) {
                   }
                 />
               )}
-              {operationForm.action === 'VALUATION' ? (
+              {['VALUATION', 'INITIAL'].includes(operationForm.action) ? (
                 <Field
                   label="Nowa wartość składnika"
                   error={fieldErrors.currentValuePln}
@@ -807,6 +810,57 @@ export function Home({ dependencies }) {
                   }
                 />
               )}
+              {operationForm.action === 'INITIAL' && (
+                <>
+                  <Field
+                    label="Znam łączny koszt / wkład początkowy"
+                    control={
+                      <input
+                        type="checkbox"
+                        checked={operationForm.costKnown}
+                        onChange={(e) => setOperationForm({ ...operationForm, costKnown: e.target.checked })}
+                      />
+                    }
+                  />
+                  {operationForm.costKnown ? (
+                    <Field
+                      label="Ile wpłaciłem na tę inwestycję — zł"
+                      error={fieldErrors.amountPln}
+                      control={
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          required
+                          value={operationForm.amountPln}
+                          onChange={(e) => setOperationForm({ ...operationForm, amountPln: e.target.value })}
+                        />
+                      }
+                    />
+                  ) : (
+                    <p>Pokażemy wartość oszczędności. Wynik pozostanie nieznany, dopóki nie uzupełnisz kosztu.</p>
+                  )}
+                </>
+              )}
+              {['BUY', 'SELL'].includes(operationForm.operationType) && (
+                <Field
+                  label="Konto finansujące zakup / przyjmujące sprzedaż"
+                  control={
+                    <select
+                      value={operationForm.cashType}
+                      onChange={(e) => setOperationForm({ ...operationForm, cashType: e.target.value })}
+                    >
+                      <option value="KONTO_BANKOWE">Konto bankowe</option>
+                      <option value="KONTO_OSZCZEDNOSCIOWE">Konto oszczędnościowe</option>
+                    </select>
+                  }
+                />
+              )}
+              <p>
+                Stan początkowy pozwala też uzupełnić nieznany koszt istniejącej inwestycji na wybraną datę. Wpłata
+                zmienia wkład własny. Aktualizacja wyceny zmienia wartość, bez dopisywania wpłaty. Zakup i sprzedaż
+                przenoszą pieniądze między wybranym kontem a inwestycją.
+              </p>
               <Field
                 label="Data zmiany"
                 error={fieldErrors.date}
@@ -818,6 +872,7 @@ export function Home({ dependencies }) {
                       fieldRefs.current.date = element;
                     }}
                     type="date"
+                    max={today()}
                     required
                     value={operationForm.date}
                     disabled={isSaving}
@@ -863,36 +918,26 @@ export function Home({ dependencies }) {
               }
             >
               {(loadedEntries) => (
-                <GlobalAllocationPanel
-                  entries={loadedEntries}
-                  preferences={preferences}
-                  onPreferenceError={reportError}
+                <PurchasePlanPanel
+                  entries={loadedEntries.filter((entry) => entry.date <= today())}
+                  scope={selectedOwner}
+                  useCases={useCases}
                 />
               )}
             </QueryBoundary>
-            {types.some((type) => ETF_INVESTMENT_TYPES.includes(type)) && (
-              <div aria-busy={projectionAffects(PortfolioQuery.SNAPSHOT)}>
-                <QueryBoundary
-                  state={controller.snapshot}
-                  skeletonShape="section"
-                  onRetry={controller.retry.snapshot}
-                  emptyTitle="Brak danych o akcjach"
-                  emptyDescription="Dodaj wycenę ETF, aby zobaczyć szczegóły."
-                >
-                  {(loadedEntries) => (
-                    <StockAllocationPanel
-                      entries={loadedEntries}
-                      investmentTypes={ETF_INVESTMENT_TYPES.filter((type) => types.includes(type))}
-                      onAddStockValue={prepareStockEntry}
-                      preferences={preferences}
-                      onPreferenceError={reportError}
-                    />
-                  )}
-                </QueryBoundary>
-              </div>
-            )}
           </div>
         </>
+      )}
+
+      {isHouseholdView && (
+        <div
+          id="portfolio-panel-allocation"
+          role="tabpanel"
+          aria-labelledby="portfolio-tab-allocation"
+          hidden={activeTab !== 'allocation'}
+        >
+          <PurchasePlanPanel entries={graphEntries} scope="household" useCases={useCases} />
+        </div>
       )}
 
       <div
@@ -910,7 +955,9 @@ export function Home({ dependencies }) {
           emptyTitle="Brak danych do analizy"
           emptyDescription="Wykres pojawi się po zapisaniu pierwszej wyceny."
         >
-          {(loadedEntries) => <SummaryChart entries={loadedEntries} types={types} />}
+          {(loadedEntries) => (
+            <SummaryChart entries={loadedEntries.filter((entry) => entry.date <= today())} types={types} />
+          )}
         </QueryBoundary>
       </div>
 
@@ -936,42 +983,53 @@ export function Home({ dependencies }) {
               emptyDescription="Wpłaty, wypłaty, kupna i sprzedaże pojawią się tutaj po zapisaniu."
             >
               {(loadedOperations) =>
-                loadedOperations.map((operation) => (
-                  <div
-                    className="entryRow"
-                    key={operation.id}
-                    aria-busy={pendingDeletions.includes(`operation:${operation.id}`)}
-                  >
-                    <div>
+                loadedOperations
+                  .filter(
+                    (operation) =>
+                      !operation.groupId ||
+                      operation.groupId === operation.id ||
+                      !loadedOperations.some((other) => other.id === operation.groupId)
+                  )
+                  .map((operation) => (
+                    <div
+                      className="entryRow"
+                      key={operation.id}
+                      aria-busy={pendingDeletions.includes(`operation:${operation.id}`)}
+                    >
+                      <div>
+                        <strong>
+                          <span className="entryFieldLabel">Typ zdarzenia: </span>
+                          {OPERATION_LABELS[operation.operationType]}
+                        </strong>
+                        <span>
+                          {TYPE_LABELS[operation.type]}
+                          {operation.subcategory ? ` · ${SUBCATEGORY_LABELS[operation.subcategory]}` : ''} ·{' '}
+                          <span className="entryFieldLabel">Data: </span>
+                          {operation.date}
+                        </span>
+                        <small>{operation.note}</small>
+                      </div>
                       <strong>
-                        <span className="entryFieldLabel">Typ zdarzenia: </span>
-                        {OPERATION_LABELS[operation.operationType]}
+                        <span className="entryFieldLabel">Wartość: </span>
+                        {formatMoney(operation.amountPln)}
                       </strong>
-                      <span>
-                        {TYPE_LABELS[operation.type]}
-                        {operation.subcategory ? ` · ${SUBCATEGORY_LABELS[operation.subcategory]}` : ''} ·{' '}
-                        <span className="entryFieldLabel">Data: </span>
-                        {operation.date}
-                      </span>
-                      <small>{operation.note}</small>
+                      <div className="entryActions">
+                        <span className="entryFieldLabel">Akcja:</span>
+                        <Button
+                          variant="danger"
+                          type="button"
+                          disabled={pendingDeletions.includes(`operation:${operation.id}`)}
+                          onClick={(event) => deleteOperation(operation, event.currentTarget)}
+                        >
+                          {pendingDeletions.includes(`operation:${operation.id}`)
+                            ? 'Usuwanie…'
+                            : operation.groupId
+                              ? 'Cofnij zmianę'
+                              : 'Usuń'}
+                        </Button>
+                      </div>
                     </div>
-                    <strong>
-                      <span className="entryFieldLabel">Wartość: </span>
-                      {formatMoney(operation.amountPln)}
-                    </strong>
-                    <div className="entryActions">
-                      <span className="entryFieldLabel">Akcja:</span>
-                      <Button
-                        variant="danger"
-                        type="button"
-                        disabled={pendingDeletions.includes(`operation:${operation.id}`)}
-                        onClick={(event) => deleteOperation(operation, event.currentTarget)}
-                      >
-                        {pendingDeletions.includes(`operation:${operation.id}`) ? 'Usuwanie…' : 'Usuń'}
-                      </Button>
-                    </div>
-                  </div>
-                ))
+                  ))
               }
             </QueryBoundary>
           </section>
@@ -998,37 +1056,43 @@ export function Home({ dependencies }) {
             >
               {() => (
                 <div className="entryList">
-                  {entries.map((entry) => (
-                    <div className="entryRow" key={entry.id} aria-busy={pendingDeletions.includes(`entry:${entry.id}`)}>
-                      <div>
+                  {entries
+                    .filter((entry) => !operations.some((operation) => operation.id === entry.id && operation.groupId))
+                    .map((entry) => (
+                      <div
+                        className="entryRow"
+                        key={entry.id}
+                        aria-busy={pendingDeletions.includes(`entry:${entry.id}`)}
+                      >
+                        <div>
+                          <strong>
+                            <span className="entryFieldLabel">Typ zdarzenia: </span>
+                            {TYPE_LABELS[entry.type] || entry.type}
+                          </strong>
+                          <span>
+                            {entry.subcategory ? SUBCATEGORY_LABELS[entry.subcategory] : 'Bez podkategorii'} ·{' '}
+                            <span className="entryFieldLabel">Data: </span>
+                            {entry.date}
+                          </span>
+                          {entry.updatedAt && <small>Ostatnia modyfikacja: {formatDateTime(entry.updatedAt)}</small>}
+                        </div>
                         <strong>
-                          <span className="entryFieldLabel">Typ zdarzenia: </span>
-                          {TYPE_LABELS[entry.type] || entry.type}
+                          <span className="entryFieldLabel">Wartość: </span>
+                          {formatMoney(entry.valuePln)}
                         </strong>
-                        <span>
-                          {entry.subcategory ? SUBCATEGORY_LABELS[entry.subcategory] : 'Bez podkategorii'} ·{' '}
-                          <span className="entryFieldLabel">Data: </span>
-                          {entry.date}
-                        </span>
-                        {entry.updatedAt && <small>Ostatnia modyfikacja: {formatDateTime(entry.updatedAt)}</small>}
+                        <div className="entryActions">
+                          <span className="entryFieldLabel">Akcja:</span>
+                          <Button
+                            variant="danger"
+                            type="button"
+                            disabled={pendingDeletions.includes(`entry:${entry.id}`)}
+                            onClick={(event) => deleteEntry(entry, event.currentTarget)}
+                          >
+                            {pendingDeletions.includes(`entry:${entry.id}`) ? 'Usuwanie…' : 'Usuń'}
+                          </Button>
+                        </div>
                       </div>
-                      <strong>
-                        <span className="entryFieldLabel">Wartość: </span>
-                        {formatMoney(entry.valuePln)}
-                      </strong>
-                      <div className="entryActions">
-                        <span className="entryFieldLabel">Akcja:</span>
-                        <Button
-                          variant="danger"
-                          type="button"
-                          disabled={pendingDeletions.includes(`entry:${entry.id}`)}
-                          onClick={(event) => deleteEntry(entry, event.currentTarget)}
-                        >
-                          {pendingDeletions.includes(`entry:${entry.id}`) ? 'Usuwanie…' : 'Usuń'}
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               )}
             </QueryBoundary>
@@ -1036,10 +1100,28 @@ export function Home({ dependencies }) {
         </div>
       )}
 
-      <section className="ledgerSection databasePanel">
+      <section
+        className="ledgerSection databasePanel"
+        id="portfolio-panel-settings"
+        role="tabpanel"
+        aria-labelledby="portfolio-tab-settings"
+        hidden={activeTab !== 'settings'}
+      >
+        {isHouseholdView && (
+          <details>
+            <summary>Wspólny cel oszczędzania</summary>
+            <HouseholdDashboard
+              entries={graphEntries}
+              users={users}
+              types={types}
+              preferences={preferences}
+              onPreferenceError={reportError}
+            />
+          </details>
+        )}
         <SectionHeader
           eyebrow="Kopia bezpieczeństwa"
-          title="Eksport i import danych"
+          title="Kopia i przywracanie danych"
           description="Pobierz aktualny plik bazy danych lub wgraj wcześniej wyeksportowany plik. Import nadpisuje całą obecną bazę."
         />
         <div className="databaseActions">
@@ -1050,7 +1132,7 @@ export function Home({ dependencies }) {
             busy={isExporting}
             busyLabel="Eksportowanie…"
           >
-            Eksportuj bazę
+            Pobierz kopię danych
           </Button>
           <Button
             variant="danger"
@@ -1059,7 +1141,7 @@ export function Home({ dependencies }) {
             busy={isImporting}
             busyLabel="Importowanie…"
           >
-            Importuj i nadpisz
+            Przywróć z kopii
           </Button>
           <input
             ref={importInputRef}

@@ -13,7 +13,7 @@ public record CreateInvestmentEntryRequest(
         @NotNull InvestmentType type,
         @NotNull String owner,
         InvestmentSubcategory subcategory,
-        @NotNull @DecimalMin(value = "0.01") @Digits(integer = 17, fraction = 2) BigDecimal valuePln,
+        @NotNull @DecimalMin(value = "0.00") @Digits(integer = 17, fraction = 2) BigDecimal valuePln,
         @NotNull LocalDate date
 ) {
 }

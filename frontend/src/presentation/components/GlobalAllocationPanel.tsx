@@ -28,11 +28,11 @@ export function GlobalAllocationPanel({ id = undefined, entries, preferences, on
 
   React.useEffect(() => {
     try {
-      preferences.changeGlobalAllocation(targets);
+      if (isValid) preferences.changeGlobalAllocation(targets);
     } catch (error) {
       onPreferenceError(error);
     }
-  }, [targets, preferences, onPreferenceError]);
+  }, [targets, isValid, preferences, onPreferenceError]);
 
   return (
     <section className="ledgerSection globalAllocationPanel sectionAnchor" id={id}>

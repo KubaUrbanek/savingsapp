@@ -7,7 +7,7 @@ import { Field } from './Field.js';
 import { Metric } from './Metric.js';
 import { SectionHeader } from './SectionHeader.js';
 
-export function SummaryChart({ id = undefined, entries, types }) {
+export function SummaryChart({ id = undefined, entries, types, scopeLabel = undefined }) {
   const summaryId = React.useId();
   const scrollHintId = React.useId();
   const [selectedType, setSelectedType] = React.useState('ALL');
@@ -15,7 +15,7 @@ export function SummaryChart({ id = undefined, entries, types }) {
   const filteredEntries = selectedType === 'ALL' ? entries : entries.filter((entry) => entry.type === selectedType);
   const points = buildSummary(filteredEntries, period);
   const viewModel = mapTimeSeriesViewModel(points, types, selectedType, period);
-  const chartWidth = 760;
+  const chartWidth = Math.max(760, points.length * 46 + 86);
   const chartHeight = 300;
   const padding = { top: 22, right: 24, bottom: 58, left: 62 };
   const innerWidth = chartWidth - padding.left - padding.right;
@@ -23,7 +23,9 @@ export function SummaryChart({ id = undefined, entries, types }) {
   const barGap = 14;
   const barWidth = points.length ? Math.max(18, (innerWidth - barGap * (points.length - 1)) / points.length) : 0;
   const selectedTypeLabel =
-    viewModel.typeOptions.find((option) => option.value === selectedType)?.label || selectedType;
+    (selectedType === 'ALL' && scopeLabel) ||
+    viewModel.typeOptions.find((option) => option.value === selectedType)?.label ||
+    selectedType;
   const periodLabel = period === 'yearly' ? 'rocznie' : 'miesięcznie';
   const latestPoint = points.at(-1);
   const changeSymbol = (latestPoint?.changeAmount || 0) >= 0 ? '↑' : '↓';
@@ -31,7 +33,7 @@ export function SummaryChart({ id = undefined, entries, types }) {
   return (
     <section className="ledgerSection graphPanel sectionAnchor" id={id}>
       <div className="graphHeader">
-        <SectionHeader eyebrow="Analiza wzrostu" title="Miesięczne i roczne podsumowanie inwestycji" />
+        <SectionHeader eyebrow="Historia wartości" title="Jak zmieniała się wartość oszczędności?" />
         <div className="graphControls">
           <Field
             label="Zakres inwestycji"
@@ -57,6 +59,7 @@ export function SummaryChart({ id = undefined, entries, types }) {
         </div>
       </div>
 
+      <p>To zmiana wartości oszczędności, obejmująca także wpłaty i wypłaty. Nie jest stopą zysku z inwestycji.</p>
       <div className="metricGrid">
         <Metric label="Aktualna suma" value={viewModel.total} />
         <Metric
@@ -94,6 +97,7 @@ export function SummaryChart({ id = undefined, entries, types }) {
               <svg
                 aria-hidden="true"
                 className="summaryChart"
+                style={{ minWidth: chartWidth }}
                 viewBox={`0 0 ${chartWidth} ${chartHeight}`}
                 preserveAspectRatio="none"
               >

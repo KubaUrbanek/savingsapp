@@ -20,11 +20,11 @@ function containsAsset(entries, asset, valuePln) {
 }
 
 function projectionIsVisible(command, queryStates) {
+  if (command.name === 'importDatabaseBackup') return true;
   if (command.name === 'recordPortfolioChange') {
+    if (command.result.atomic && command.result.id) return true;
     const { request, result } = command;
-    const valuationVisible =
-      containsAsset(queryStates.entries.data || [], request.asset, result.nextValue) &&
-      containsAsset(queryStates.snapshot.data || [], request.asset, result.nextValue);
+    const valuationVisible = containsAsset(queryStates.entries.data || [], request.asset, result.nextValue);
     if (!valuationVisible) return false;
     if (request.kind === 'VALUATION') return true;
     return (queryStates.operations.data || []).some(
@@ -45,8 +45,6 @@ function projectionIsVisible(command, queryStates) {
   if (command.name === 'deleteInvestmentOperation') {
     return !(queryStates.operations.data || []).some((operation) => operation.id === command.request);
   }
-  // The import response contains no version or record identity. A successful query
-  // refresh therefore cannot prove that the imported projection is already visible.
   return false;
 }
 
@@ -85,7 +83,7 @@ export function usePortfolioController(useCases, scope, filters) {
     (signal) => useCases.loadPortfolioPerformance.execute({ scope, filters: { type, subcategory }, signal }),
     [useCases, scope, type, subcategory, versions.operations, versions.performance],
     {
-      enabled: isOwner,
+      enabled: true,
       queryKey: filteredQueryKey,
       refreshVersions: { operations: versions.operations, performance: versions.performance }
     }
@@ -210,6 +208,7 @@ export function usePortfolioController(useCases, scope, filters) {
     referenceData,
     operations,
     performance,
+    assets: performanceResult.data?.assets || [],
     mutation,
     projection,
     commands,

@@ -82,11 +82,11 @@ describe('AppRouter', () => {
     expect(summary).not.toHaveFocus();
 
     fireEvent.keyDown(update, { key: 'End' });
-    await waitFor(() => expect(screen.getByRole('tab', { name: 'Historia' })).toHaveFocus());
-    fireEvent.keyDown(screen.getByRole('tab', { name: 'Historia' }), { key: 'Home' });
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Ustawienia' })).toHaveFocus());
+    fireEvent.keyDown(screen.getByRole('tab', { name: 'Ustawienia' }), { key: 'Home' });
     await waitFor(() => expect(summary).toHaveFocus());
     fireEvent.keyDown(summary, { key: 'ArrowLeft' });
-    await waitFor(() => expect(screen.getByRole('tab', { name: 'Historia' })).toHaveFocus());
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Ustawienia' })).toHaveFocus());
   });
 
   it('keeps update form and portfolio filters while switching tabs', async () => {
@@ -99,7 +99,7 @@ describe('AppRouter', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Aktualizacja' }));
 
     expect(screen.getByLabelText('Kwota dodana')).toHaveValue(123.45);
-    expect(screen.getByRole('button', { name: 'Konto bankowe', pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Wszystkie inwestycje', pressed: true })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /jakub/i, pressed: true })).toBeInTheDocument();
   });
 
@@ -109,39 +109,7 @@ describe('AppRouter', () => {
     expect(screen.getByRole('tab', { name: 'Aktualizacja' })).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('prepares a stock valuation in the update tab without scrolling', async () => {
-    const scrollTo = vi.spyOn(window, 'scrollTo');
-    render(
-      <AppRouter
-        dependencies={dependencies({
-          loadReferenceData: { execute: async () => ({ users: ['jakub'], types: ['GIELDA'] }) },
-          loadPortfolio: {
-            execute: async () => [
-              {
-                id: 'stock',
-                owner: 'jakub',
-                type: 'GIELDA',
-                subcategory: 'ZLOTO',
-                date: '2026-09-03',
-                valuePln: 100
-              }
-            ]
-          }
-        })}
-      />
-    );
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Alokacja' }));
-    const stockAction = (await screen.findAllByRole('button', { name: /Dodaj wycenę:/ }))[1]!;
-    fireEvent.click(stockAction);
-    expect(screen.getByRole('tab', { name: 'Aktualizacja' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByLabelText('Co chcesz zrobić?')).toHaveValue('VALUATION');
-    expect(screen.getByLabelText('Składnik portfela')).toHaveValue('GIELDA');
-    expect(document.getElementById('portfolio-change-subcategory')).toHaveValue('RYNKI_ROZWINIETE');
-    expect(scrollTo).not.toHaveBeenCalled();
-  });
-
-  it('renders ETF allocation when retirement account types are available without Giełda', async () => {
+  it('uses one budget planner for retirement accounts as well as brokerage holdings', async () => {
     render(
       <AppRouter
         dependencies={dependencies({
@@ -149,23 +117,23 @@ describe('AppRouter', () => {
           loadPortfolio: {
             execute: async () => [
               {
-                id: 'ike-entry',
+                id: 'ike',
                 owner: 'jakub',
                 type: 'IKE',
                 subcategory: 'ZLOTO',
+                valuePln: 1000,
                 date: '2026-09-01',
-                createdAt: '2026-09-01T10:00:00Z',
-                valuePln: 1000
+                createdAt: '2026-09-01T00:00:00Z'
               }
             ]
           }
         })}
       />
     );
-
-    fireEvent.click(screen.getByRole('tab', { name: 'Alokacja' }));
-    expect(await screen.findByText('ETF — Giełda, IKE i IKZE')).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Typ rachunku dla nowej wyceny' })).toHaveValue('IKE');
+    fireEvent.click(screen.getByRole('tab', { name: 'Co dokupić?' }));
+    expect(await screen.findByRole('table', { name: 'Co kupić według mojego planu' })).toBeVisible();
+    expect(screen.getByLabelText('Mam do zainwestowania — zł')).toBeVisible();
+    expect(screen.queryByText('ETF — Giełda, IKE i IKZE')).not.toBeInTheDocument();
   });
 
   it.each([
@@ -200,6 +168,28 @@ describe('AppRouter', () => {
     render(
       <AppRouter
         dependencies={dependencies({
+          loadPortfolio: {
+            execute: async () => [
+              {
+                id: 'bond',
+                owner: 'jakub',
+                type: 'OBLIGACJE',
+                subcategory: 'TRZYLETNIE',
+                valuePln: 100,
+                date: '2026-09-01',
+                createdAt: '2026-09-01T00:00:00Z'
+              },
+              {
+                id: 'cash',
+                owner: 'jakub',
+                type: 'KONTO_BANKOWE',
+                subcategory: null,
+                valuePln: 100,
+                date: '2026-09-01',
+                createdAt: '2026-09-01T00:00:00Z'
+              }
+            ]
+          },
           loadReferenceData: {
             execute: async () => ({ users: ['jakub', 'zosia'], types: ['OBLIGACJE', 'KONTO_BANKOWE'] })
           }
@@ -208,7 +198,8 @@ describe('AppRouter', () => {
     );
 
     const ownerGroup = await screen.findByRole('group', { name: 'Czyj portfel wyświetlić?' });
-    const typeGroup = screen.getByRole('group', { name: 'Rodzaj inwestycji' });
+    const typeGroup = await screen.findByRole('group', { name: 'Rodzaj inwestycji' });
+    fireEvent.click(await screen.findByRole('button', { name: 'Obligacje' }));
     const subcategoryGroup = await screen.findByRole('group', { name: 'Podkategorie inwestycji' });
     expect(ownerGroup).toHaveAccessibleName('Czyj portfel wyświetlić?');
     expect(typeGroup).toHaveAccessibleName('Rodzaj inwestycji');
@@ -270,18 +261,13 @@ describe('AppRouter', () => {
     expect(scopeSwitcher.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(summary.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     const summaryView = within(summary);
-    expect(summaryView.getByText('Aktualny stan')).toBeVisible();
-    expect(summaryView.getByRole('heading', { level: 2, name: 'Wszystkie inwestycje' })).toBeVisible();
-    expect(summaryView.getByText('Data danych').parentElement).toHaveTextContent('2026-09-03');
-
-    const portfolioValue = summaryView.getByRole('region', { name: 'Wartość portfela' });
-    expect(portfolioValue).toHaveTextContent(/Wartość portfela4\s?200,00\s*zł/);
-
-    const results = summaryView.getByRole('region', { name: 'Wyniki' });
-    await waitFor(() => expect(results).toHaveTextContent(/Zmiana w tym miesiącu\+125,00\s*zł\+2,5%/));
-    expect(results).toHaveTextContent(/Łączny wynik inwestycji-340,00\s*zł/);
+    await waitFor(() =>
+      expect(summaryView.getAllByText('Mam teraz')[0]!.parentElement).toHaveTextContent(/4\s?200,00\s*zł/)
+    );
+    expect(summaryView.getByText('Wyceny z 2026-09-03')).toBeVisible();
+    expect(summaryView.getByText('Straciłem').parentElement).toHaveTextContent(/-340,00\s*zł/);
+    expect(summaryView.getByText('Wpłaciłem')).toBeVisible();
     expect(scopeSwitcher.querySelectorAll('.button')).toHaveLength(3);
-    expect(form.querySelectorAll('.field')).toHaveLength(5);
 
     fireEvent.click(screen.getByRole('button', { name: /zosia/i, pressed: false }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Portfel: zosia' })).toBeInTheDocument();
@@ -290,7 +276,12 @@ describe('AppRouter', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Razem', pressed: false }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Portfel całego gospodarstwa' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Razem', pressed: true })).toBeInTheDocument();
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual(['Podsumowanie', 'Analiza']);
+    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Podsumowanie',
+      'Historia wartości',
+      'Co dokupić?',
+      'Ustawienia'
+    ]);
     expect(document.getElementById('portfolio-panel-update')).not.toBeInTheDocument();
   });
 
@@ -391,13 +382,14 @@ describe('AppRouter', () => {
 
     const owner = await screen.findByRole('button', { name: /jakub/i, pressed: true });
     const together = screen.getByRole('button', { name: 'Razem', pressed: false });
-    const type = await screen.findByRole('button', { name: 'Konto bankowe', pressed: true });
+    const type = await screen.findByRole('button', { name: 'Wszystkie inwestycje', pressed: true });
     const operationType = screen.getByLabelText('Co chcesz zrobić?');
     const operationReason = screen.getByLabelText('Skąd wynika zmiana?');
     const asset = screen.getByLabelText('Składnik portfela');
     const amount = screen.getByLabelText('Kwota dodana');
     const date = screen.getByLabelText('Data zmiany');
     const save = screen.getByRole('button', { name: 'Zaktualizuj portfel' });
+    await waitFor(() => expect(save).toBeEnabled());
     const controls = [owner, together, type, operationType, operationReason, asset, amount, date, save];
 
     controls.forEach((control, index) => {
@@ -449,7 +441,8 @@ describe('AppRouter', () => {
     expect(screen.getByLabelText('Składnik portfela')).toBeInTheDocument();
     expect(screen.getByLabelText('Data zmiany')).toBeInTheDocument();
     expect(Array.from(action.querySelectorAll('option'), (option) => option.textContent)).toEqual([
-      'Dodaj środki',
+      'Wpisz posiadane oszczędności',
+      'Dodaj środki — nowa wpłata lub zakup',
       'Odejmij środki',
       'Ustaw aktualną wartość'
     ]);
@@ -522,7 +515,7 @@ describe('AppRouter', () => {
     await waitFor(() => expect(alert).toHaveFocus());
     expect(alert).toHaveFocus();
     expect(alert).toHaveTextContent('Nie udało się zapisać zmiany');
-    expect(alert).toHaveTextContent('Sprawdź dane i spróbuj ponownie');
+    expect(alert).toHaveTextContent('ta sama próba nie zapisze zdarzenia dwukrotnie');
     expect(alert).not.toHaveTextContent('Awaria API');
     expect(alert).not.toHaveTextContent('MappingError');
   });
@@ -607,7 +600,8 @@ describe('AppRouter', () => {
 
     await screen.findByLabelText('Kwota dodana');
     await waitFor(() => expect(appDependencies.preferences.selectOwner).toHaveBeenCalledTimes(2));
-    fireEvent.click(screen.getByRole('button', { name: 'Eksportuj bazę' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Ustawienia' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pobierz kopię danych' }));
     const exportingButton = screen.getByRole('button', { name: 'Eksportowanie…' });
     fireEvent.click(exportingButton);
     expect(exportingButton).toBeDisabled();
@@ -618,7 +612,7 @@ describe('AppRouter', () => {
 
     operation.resolve(new Blob());
     await waitFor(() => expect(status).toHaveTextContent('Wyeksportowano bazę danych'));
-    expect(screen.getByRole('button', { name: 'Eksportuj bazę' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Pobierz kopię danych' })).toBeEnabled();
     createObjectURL.mockRestore();
     revokeObjectURL.mockRestore();
   });
@@ -636,6 +630,7 @@ describe('AppRouter', () => {
     );
 
     await screen.findByLabelText('Kwota dodana');
+    fireEvent.click(screen.getByRole('tab', { name: 'Ustawienia' }));
     const fileInput = document.querySelector('input[type="file"]');
     expect(fileInput).not.toBeNull();
     if (!fileInput) throw new Error('Import file input was not rendered.');
@@ -654,7 +649,7 @@ describe('AppRouter', () => {
     expect(alert).not.toHaveTextContent('Zły plik');
     expect(alert).not.toHaveTextContent('Nie udało się zapisać');
     expect(alert).toHaveFocus();
-    expect(screen.getByRole('button', { name: 'Importuj i nadpisz' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Przywróć z kopii' })).toBeEnabled();
   });
 
   it.each([

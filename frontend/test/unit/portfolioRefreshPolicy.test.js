@@ -4,12 +4,15 @@ import { affectedQueries, PortfolioQuery } from '../../src/presentation/portfoli
 
 test('portfolio command refresh policy invalidates only related query families', () => {
   assert.deepEqual(affectedQueries('deleteInvestmentOperation'), [
+    PortfolioQuery.ENTRIES,
+    PortfolioQuery.SNAPSHOT,
     PortfolioQuery.OPERATIONS,
     PortfolioQuery.PERFORMANCE
   ]);
   assert.deepEqual(affectedQueries('deleteInvestmentEntry'), [
     PortfolioQuery.ENTRIES,
     PortfolioQuery.SNAPSHOT,
+    PortfolioQuery.OPERATIONS,
     PortfolioQuery.PERFORMANCE
   ]);
   assert.deepEqual(affectedQueries('unknownCommand'), []);

@@ -10,6 +10,6 @@ public final class InvestmentEntryJsonMapper {
     public InvestmentEntry toDomain(InvestmentEntryJsonRecord value) {
         return InvestmentEntry.reconstitute(new InvestmentEntryId(value.id()),
                 AssetCategory.of(value.type(), value.subcategory()), OwnerId.fromExternal(value.owner()),
-                Money.positive(value.valuePln()), value.date(), value.createdAt(), value.updatedAt());
+                Money.zeroOrPositive(value.valuePln()), value.date(), value.createdAt(), value.updatedAt());
     }
 }

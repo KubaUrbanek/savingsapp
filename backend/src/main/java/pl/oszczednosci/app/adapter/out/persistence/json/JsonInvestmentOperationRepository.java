@@ -14,10 +14,11 @@ public final class JsonInvestmentOperationRepository implements InvestmentOperat
     public JsonInvestmentOperationRepository(JsonInvestmentStore store) { this.store = store; }
     @Override public synchronized InvestmentOperation save(InvestmentOperation operation) {
         store.update(current -> {
+            if(current.operations().stream().anyMatch(o->o.getId().equals(operation.getId()) && o.getGroupId()!=null)) throw new IllegalArgumentException("Powiązaną zmianę popraw przez historię portfela.");
             List<InvestmentOperation> values = new java.util.ArrayList<>(current.operations());
             values.removeIf(value -> value.getId().equals(operation.getId()));
             values.add(operation);
-            return new InvestmentBackup(current.formatVersion(), current.entries(), values);
+            return new InvestmentBackup(current.formatVersion(), current.entries(), values, current.plans());
         });
         return operation;
     }
@@ -35,8 +36,17 @@ public final class JsonInvestmentOperationRepository implements InvestmentOperat
         boolean[] deleted = {false};
         store.update(current -> {
             List<InvestmentOperation> values = new java.util.ArrayList<>(current.operations());
+            var linked=current.operations().stream().filter(o->o.getId().equals(id.value()) && o.getGroupId()!=null).findFirst();
+            if(linked.isPresent()) {
+                var group=linked.get().getGroupId();
+                var removed=current.operations().stream().filter(o->group.equals(o.getGroupId())).map(InvestmentOperation::getId).collect(java.util.stream.Collectors.toSet());
+                var ops=current.operations().stream().filter(o->!removed.contains(o.getId())).toList();
+                var entries=current.entries().stream().filter(e->!removed.contains(e.getId())).toList();
+                deleted[0]=true;
+                return new InvestmentBackup(current.formatVersion(),pl.oszczednosci.app.domain.service.PortfolioChangeCalculator.rebuild(entries,ops),ops,current.plans());
+            }
             deleted[0] = values.removeIf(value -> value.id().equals(id));
-            return deleted[0] ? new InvestmentBackup(current.formatVersion(), current.entries(), values) : current;
+            return deleted[0] ? new InvestmentBackup(current.formatVersion(), current.entries(), values, current.plans()) : current;
         });
         return deleted[0] ? DeleteResult.DELETED : DeleteResult.NOT_FOUND;
     }

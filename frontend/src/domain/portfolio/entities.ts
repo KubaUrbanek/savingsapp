@@ -15,7 +15,7 @@ export const InvestmentEntry = Object.freeze({
       id,
       ...category,
       owner: OwnerId.parse(owner),
-      valuePln: Money.positive(valuePln, 'valuePln'),
+      valuePln: Money.zeroOrPositive(valuePln, 'valuePln'),
       date: ValuationDate.parse(date),
       createdAt: timestamp(createdAt, 'createdAt'),
       updatedAt: updatedAt == null ? null : timestamp(updatedAt, 'updatedAt')
@@ -35,15 +35,20 @@ export const InvestmentOperation = Object.freeze({
     taxPln = 0,
     date,
     note = null,
-    createdAt
+    createdAt,
+    groupId = null
   }) {
     const category = InvestmentClassificationPolicy.classify(type, subcategory);
     return Object.freeze({
       id,
       operationType: OperationType.parse(operationType),
+      groupId,
       ...category,
       owner: OwnerId.parse(owner),
-      amountPln: Money.positive(amountPln, 'amountPln'),
+      amountPln:
+        operationType === 'INITIAL'
+          ? Money.zeroOrPositive(amountPln, 'amountPln')
+          : Money.positive(amountPln, 'amountPln'),
       feePln: Money.zeroOrPositive(feePln, 'feePln'),
       taxPln: Money.zeroOrPositive(taxPln, 'taxPln'),
       date: ValuationDate.parse(date),

@@ -9,7 +9,7 @@ import {
 } from '../../../domain/portfolio/index.js';
 import { MappingError, mapped } from './MappingError.js';
 
-const SERVER_OPERATION_TYPES = ['DEPOSIT', 'WITHDRAWAL', 'BUY', 'SELL'];
+const SERVER_OPERATION_TYPES = ['INITIAL', 'DEPOSIT', 'WITHDRAWAL', 'BUY', 'SELL'];
 
 function record(dto, path) {
   if (dto === null || typeof dto !== 'object' || Array.isArray(dto))
