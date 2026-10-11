@@ -10,7 +10,7 @@ const server = spawn(
     '-jar',
     resolve('../backend/target/app-0.0.1-SNAPSHOT.jar'),
     '--server.port=8082',
-    `--app.database.file=${resolve(directory, 'portfolio.json')}`
+    `--app.database.path=${resolve(directory, 'portfolio')}`
   ],
   { stdio: 'ignore' }
 );
