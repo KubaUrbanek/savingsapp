@@ -18,6 +18,8 @@ result = 0
 output = ""
 
 if args[0] == "compose":
+    if state.get("registry_config"):
+        assert os.environ.get("DOCKER_CONFIG") != state["registry_config"], "Compose must retain the NAS's plugin configuration"
     if args[1] == "version":
         output = state.get("version", "2.39.0")
     else:
@@ -64,6 +66,7 @@ elif args[0] == "login":
     state["registry_config"] = os.environ["DOCKER_CONFIG"]
     (Path(state["registry_config"]) / "config.json").write_text("temporary credential")
 elif args[0] == "pull":
+    assert os.environ["DOCKER_CONFIG"] == state["registry_config"]
     result = 1 if state.get("failure") == "pull" else 0
 elif args[:2] == ["image", "inspect"]:
     output = NEW

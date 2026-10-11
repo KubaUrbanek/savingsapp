@@ -103,11 +103,11 @@ EOF
 
 # Login is isolated and removed on all exit paths; no permanent PAT on the NAS.
 registry_config=$(mktemp -d)
-export DOCKER_CONFIG=$registry_config
 [ -n "${REGISTRY_TOKEN:-}" ] || fail 'Registry token is required.'
-printf '%s\n' "$REGISTRY_TOKEN" | "$docker_bin" login ghcr.io --username "$registry_user" --password-stdin >/dev/null
+printf '%s\n' "$REGISTRY_TOKEN" | DOCKER_CONFIG="$registry_config" "$docker_bin" login ghcr.io --username "$registry_user" --password-stdin >/dev/null
 unset REGISTRY_TOKEN
-"$docker_bin" pull "$image"
+# Keep the NAS's normal CLI config for Compose/plugin discovery.
+DOCKER_CONFIG="$registry_config" "$docker_bin" pull "$image"
 new_image=$("$docker_bin" image inspect --format '{{.Id}}' "$image")
 backup=$(mktemp -d "$state_dir/backup.XXXXXXXX")
 printf '%s\n' "$old_image" > "$backup/previous-image.txt"
