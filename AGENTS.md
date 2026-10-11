@@ -28,7 +28,7 @@ These instructions apply to the entire repository. Keep changes focused, preserv
 - Dependencies point inward: `adapter` -> `application` -> `domain`; `configuration` is the composition root.
 - Keep domain code framework-free and transport/persistence-agnostic. Business invariants belong in domain models or pure domain services.
 - Put orchestration and technology-neutral ports in `application`. Controllers depend on input ports, and outbound adapters implement application-owned output ports.
-- Keep HTTP requests/responses and web mappers in `adapter.in.web`. Keep JSON records, Jackson/filesystem details, and persistence mappers in `adapter.out.persistence.json`.
+- Keep HTTP requests/responses and web mappers in `adapter.in.web`. Keep JSON records, Jackson/filesystem details, and JSON mappers in `adapter.out.persistence.json`; JDBC/H2/Liquibase details belong in `adapter.out.persistence.jdbc`.
 - Translate exceptions to HTTP only in `ApiExceptionHandler`. Do not leak HTTP status, Spring, Jakarta, Jackson, or vendor types into inner layers.
 - Obtain business time and UUIDs through the application `Clock` and `IdGenerator` ports. Introduce application-owned ports for new external integrations.
 - Treat one use-case invocation as the transaction boundary. Extend the unit-of-work abstraction when atomic multi-write behavior is needed.
@@ -82,7 +82,7 @@ If a required check cannot run, report the exact command and reason. Do not weak
 ## API, persistence, and security
 
 - Preserve `/api` contracts and Spring's SPA routing behavior unless the task explicitly changes them. Update both clients and documentation for intentional contract changes.
-- Treat persisted JSON and imported backups as untrusted input. Preserve version validation, invariant checks, locking, and atomic replacement behavior.
+- Treat persisted JSON and imported backups as untrusted input. Preserve version validation, invariant checks, transactional H2 writes, and Liquibase schema validation. The legacy JSON adapter retains locking and atomic replacement behavior.
 - Never commit passwords, tokens, secret files, production data, or insecure fallback credentials. Keep authorization requirements intact and expose only sanitized errors to clients.
 - Validate at the owning boundary: input usability in presentation, workflow preconditions in application, invariants in domain, and external data shapes in infrastructure/adapters.
 

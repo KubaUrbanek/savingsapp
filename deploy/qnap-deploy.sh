@@ -88,8 +88,8 @@ old_container=$(compose ps -q "$service")
 case "$old_container" in *[!a-zA-Z0-9]*) fail 'Exactly one existing container is required.' ;; esac
 [ "$("$docker_bin" inspect --format '{{.State.Running}}' "$old_container")" = true ] || fail 'Existing service is not running.'
 old_image=$("$docker_bin" inspect --format '{{.Image}}' "$old_container")
-database=$("$docker_bin" inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$old_container" | awk '/^APP_DATABASE_FILE=/ {sub(/^APP_DATABASE_FILE=/, ""); print; exit}')
-case "$database" in /*) ;; *) fail 'Set APP_DATABASE_FILE to an absolute path in a persistent volume first.' ;; esac
+database=$("$docker_bin" inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$old_container" | awk '/^APP_DATABASE_PATH=/ {sub(/^APP_DATABASE_PATH=/, ""); print; exit}')
+case "$database" in /*) ;; *) fail 'Set APP_DATABASE_PATH to an absolute path in a persistent volume first.' ;; esac
 case "$database" in */../*|*/..|*/./*|*/.) fail 'Database path must be normalized.' ;; esac
 mounts=$("$docker_bin" inspect --format '{{range .Mounts}}{{if .RW}}{{println .Destination}}{{end}}{{end}}' "$old_container")
 persisted=false
@@ -112,11 +112,12 @@ new_image=$("$docker_bin" image inspect --format '{{.Id}}' "$image")
 backup=$(mktemp -d "$state_dir/backup.XXXXXXXX")
 printf '%s\n' "$old_image" > "$backup/previous-image.txt"
 
-# Never run two JVMs against the same JSON file. Pull before downtime starts.
+# Never run two JVMs against the same embedded database. Pull before downtime starts.
 rollback_needed=true
 compose stop -t 30 "$service"
-"$docker_bin" cp "$old_container:$database" "$backup/database.json"
-chmod 600 "$backup/database.json"
+mkdir "$backup/data"
+"$docker_bin" cp "$old_container:$(dirname "$database")/." "$backup/data/"
+chmod -R u=rwX,go= "$backup/data"
 write_image "$image"
 compose up -d --no-deps --force-recreate --pull never "$service"
 new_container=$(compose ps -q "$service")

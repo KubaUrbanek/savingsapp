@@ -77,16 +77,25 @@ class QnapDeploymentTest(unittest.TestCase):
         self.assertIn("--no-deps", calls[up])
         self.assertIn("never", calls[up])
         self.assertIn("existing-project", calls[up])
-        backups = list((self.root / ".savingsapp-deploy").glob("backup.*/database.json"))
+        backups = list((self.root / ".savingsapp-deploy").glob("backup.*/data/database.json"))
         self.assertEqual(len(backups), 1)
         self.assertEqual(backups[0].read_bytes(), self.database.read_bytes())
         self.assertIn(IMAGE, (self.root / ".savingsapp-deploy/override.yml").read_text())
         self.assertEqual(self.compose_file.read_text(), "services:\n  savingsapp:\n    image: savingsapp:latest\n")
 
+    def test_backup_includes_h2_database(self):
+        h2 = self.root / "portfolio.mv.db"
+        h2.write_bytes(b"H2 durable data")
+        result = self.run_deploy()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        backups = list((self.root / ".savingsapp-deploy").glob("backup.*/data/portfolio.mv.db"))
+        self.assertEqual(len(backups), 1)
+        self.assertEqual(backups[0].read_bytes(), h2.read_bytes())
+
     def test_preflight_failures_leave_the_existing_service_running(self):
         for config in ({"failure": "ephemeral"}, {"failure": "pull"}, {"database": "./data.json"}, {"database": "/app/data/../secret.json"}, {"version": "1.29.2"}):
             with self.subTest(config=config):
-                self.configure(failure=None, database="/app/data/investment-entries.json", version="2.39.0", calls=[])
+                self.configure(failure=None, database="/app/data/portfolio", version="2.39.0", calls=[])
                 self.configure(**config)
                 result = self.run_deploy()
                 self.assertNotEqual(result.returncode, 0)
@@ -121,7 +130,7 @@ class QnapDeploymentTest(unittest.TestCase):
         result = self.run_deploy()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("ROLLBACK FAILED", result.stderr)
-        backups = list((self.root / ".savingsapp-deploy").glob("backup.*/database.json"))
+        backups = list((self.root / ".savingsapp-deploy").glob("backup.*/data/database.json"))
         self.assertEqual(len(backups), 1)
         self.assertEqual(backups[0].read_bytes(), self.database.read_bytes())
 

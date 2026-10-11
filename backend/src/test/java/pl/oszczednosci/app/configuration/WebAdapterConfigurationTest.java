@@ -12,8 +12,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,21 +24,21 @@ import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.json.JsonMapper;
 
 @SpringBootTest(properties = {
-        "app.database.file=./target/web-adapter-configuration-test.json",
+        "app.database.path=./target/web-adapter-configuration-test",
         "app.web.cors.allowed-origins=https://portfolio.example.com"
 })
 @AutoConfigureMockMvc
 class WebAdapterConfigurationTest {
-    private static final Path DATABASE = Path.of("target/web-adapter-configuration-test.json");
     private static final String ENTRY = """
             {"type":"KONTO_BANKOWE","owner":"jakub","valuePln":100.00,"date":"2026-09-06"}
             """;
 
     @Autowired MockMvc mvc;
+    @Autowired pl.oszczednosci.app.application.port.out.InvestmentUnitOfWork store;
 
     @BeforeEach
     void resetDatabase() throws Exception {
-        Files.deleteIfExists(DATABASE);
+        store.replaceAll(pl.oszczednosci.app.application.port.out.InvestmentBackup.empty());
     }
 
     @Test

@@ -29,7 +29,15 @@ mvn clean package
 java -jar backend/target/app-0.0.1-SNAPSHOT.jar
 ```
 
-Aplikacja: http://localhost:8080. Baza JSON: `backend/data/investment-entries.json`; można zmienić `app.database.file`. Nie uruchamiaj dwóch procesów na tym samym pliku: blokada koordynuje tylko jeden JVM.
+Aplikacja: http://localhost:8080. Dane zapisuje **H2 w trybie dyskowym**, w tabelach SQL z transakcjami; przetrwają restart JVM. Dla jednej instancji na QNAP-ie nie wymaga to osobnego serwera bazy. Przy wielu instancjach aplikacji wybierz PostgreSQL i osobny adapter.
+
+`app.database.path` (lub `APP_DATABASE_PATH`) określa ścieżkę bazy **bez rozszerzenia**, domyślnie `./backend/data/portfolio`. H2 tworzy plik `portfolio.mv.db`. W Dockerze domyślna ścieżka to `/app/data/portfolio`; katalog `/app/data` musi być trwałym wolumenem używanym ponownie po odtworzeniu kontenera. Nie uruchamiaj dwóch JVM-ów na tej bazie; H2 blokuje dostęp drugiego procesu. Serwer TCP i konsola H2 nie są włączone.
+
+Aplikacja zaczyna od pustej bazy; stare pliki JSON i wcześniejsza konfiguracja `APP_DATABASE_FILE` nie są używane. Przy starcie Liquibase aktualizuje schemat według `backend/src/main/resources/db/changelog/db.changelog-master.xml`. Kolejne uruchomienia zachowują dane H2. Przejście ze starej wersji nie wymaga zachowania danych ani automatycznej migracji JSON.
+
+Kolejne zmiany schematu dodawaj jako nowe changesety Liquibase; nie zmieniaj migracji już wykonanych. Historia i sumy kontrolne są zapisywane w bazie.
+
+Import/eksport JSON przez API pozostaje zgodny. Do kopii działającej aplikacji używaj eksportu; pliki H2 kopiuj po zatrzymaniu aplikacji, najlepiej cały katalog danych. Kwoty w SQL mają dokładność dwóch miejsc i maksymalnie 36 cyfr części całkowitej; przekroczenie zakresu wycofuje całą transakcję.
 
 Rozwój:
 

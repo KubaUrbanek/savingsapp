@@ -15,13 +15,13 @@ docker inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' 
 docker inspect --format '{{index .Config.Labels "com.docker.compose.service"}}' NAZWA_KONTENERA
 docker inspect --format '{{index .Config.Labels "com.docker.compose.project.config_files"}}' NAZWA_KONTENERA
 docker inspect --format '{{range .Mounts}}{{println .Source "->" .Destination "writable=" .RW}}{{end}}' NAZWA_KONTENERA
-docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' NAZWA_KONTENERA | sed -n '/^APP_DATABASE_FILE=/p'
+docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' NAZWA_KONTENERA | sed -n '/^APP_DATABASE_PATH=/p'
 uname -m
 ```
 
 Wymagamy Compose v2 (`docker compose` lub `docker-compose` v2), jednej działającej repliki i istniejącego pliku Compose dostępnego w SSH. Jeśli etykieta wymienia kilka plików Compose, przygotuj najpierw jeden plik zawierający ich pełną konfigurację; automat przyjmuje jeden plik bazowy. Konto SSH musi mieć dostęp do Docker Engine i zapisu w katalogu projektu. Opcjonalna zmienna `QNAP_DOCKER_BIN` wskazuje pełną ścieżkę do Docker CLI, jeśli nie ma go w PATH sesji SSH.
 
-`APP_DATABASE_FILE` musi wskazywać bezwzględną ścieżkę wewnątrz zapisywalnego, trwałego **wolumenu katalogowego**, np. `/app/data/investment-entries.json` przy wolumenie `/app/data`. Nie podpinaj pojedynczego pliku: zapis bazy używa atomowej wymiany pliku. Katalog musi być zapisywalny dla użytkownika kontenera `app` lub użytkownika ustawionego w istniejącym Compose. Użyj aktualnego katalogu danych, portów i ustawień — nie uruchamiaj drugiej aplikacji na tej samej bazie. Port panelu QNAP może zajmować 8080; automat zachowuje obecne mapowanie portu aplikacji.
+`APP_DATABASE_PATH` musi wskazywać bezwzględną ścieżkę wewnątrz zapisywalnego, trwałego **wolumenu katalogowego**, np. `/app/data/portfolio` przy wolumenie `/app/data`. Podaj ścieżkę bez rozszerzenia. H2 utworzy `<APP_DATABASE_PATH>.mv.db`; podpinaj cały katalog, nie pojedynczy plik. Przy przejściu ze starej wersji zastąp `APP_DATABASE_FILE` przez `APP_DATABASE_PATH` w Compose i odtwórz usługę. Stare dane JSON nie są automatycznie importowane. Zachowaj ten sam wolumen przy odtwarzaniu kontenera. Katalog musi być zapisywalny dla użytkownika kontenera `app` lub użytkownika ustawionego w istniejącym Compose. Użyj aktualnego katalogu danych, portów i ustawień — nie uruchamiaj drugiej aplikacji na tej samej bazie. Port panelu QNAP może zajmować 8080; automat zachowuje obecne mapowanie portu aplikacji.
 
 ## 2. Tailscale i SSH
 
@@ -64,11 +64,11 @@ Obraz może pozostać prywatny. Pipeline używa własnego, krótkotrwałego `GIT
 
 1. Skrypt sprawdza istniejący projekt, trwały wolumen i blokadę wdrożenia. Bez tych warunków kończy pracę przed zatrzymaniem aplikacji.
 2. Pobiera obraz, gdy stara wersja nadal działa.
-3. Zatrzymuje tylko SavingsApp i kopiuje JSON z zatrzymanego kontenera do katalogu `.savingsapp-deploy/backup.*/database.json`. Kopia ma prywatne uprawnienia. Przy błędzie kopii uruchamia starą wersję; nie uruchamia nowej bez kopii.
+3. Zatrzymuje tylko SavingsApp i kopiuje cały katalog danych z zatrzymanego kontenera do `.savingsapp-deploy/backup.*/data/` (H2 oraz ewentualny oryginalny JSON). Kopia ma prywatne uprawnienia. Przy błędzie kopii uruchamia starą wersję; nie uruchamia nowej bez kopii.
 4. Zapisuje `.savingsapp-deploy/override.yml` z nowym obrazem i odtwarza tylko tę usługę, zachowując istniejące porty, wolumeny, środowisko i sekrety.
 5. Sprawdza tożsamość obrazu i czeka do dwóch minut na zdrowie kontenera. Błąd uruchomienia, brak healthchecka, przekroczony czas lub obsłużony sygnał przerwania powoduje przywrócenie poprzedniego obrazu. Pipeline pozostaje czerwony.
 
-W czasie zmiany jest krótka przerwa w dostępie. Nie uruchamiamy dwóch JVM-ów na tej samej bazie. Dane nie są automatycznie nadpisywane przy rollbacku, aby nie usunąć zapisów użytkownika; przedwdrożeniowa kopia służy do ręcznego odtworzenia w razie potrzeby. Nie projektuj przyszłych zmian formatu danych bez kompatybilności ze starszą wersją lub osobnej procedury migracji. Skrypt zgłasza nieudane uruchomienie rollbacku; poprzednia wersja bez healthchecka nie ma ponownego potwierdzenia zdrowia aplikacji.
+W czasie zmiany jest krótka przerwa w dostępie. Nie uruchamiamy dwóch JVM-ów na tej samej bazie. Dane nie są automatycznie nadpisywane przy rollbacku, aby nie usunąć zapisów użytkownika; przedwdrożeniowa kopia służy do ręcznego odtworzenia w razie potrzeby. Przejście z wersji JSON rozpoczyna pracę na pustej bazie H2. Kolejne zmiany schematu również wymagają kompatybilności ze starszą wersją lub osobnej procedury migracji. Skrypt zgłasza nieudane uruchomienie rollbacku; poprzednia wersja bez healthchecka nie ma ponownego potwierdzenia zdrowia aplikacji.
 
 Plik override pozostaje na NAS-ie i kolejne automatyczne wdrożenia go wykorzystują. Przy ręcznym odtworzeniu usługi również uwzględnij go:
 
