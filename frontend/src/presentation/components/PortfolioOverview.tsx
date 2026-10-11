@@ -12,14 +12,61 @@ import {
   SUBCATEGORY_LABELS
 } from '../viewModels/formatters.js';
 import { buildCurrentSnapshot } from '../../domain/portfolio/snapshot.js';
-import { today } from '../viewModels/formatters.js';
+
+function HoldingDetails({ asset, loading, onCompleteBasis, onManage }) {
+  return (
+    <details className="holdingDetails">
+      <summary>
+        Szczegóły
+        <span className="visuallyHidden">
+          {' '}
+          — {SUBCATEGORY_LABELS[asset.subcategory] || TYPE_LABELS[asset.type]} · {displayName(asset.owner)}
+        </span>
+      </summary>
+      <div className="holdingDetailsContent">
+        <dl>
+          <div>
+            <dt>Wkład po wypłatach</dt>
+            <dd>
+              {loading
+                ? 'Wczytywanie…'
+                : asset.performance?.contributedCapitalPln == null
+                  ? 'Brak danych'
+                  : formatMoney(asset.performance.contributedCapitalPln)}
+            </dd>
+          </div>
+          <div>
+            <dt>Data wyceny</dt>
+            <dd>{asset.date}</dd>
+          </div>
+        </dl>
+        {!loading && asset.performance?.nominalResultPln == null && onCompleteBasis && (
+          <Button onClick={() => onCompleteBasis(asset)}>Uzupełnij wpłaty</Button>
+        )}
+        {onManage && <Button onClick={() => onManage(asset)}>Edytuj / usuń</Button>}
+      </div>
+    </details>
+  );
+}
+function HoldingValue({ asset, loading }) {
+  const result = asset.performance?.nominalResultPln;
+  return (
+    <div className="holdingAmount">
+      <strong>{formatMoney(asset.valuePln)}</strong>
+      {!loading && result != null && (
+        <small className={result < 0 ? 'negativeText' : 'positiveText'}>Wynik: {formatSignedMoney(result)}</small>
+      )}
+    </div>
+  );
+}
 export function PortfolioOverview({
   entries,
   performance,
   assets = [],
   loading = false,
   onUpdate = undefined,
-  onCompleteBasis = undefined
+  onCompleteBasis = undefined as ((asset: object) => void) | undefined,
+  onManage = undefined as ((asset: object) => void) | undefined
 }) {
   const current = buildCurrentSnapshot(entries),
     total = current.reduce((s, e) => s + Number(e.valuePln), 0);
@@ -32,13 +79,14 @@ export function PortfolioOverview({
     oldest = dates[0],
     newest = dates.at(-1);
   const known = performance?.nominalResultPln != null;
-  const metric = (value) => (loading ? 'Wczytywanie…' : value == null ? 'Brak danych' : formatMoney(value));
+  const metric = (value) => (loading ? 'Wczytywanie…' : value == null ? '—' : formatMoney(value));
+  const missingBasis = !loading && rows.some((row) => row.performance?.nominalResultPln == null);
   return (
     <>
       <div className="savingsHeadline" aria-busy={loading}>
         <Metric
           label="Wpłaciłem"
-          value={metric(performance?.depositsTotalPln)}
+          value={metric(!known && performance?.depositsTotalPln === 0 ? null : performance?.depositsTotalPln)}
           detail="Wpłaty i znany wkład początkowy"
         />
         <Metric
@@ -50,18 +98,10 @@ export function PortfolioOverview({
           }
         />
         <Metric
-          label={known && performance.nominalResultPln < 0 ? 'Straciłem' : 'Zarobiłem'}
-          value={
-            loading
-              ? 'Wczytywanie…'
-              : known
-                ? formatSignedMoney(performance.nominalResultPln)
-                : 'Brak danych o wpłatach'
-          }
+          label={known ? (performance.nominalResultPln < 0 ? 'Straciłem' : 'Zarobiłem') : 'Zysk / strata'}
+          value={loading ? 'Wczytywanie…' : known ? formatSignedMoney(performance.nominalResultPln) : '—'}
           tone={known ? (performance.nominalResultPln >= 0 ? 'positive' : 'negative') : 'neutral'}
-          detail={
-            known ? 'Wynik od początku, po uwzględnieniu wypłat' : 'Uzupełnij wkład początkowy lub historię wpłat.'
-          }
+          detail={known ? 'Wynik od początku, po uwzględnieniu wypłat' : 'Wynik wymaga danych o wpłatach'}
         />
       </div>
       {performance?.withdrawalsTotalPln > 0 && (
@@ -71,6 +111,11 @@ export function PortfolioOverview({
         </p>
       )}
       <h2>Moje inwestycje</h2>
+      {missingBasis && (
+        <p className="holdingsNotice">
+          Brak danych o wpłatach. Uzupełnij je w szczegółach inwestycji, aby zobaczyć zysk lub stratę.
+        </p>
+      )}
       <div className="tableScroller holdingsTable" role="region" aria-label="Wartości i wyniki inwestycji" tabIndex={0}>
         <DataTable
           caption="Wpłaty, wartość i wynik każdej inwestycji"
@@ -79,7 +124,7 @@ export function PortfolioOverview({
           columns={[
             {
               key: 'asset',
-              header: 'Inwestycja / rachunek',
+              header: 'Inwestycja',
               rowHeader: true,
               cell: (e) => (
                 <>
@@ -90,29 +135,15 @@ export function PortfolioOverview({
                 </>
               )
             },
-            { key: 'capital', header: 'Wkład po wypłatach', cell: (e) => metric(e.performance?.contributedCapitalPln) },
-            { key: 'value', header: 'Mam teraz', cell: (e) => formatMoney(e.valuePln) },
-            {
-              key: 'result',
-              header: 'Zysk / strata',
-              cell: (e) =>
-                e.performance?.nominalResultPln == null
-                  ? 'Brak danych o wpłatach'
-                  : formatSignedMoney(e.performance.nominalResultPln)
-            },
-            { key: 'date', header: 'Data wyceny', cell: (e) => e.date },
+            { key: 'value', header: 'Wartość', cell: (e) => <HoldingValue asset={e} loading={loading} /> },
             {
               key: 'action',
-              header: 'Zmiana',
+              header: 'Działania',
               cell: (e) => (
-                <>
+                <div className="holdingActions">
                   <Button onClick={() => onUpdate?.(e)}>Aktualizuj wartość</Button>
-                  {!loading && e.performance?.nominalResultPln == null && onCompleteBasis && (
-                    <Button variant="quiet" onClick={() => onCompleteBasis(e)}>
-                      Uzupełnij wpłaty
-                    </Button>
-                  )}
-                </>
+                  <HoldingDetails asset={e} loading={loading} onCompleteBasis={onCompleteBasis} onManage={onManage} />
+                </div>
               )
             }
           ]}
@@ -121,28 +152,18 @@ export function PortfolioOverview({
       <ul className="holdingsCards" aria-label="Moje inwestycje">
         {rows.map((e) => (
           <li className="holdingCard" key={e.id}>
-            <h3>{SUBCATEGORY_LABELS[e.subcategory] || TYPE_LABELS[e.type]}</h3>
-            <small>
-              {TYPE_LABELS[e.type]} · {displayName(e.owner)}
-            </small>
-            <p className="holdingValue">{formatMoney(e.valuePln)}</p>
-            <p className="holdingResult">
-              {e.performance?.nominalResultPln == null
-                ? 'Brak danych o wpłatach'
-                : `Zysk / strata: ${formatSignedMoney(e.performance.nominalResultPln)}`}
-            </p>
-            <small>Wycena z {e.date}</small>
-            <details>
-              <summary>Wpłaty i szczegóły</summary>
-              <p>Wkład po wypłatach: {metric(e.performance?.contributedCapitalPln)}</p>
-            </details>
+            <div className="holdingCardHeading">
+              <div>
+                <h3>{SUBCATEGORY_LABELS[e.subcategory] || TYPE_LABELS[e.type]}</h3>
+                <small>
+                  {TYPE_LABELS[e.type]} · {displayName(e.owner)}
+                </small>
+              </div>
+              <HoldingValue asset={e} loading={loading} />
+            </div>
             <div className="holdingActions">
               <Button onClick={() => onUpdate?.(e)}>Aktualizuj wartość</Button>
-              {!loading && e.performance?.nominalResultPln == null && onCompleteBasis && (
-                <Button variant="quiet" onClick={() => onCompleteBasis(e)}>
-                  Uzupełnij wpłaty
-                </Button>
-              )}
+              <HoldingDetails asset={e} loading={loading} onCompleteBasis={onCompleteBasis} onManage={onManage} />
             </div>
           </li>
         ))}

@@ -90,7 +90,7 @@ test('purchase moves existing cash, creates no profit and can be undone as one e
   await page.getByRole('tab', { name: 'Historia', exact: true }).click();
   const purchase = page.locator('.entryRow').filter({ hasText: 'Zakup' });
   await expect(purchase).toHaveCount(1);
-  await purchase.getByRole('button', { name: 'Popraw' }).click();
+  await purchase.getByRole('button', { name: 'Edytuj' }).click();
   await expect(page.getByRole('dialog')).toContainText('Jakub');
   await page.getByLabel('Kwota — zł').fill('250');
   await page.getByRole('button', { name: 'Zapisz poprawkę' }).click();
@@ -102,12 +102,40 @@ test('purchase moves existing cash, creates no profit and can be undone as one e
   await page
     .locator('.entryRow')
     .filter({ hasText: 'Zakup' })
-    .getByRole('button', { name: 'Cofnij zmianę', exact: true })
+    .getByRole('button', { name: 'Usuń wpis', exact: true })
     .click();
   await expect(page.locator('.entryRow').filter({ hasText: 'Zakup' })).toHaveCount(0);
   const operations = await (await request.get('/api/investment-operations?owner=jakub')).json();
   expect(operations).toHaveLength(2);
   expect(operations.every((o: { operationType: string }) => o.operationType === 'INITIAL')).toBeTruthy();
+});
+
+test('holding management opens the selected history with explicit edit and delete buttons', async ({
+  page,
+  request
+}) => {
+  await initial(request, 'GIELDA', 200, 'ZLOTO');
+  await initial(request, 'KONTO_BANKOWE', 500);
+  await page.goto('/');
+  const holding =
+    page.viewportSize()!.width < 640
+      ? page.locator('.holdingCard').filter({ hasText: 'Złoto' })
+      : page.getByRole('row').filter({ has: page.getByRole('rowheader', { name: /Złoto/ }) });
+  await expect(holding.getByRole('button', { name: 'Edytuj / usuń' })).toBeHidden();
+  await holding.locator('summary').click();
+  await holding.getByRole('button', { name: 'Edytuj / usuń' }).click();
+  const history = page.getByRole('tabpanel', { name: 'Historia' });
+  await expect(history.locator('.entryRow')).toHaveCount(1);
+  await expect(history.locator('.entryRow')).toContainText('Złoto');
+  await history.getByRole('button', { name: 'Edytuj', exact: true }).click();
+  await expect(page.getByLabel('Inwestycja / rachunek')).toHaveValue('GIELDA');
+  await page.getByRole('button', { name: 'Anuluj', exact: true }).click();
+  page.once('dialog', (dialog) => dialog.dismiss());
+  await history.getByRole('button', { name: 'Usuń wpis' }).click();
+  await expect(history.locator('.entryRow')).toHaveCount(1);
+  await history.getByRole('button', { name: 'Pokaż całą historię' }).click();
+  await expect(history.locator('.entryRow')).toHaveCount(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
 });
 
 test('budget is conserved and invalid draft weights never persist or produce advice', async ({ page, request }) => {
@@ -136,6 +164,17 @@ test('budget is conserved and invalid draft weights never persist or produce adv
   await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
   await page.getByText('Zmień mój plan').click();
   await expect(page.getByLabel('Obligacje — % całego planu')).toHaveValue('50');
+  await page.getByLabel('Rynki rozwinięte — % akcji').fill('80');
+  await expect(page.getByRole('button', { name: 'Zapisz mój plan' })).toBeDisabled();
+  await page.getByLabel('Rynki wschodzące — % akcji').fill('20');
+  await page.getByRole('button', { name: 'Zapisz mój plan' }).click();
+  const breakdown = page.getByRole('list', { name: 'Podział akcji w zapisanym planie' });
+  await expect(breakdown).toContainText('40% całego planu');
+  await expect(breakdown).toContainText('10% całego planu');
+  await page.reload();
+  await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
+  await expect(breakdown).toContainText('40% całego planu');
+  await expect(breakdown).toContainText('10% całego planu');
 });
 
 test('lost response followed by reload and retry never duplicates a deposit', async ({ page, request }) => {
@@ -178,7 +217,12 @@ test('first use records existing value without inventing contributions and can c
   await page.getByLabel('Data zmiany').fill('2020-01-01');
   await page.getByRole('button', { name: 'Zapisz zmianę', exact: true }).click();
   await expect(page.locator('.savingsHeadline')).toContainText('700,00');
-  await expect(page.locator('.savingsHeadline .metric').last()).toContainText('Brak danych o wpłatach');
+  await expect(page.locator('.savingsHeadline .metric').last()).toContainText('—');
+  await expect(page.locator('.holdingsNotice')).toContainText('Brak danych o wpłatach');
+  const holding =
+    page.viewportSize()!.width < 640 ? page.locator('.holdingCard') : page.locator('.holdingsTable tbody tr');
+  await expect(holding.getByRole('button', { name: 'Uzupełnij wpłaty', exact: true })).toBeHidden();
+  await holding.locator('summary').click();
   await page.getByRole('button', { name: 'Uzupełnij wpłaty', exact: true }).click();
   await expect(page.getByLabel('Ile masz teraz — zł')).toHaveValue('700');
   await page.getByLabel('Ile łącznie wpłaciłem — zł').fill('600');

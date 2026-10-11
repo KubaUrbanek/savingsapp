@@ -10,7 +10,7 @@ const labels = {
   BONDS: 'Obligacje',
   GOLD: 'Złoto',
   RYNKI_ROZWINIETE: 'Rynki rozwinięte',
-  RYNKI_ROZWIJAJACE_SIE: 'Rynki rozwijające się'
+  RYNKI_ROZWIJAJACE_SIE: 'Rynki wschodzące'
 };
 export function PurchasePlanPanel({ entries, scope, useCases }) {
   const [saved, setSaved] = React.useState(defaults),
@@ -159,10 +159,18 @@ export function PurchasePlanPanel({ entries, scope, useCases }) {
           Obligacje {formatUnsignedPercent(saved.bonds)} · Akcje {formatUnsignedPercent(saved.stocks)}
           {saved.gold > 0 ? ` · Złoto ${formatUnsignedPercent(saved.gold)}` : ''}
         </span>
-        <small>
-          W akcjach: rynki rozwinięte {formatUnsignedPercent(saved.developed)} · rozwijające się{' '}
-          {formatUnsignedPercent(saved.emerging)}
-        </small>
+        <ul className="equityBreakdown" aria-label="Podział akcji w zapisanym planie">
+          <li>
+            <strong>Rynki rozwinięte</strong>
+            <span>{formatUnsignedPercent(saved.developed)} części akcyjnej</span>
+            <small>{formatUnsignedPercent((saved.stocks * saved.developed) / 100)} całego planu</small>
+          </li>
+          <li>
+            <strong>Rynki wschodzące</strong>
+            <span>{formatUnsignedPercent(saved.emerging)} części akcyjnej</span>
+            <small>{formatUnsignedPercent((saved.stocks * saved.emerging) / 100)} całego planu</small>
+          </li>
+        </ul>
       </div>
       <details ref={editor} className="planEditor">
         <summary>Zmień mój plan</summary>
@@ -191,11 +199,13 @@ export function PurchasePlanPanel({ entries, scope, useCases }) {
           ))}
         </div>
         <h3>Podział części akcyjnej</h3>
-        <p>Te procenty dotyczą tylko akcji. Na każdym poziomie ustaw łącznie 100%.</p>
+        <p>
+          Podziel akcje między rynki rozwinięte i wschodzące. Ich udziały muszą sumować się do 100% części akcyjnej.
+        </p>
         <div className="allocationInputs">
           {[
             ['developed', 'Rynki rozwinięte'],
-            ['emerging', 'Rynki rozwijające się']
+            ['emerging', 'Rynki wschodzące']
           ].map(([key, label]) => (
             <Field
               key={key}
@@ -214,6 +224,12 @@ export function PurchasePlanPanel({ entries, scope, useCases }) {
             />
           ))}
         </div>
+        {valid && (
+          <p className="equityPreview" role="status">
+            W całym planie: rynki rozwinięte {formatUnsignedPercent((draft.stocks * draft.developed) / 100)}
+            {' · '}rynki wschodzące {formatUnsignedPercent((draft.stocks * draft.emerging) / 100)}.
+          </p>
+        )}
         <div className="dialogActions">
           <Button
             onClick={() => {
