@@ -60,3 +60,6 @@ temp/
 # Browser regression artifacts
 frontend/playwright-report/
 frontend/test-results/
+# Deployment state and Python test caches
+.savingsapp-deploy/
+__pycache__/

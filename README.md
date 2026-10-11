@@ -47,6 +47,10 @@ npm run dev
 
 Vite działa na http://localhost:5173 i kieruje `/api` do serwera 8080. Produkcyjny JAR serwuje SPA oraz obsługuje bezpośrednie wejścia i odświeżenia tras.
 
+## Wdrożenia na QNAP
+
+Pipeline może automatycznie wdrażać po zielonym CI na `main` przez Tailscale i SSH do istniejącej usługi Docker Compose w Container Station. Buduje obraz z przetestowanego JAR-a, zachowuje wolumen danych, tworzy kopię przed aktualizacją i przy nieudanym starcie przywraca poprzedni obraz. Wdrożenia są domyślnie wyłączone do czasu skonfigurowania NAS-a i sekretów. Konfigurację oraz zasady ręcznej obsługi opisuje [instrukcja wdrożenia](deploy/README.md).
+
 ## API
 
 | Metoda     | Ścieżka                                                                                                   | Znaczenie                                                                   |
@@ -96,7 +100,8 @@ Pipeline [CI](.github/workflows/frontend.yml) automatycznie sprawdza każdy push
 - testy jednostkowe i architektury frontendu oraz testy komponentów i dostępności;
 - wszystkie testy backendu: domena, use case’y, kontrakty repozytoriów, HTTP i architektura;
 - produkcyjny build frontendu i kompletny JAR aplikacji;
-- testy Chromium na komputerze i telefonie, uruchamiane na JAR-ze z tymczasową bazą.
+- testy Chromium na komputerze i telefonie, uruchamiane na JAR-ze z tymczasową bazą;
+- testy skryptu wdrożenia na QNAP oraz rzeczywistego kontenera: zdrowie, zapis i zachowanie danych po restarcie.
 
 Raporty backendu, raport HTML Playwright oraz zrzuty ekranu i ślady błędów przeglądarki są dostępne jako artefakt `verification-reports` przez 14 dni. Przed mergem wymagamy zielonego CI dla bieżącego commita. Nie trzeba powtarzać całego zestawu ręcznie po jego zaliczeniu; lokalnie uruchamiaj wybrane kontrole potrzebne do pracy lub diagnozy. Workflow można też uruchomić ręcznie z GitHub Actions.
 
