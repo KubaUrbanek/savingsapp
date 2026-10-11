@@ -19,13 +19,28 @@ docker inspect --format '{{range .Config.Env}}{{println .}}{{end}}' NAZWA_KONTEN
 uname -m
 ```
 
-Wymagamy Compose v2 (`docker compose` lub `docker-compose` v2), jednej działającej repliki i istniejącego pliku Compose dostępnego w SSH. Jeśli etykieta wymienia kilka plików Compose, przygotuj najpierw jeden plik zawierający ich pełną konfigurację; automat przyjmuje jeden plik bazowy. Konto SSH musi mieć dostęp do Docker Engine i zapisu w katalogu projektu. Opcjonalna zmienna `QNAP_DOCKER_BIN` wskazuje pełną ścieżkę do Docker CLI, jeśli nie ma go w PATH sesji SSH.
+Wymagamy Compose v2 (`docker compose` lub `docker-compose` v2), jednej działającej repliki i istniejącego pliku Compose dostępnego w SSH. Container Station może dodawać plik `docker-compose.resource.yml`; wskaż go przez opcjonalne `QNAP_COMPOSE_RESOURCE_FILE`. Automat używa pliku głównego, następnie pliku zasobów, a na końcu override obrazu. Przy większej liczbie plików połącz pozostałe ustawienia w jeden plik zasobów. Konto SSH musi mieć dostęp do Docker Engine i zapisu w katalogu projektu. Opcjonalna zmienna `QNAP_DOCKER_BIN` wskazuje pełną ścieżkę do Docker CLI, jeśli nie ma go w PATH sesji SSH.
 
 `APP_DATABASE_FILE` musi wskazywać bezwzględną ścieżkę wewnątrz zapisywalnego, trwałego **wolumenu katalogowego**, np. `/app/data/investment-entries.json` przy wolumenie `/app/data`. Nie podpinaj pojedynczego pliku: zapis bazy używa atomowej wymiany pliku. Katalog musi być zapisywalny dla użytkownika kontenera `app` lub użytkownika ustawionego w istniejącym Compose. Użyj aktualnego katalogu danych, portów i ustawień — nie uruchamiaj drugiej aplikacji na tej samej bazie. Port panelu QNAP może zajmować 8080; automat zachowuje obecne mapowanie portu aplikacji.
 
-### Obecny NAS: przygotowanie Compose
+### Obecny NAS: Compose
 
-Odczyt z panelu 2026-10-11: `savingsapp-1` jest samodzielnym kontenerem (`savingsapp:1.0.14`), bez etykiet Compose. Port to `8090:8080`, użytkownik `app`, baza `/app/data/investment-entries.json`, trwały zapisywalny wolumen `savings-app`. SSH działa na `qnap.tail6b5d67.ts.net:22`; konto `urbanekj` ma w panelu uprawnienie SSH. Dostęp kluczem i do Docker Engine wymaga osobnej weryfikacji.
+Odczyt przed migracją 2026-10-11: `savingsapp-1` jest samodzielnym kontenerem (`savingsapp:1.0.14`), bez etykiet Compose. Port to `8090:8080`, użytkownik `app`, baza `/app/data/investment-entries.json`, trwały zapisywalny wolumen `savings-app`. SSH działa na `qnap.tail6b5d67.ts.net:22`; konto `urbanekj` ma w panelu uprawnienie SSH. Dostęp kluczem i do Docker Engine wymaga osobnej weryfikacji.
+
+Po migracji przez Container Station 2026-10-11 projekt i usługa mają nazwę `savingsapp`, kontener `savingsapp-savingsapp-1`, a etykiety wskazują Compose `2.29.1`. Frontend i `/api/users` zwracają HTTP 200; `/actuator/health` zwraca `UP`. Stary kontener `savingsapp-1` jest zatrzymany. Ustawienia do środowiska GitHub `qnap`:
+
+| Zmienna | Wartość |
+| --- | --- |
+| `QNAP_HOST` | `qnap.tail6b5d67.ts.net` |
+| `QNAP_SSH_USER` | `urbanekj` |
+| `QNAP_SSH_PORT` | `22` |
+| `QNAP_COMPOSE_PROJECT` | `savingsapp` |
+| `QNAP_COMPOSE_SERVICE` | `savingsapp` |
+| `QNAP_CONTAINER` | `savingsapp-savingsapp-1` |
+| `QNAP_COMPOSE_FILE` | `/share/CACHEDEV1_DATA/.qpkg/container-station/data/application/savingsapp/docker-compose.yml` |
+| `QNAP_COMPOSE_RESOURCE_FILE` | `/share/CACHEDEV1_DATA/.qpkg/container-station/data/application/savingsapp/docker-compose.resource.yml` |
+
+Wartości pochodzą z etykiet nowego kontenera; dostęp do tych plików i Docker CLI przez SSH nadal wymaga sprawdzenia.
 
 Plik `deploy/qnap-compose.yml` zachowuje te ustawienia. Wolumen jest **zewnętrzny**, aby Compose używał istniejących danych i zakończył pracę błędem, jeśli wolumen nie istnieje. Nie uruchamiaj tego pliku, gdy stary kontener działa. Sam pipeline nie migruje samodzielnego kontenera.
 
@@ -68,6 +83,7 @@ Zmienne środowiska `qnap`:
 | `QNAP_SSH_USER`        | Konto SSH z dostępem do Dockera                            |
 | `QNAP_SSH_PORT`        | Port SSH; pusty oznacza 22                                 |
 | `QNAP_COMPOSE_FILE`    | Bezwzględna ścieżka do aktualnego pliku Compose na NAS-ie  |
+| `QNAP_COMPOSE_RESOURCE_FILE` | Opcjonalny plik ustawień zasobów Container Station |
 | `QNAP_COMPOSE_PROJECT` | Dokładna nazwa projektu z etykiety kontenera               |
 | `QNAP_COMPOSE_SERVICE` | Dokładna nazwa usługi z etykiety kontenera                 |
 | `QNAP_DOCKER_BIN`      | Opcjonalna pełna ścieżka do Docker CLI                     |
@@ -95,10 +111,10 @@ W czasie zmiany jest krótka przerwa w dostępie. Nie uruchamiamy dwóch JVM-ów
 Plik override pozostaje na NAS-ie i kolejne automatyczne wdrożenia go wykorzystują. Przy ręcznym odtworzeniu usługi również uwzględnij go:
 
 ```sh
-docker compose -p NAZWA_PROJEKTU -f /SCIEZKA/compose.yml -f /SCIEZKA/.savingsapp-deploy/override.yml up -d --no-deps NAZWA_USLUGI
+docker compose -p NAZWA_PROJEKTU -f /SCIEZKA/compose.yml -f /SCIEZKA/docker-compose.resource.yml -f /SCIEZKA/.savingsapp-deploy/override.yml up -d --no-deps NAZWA_USLUGI
 ```
 
-Odtworzenie aplikacji z samego starego YAML w panelu Container Station może przywrócić poprzedni `image:`. Do zmian konfiguracji pod kontrolą automatu używaj pliku bazowego i powyższego polecenia z override. Automat nie zarządza innymi usługami ani sieciami NAS-a.
+Pomiń argument pliku zasobów, jeśli projekt go nie używa. Odtworzenie aplikacji z samego starego YAML w panelu Container Station może przywrócić poprzedni `image:`. Do zmian konfiguracji pod kontrolą automatu używaj pliku bazowego i powyższego polecenia z override. Automat nie zarządza innymi usługami ani sieciami NAS-a.
 
 Wdrożenia są kolejkowane i nie przerywają działającego wdrożenia po kolejnym pushu. Dodatkowa blokada na NAS-ie chroni przed równoległymi wywołaniami. Po awarii zasilania, `SIGKILL` lub zerwanym połączeniu skrypt nie gwarantuje wykonania rollbacku: sprawdź stan usługi i kopię przed ręcznym usunięciem `.savingsapp-deploy/lock`. Nie usuwaj blokady aktywnego wdrożenia.
 

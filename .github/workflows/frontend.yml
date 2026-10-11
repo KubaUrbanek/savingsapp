@@ -176,6 +176,7 @@ jobs:
           QNAP_SSH_USER: ${{ vars.QNAP_SSH_USER }}
           QNAP_SSH_PORT: ${{ vars.QNAP_SSH_PORT }}
           QNAP_COMPOSE_FILE: ${{ vars.QNAP_COMPOSE_FILE }}
+          QNAP_COMPOSE_RESOURCE_FILE: ${{ vars.QNAP_COMPOSE_RESOURCE_FILE }}
           QNAP_COMPOSE_PROJECT: ${{ vars.QNAP_COMPOSE_PROJECT }}
           QNAP_COMPOSE_SERVICE: ${{ vars.QNAP_COMPOSE_SERVICE }}
           QNAP_DOCKER_BIN: ${{ vars.QNAP_DOCKER_BIN }}

@@ -31,6 +31,7 @@ args = [os.environ[name] for name in (
     "IMAGE", "QNAP_COMPOSE_FILE", "QNAP_COMPOSE_PROJECT", "QNAP_COMPOSE_SERVICE", "REGISTRY_USER"
 )]
 args.append(os.environ.get("QNAP_DOCKER_BIN") or "docker")
+args.append(os.environ.get("QNAP_COMPOSE_RESOURCE_FILE") or "")
 print("IFS= read -r REGISTRY_TOKEN; export REGISTRY_TOKEN; sh -s -- " + shlex.join(args))
 PY
 )
