@@ -23,6 +23,22 @@ Wymagamy Compose v2 (`docker compose` lub `docker-compose` v2), jednej działaj�
 
 `APP_DATABASE_FILE` musi wskazywać bezwzględną ścieżkę wewnątrz zapisywalnego, trwałego **wolumenu katalogowego**, np. `/app/data/investment-entries.json` przy wolumenie `/app/data`. Nie podpinaj pojedynczego pliku: zapis bazy używa atomowej wymiany pliku. Katalog musi być zapisywalny dla użytkownika kontenera `app` lub użytkownika ustawionego w istniejącym Compose. Użyj aktualnego katalogu danych, portów i ustawień — nie uruchamiaj drugiej aplikacji na tej samej bazie. Port panelu QNAP może zajmować 8080; automat zachowuje obecne mapowanie portu aplikacji.
 
+### Obecny NAS: przygotowanie Compose
+
+Odczyt z panelu 2026-10-11: `savingsapp-1` jest samodzielnym kontenerem (`savingsapp:1.0.14`), bez etykiet Compose. Port to `8090:8080`, użytkownik `app`, baza `/app/data/investment-entries.json`, trwały zapisywalny wolumen `savings-app`. SSH działa na `qnap.tail6b5d67.ts.net:22`; konto `urbanekj` ma w panelu uprawnienie SSH. Dostęp kluczem i do Docker Engine wymaga osobnej weryfikacji.
+
+Plik `deploy/qnap-compose.yml` zachowuje te ustawienia. Wolumen jest **zewnętrzny**, aby Compose używał istniejących danych i zakończył pracę błędem, jeśli wolumen nie istnieje. Nie uruchamiaj tego pliku, gdy stary kontener działa. Sam pipeline nie migruje samodzielnego kontenera.
+
+Jednorazowe przejście wykonaj w oknie serwisowym przez SSH, po sprawdzeniu aktualnego obrazu, portów, wolumenu, wersji Compose v2 i działania aplikacji. Skopiuj YAML do wybranego trwałego katalogu NAS-a (poniżej `/SCIEZKA/compose.yml`). Najpierw zweryfikuj go `docker compose -p savingsapp -f /SCIEZKA/compose.yml config --quiet`. Następnie:
+
+1. Utwórz prywatny katalog kopii (`umask 077`). Zatrzymaj `savingsapp-1` przez `docker stop -t 30 savingsapp-1` i sprawdź, czy jest zatrzymany. Nie usuwaj kontenera ani wolumenu.
+2. Wykonaj `docker cp savingsapp-1:/app/data/investment-entries.json /SCIEZKA_PRYWATNEJ_KOPII/database.json`. Jeśli kopia się nie uda, uruchom stary kontener `docker start savingsapp-1` i przerwij migrację.
+3. Uruchom `docker compose -p savingsapp -f /SCIEZKA/compose.yml up -d --pull never savingsapp`. Nazwa nowego kontenera będzie `savingsapp-savingsapp-1`, więc stary kontener pozostaje dostępny do powrotu.
+4. Sprawdź `/actuator/health`, interfejs na porcie 8090 i istniejące dane. Jeśli start lub weryfikacja się nie uda, zatrzymaj nową usługę i potwierdź jej zatrzymanie przed `docker start savingsapp-1`. Nie odtwarzaj automatycznie bazy z kopii.
+5. Odczytaj etykiety nowego kontenera. Ustaw `QNAP_COMPOSE_PROJECT=savingsapp`, `QNAP_COMPOSE_SERVICE=savingsapp`, `QNAP_COMPOSE_FILE` na rzeczywistą bezwzględną ścieżkę YAML oraz `QNAP_CONTAINER=savingsapp-savingsapp-1` do diagnostyki. Dopiero po udanej weryfikacji można włączyć wdrożenia.
+
+Stary obraz nie ma Docker healthchecka; kontrola pierwszego przejścia wymaga sprawdzenia HTTP. Obrazy publikowane przez pipeline mają healthcheck.
+
 ## 2. Tailscale i SSH
 
 Włącz zwykłe SSH na NAS-ie oraz uwierzytelnianie dedykowanym kluczem. Nie potrzebujemy funkcji **Tailscale SSH**. NAS musi być osiągalny w Tailnecie i mieć dostęp do `ghcr.io` przez HTTPS.
@@ -59,6 +75,12 @@ Zmienne środowiska `qnap`:
 Na końcu ustaw **zmienną repozytorium**, nie środowiska: `QNAP_DEPLOY_ENABLED=true`. Ona włącza zadania `publish` i `deploy`. Zielony CI jest zawsze wymagany. Ręczne uruchomienie workflow na `main` również wdraża; uruchomienia z innych branchy oraz PR-y nigdy nie wdrażają.
 
 Obraz może pozostać prywatny. Pipeline używa własnego, krótkotrwałego `GITHUB_TOKEN` do publikacji oraz pobrania obrazu na NAS. Konfiguracja logowania GHCR na NAS trafia do tymczasowego katalogu usuwanego po wykonaniu skryptu. Nie potrzeba dodatkowego stałego tokena GHCR na NAS-ie. Jeśli pakiet GHCR istniał wcześniej, nadaj repozytorium dostęp Actions do tego pakietu (ustawienia pakietu → Manage Actions access).
+
+### Diagnostyka z GitHub Actions
+
+Uruchom workflow `CI` na `main` z `operation=inspect`. Ten tryb pomija build, publikację i wdrożenie oraz nie wymaga `QNAP_DEPLOY_ENABLED=true`. Korzysta z tego samego środowiska `qnap`, Tailscale i weryfikacji klucza hosta SSH. Wymaga sekretów połączenia oraz `QNAP_HOST`, `QNAP_SSH_USER`; opcjonalnie `QNAP_SSH_PORT`, `QNAP_DOCKER_BIN` i `QNAP_CONTAINER` (domyślnie `savingsapp-1`). Nie wymaga zmiennych Compose ani tokena GHCR.
+
+Raportuje architekturę, wersję Docker/Compose, stan kontenera, porty, montowania, bazę i etykiety Compose. Nie wypisuje całego środowiska ani pełnego `docker inspect`. Brak etykiet Compose oznacza czerwony wynik z instrukcją migracji; kontener nadal działa. Zielony wynik potwierdza obecność etykiet, nie zastępuje sprawdzenia pliku Compose i uprawnień zapisu. Tryb `deploy` pozostaje domyślny; push na `main` zachowuje dotychczasowe zachowanie.
 
 ## 4. Co dzieje się przy wdrożeniu
 
