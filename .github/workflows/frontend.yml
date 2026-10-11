@@ -3,6 +3,14 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      operation:
+        description: Deploy or inspect QNAP without changing containers
+        type: choice
+        options:
+          - deploy
+          - inspect
+        default: deploy
 
 permissions:
   contents: read
@@ -14,6 +22,7 @@ concurrency:
 
 jobs:
   verify:
+    if: github.event_name != 'workflow_dispatch' || inputs.operation != 'inspect'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     defaults:
@@ -40,7 +49,7 @@ jobs:
       - name: Check frontend formatting
         run: npm run format:check
       - name: Check workflow formatting
-        run: npx prettier --check '../.github/workflows/*.{yml,yaml}'
+        run: npx prettier --check '../.github/workflows/*.{yml,yaml}' '../deploy/qnap-compose.yml'
       - name: Check TypeScript
         run: npm run typecheck
       - name: Run frontend unit and architecture tests
@@ -61,9 +70,11 @@ jobs:
       - name: Run deployment regression tests
         run: |
           sh -n deploy/qnap-deploy.sh
+          sh -n deploy/qnap-inspect.sh
           bash -n deploy/connect-qnap.sh
           bash -n deploy/test-image.sh
           python3 -m unittest discover -s deploy/test -v
+          docker compose -p savingsapp -f deploy/qnap-compose.yml config --quiet
         working-directory: .
       - name: Build and smoke-test the deployment image
         run: |
@@ -165,8 +176,34 @@ jobs:
           QNAP_SSH_USER: ${{ vars.QNAP_SSH_USER }}
           QNAP_SSH_PORT: ${{ vars.QNAP_SSH_PORT }}
           QNAP_COMPOSE_FILE: ${{ vars.QNAP_COMPOSE_FILE }}
+          QNAP_COMPOSE_RESOURCE_FILE: ${{ vars.QNAP_COMPOSE_RESOURCE_FILE }}
           QNAP_COMPOSE_PROJECT: ${{ vars.QNAP_COMPOSE_PROJECT }}
           QNAP_COMPOSE_SERVICE: ${{ vars.QNAP_COMPOSE_SERVICE }}
+          QNAP_DOCKER_BIN: ${{ vars.QNAP_DOCKER_BIN }}
+          QNAP_SSH_PRIVATE_KEY: ${{ secrets.QNAP_SSH_PRIVATE_KEY }}
+          QNAP_SSH_KNOWN_HOSTS: ${{ secrets.QNAP_SSH_KNOWN_HOSTS }}
+
+  inspect-qnap:
+    if: github.event_name == 'workflow_dispatch' && inputs.operation == 'inspect' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: qnap
+    steps:
+      - uses: actions/checkout@v4
+      - name: Join the private Tailscale network
+        uses: tailscale/github-action@v3
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:savingsapp-ci
+      - name: Inspect QNAP configuration without deploying
+        run: bash deploy/connect-qnap.sh
+        env:
+          QNAP_OPERATION: inspect
+          QNAP_CONTAINER: ${{ vars.QNAP_CONTAINER || 'savingsapp-1' }}
+          QNAP_HOST: ${{ vars.QNAP_HOST }}
+          QNAP_SSH_USER: ${{ vars.QNAP_SSH_USER }}
+          QNAP_SSH_PORT: ${{ vars.QNAP_SSH_PORT }}
           QNAP_DOCKER_BIN: ${{ vars.QNAP_DOCKER_BIN }}
           QNAP_SSH_PRIVATE_KEY: ${{ secrets.QNAP_SSH_PRIVATE_KEY }}
           QNAP_SSH_KNOWN_HOSTS: ${{ secrets.QNAP_SSH_KNOWN_HOSTS }}

@@ -1,0 +1,21 @@
+# Initial Compose definition matching the NAS configuration inspected on 2026-10-11.
+# Stop the standalone container before starting this service: both use one database.
+services:
+  savingsapp:
+    image: savingsapp:1.0.14
+    user: app
+    restart: unless-stopped
+    ports:
+      - "8090:8080"
+    environment:
+      # Bootstrap image 1.0.14 uses JSON; new images use the H2 path below.
+      APP_DATABASE_FILE: /app/data/investment-entries.json
+      APP_DATABASE_PATH: /app/data/portfolio
+      JAVA_OPTS: ""
+    volumes:
+      - savings-data:/app/data
+
+volumes:
+  savings-data:
+    external: true
+    name: savings-app

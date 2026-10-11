@@ -46,9 +46,9 @@ class QnapDeploymentTest(unittest.TestCase):
     def state(self):
         return json.loads(self.state_file.read_text())
 
-    def run_deploy(self, image=IMAGE):
+    def run_deploy(self, image=IMAGE, resource_file=""):
         result = subprocess.run(
-            ["sh", str(DEPLOY / "qnap-deploy.sh"), image, str(self.compose_file), "existing-project", "savingsapp", "actor"],
+            ["sh", str(DEPLOY / "qnap-deploy.sh"), image, str(self.compose_file), "existing-project", "savingsapp", "actor", "docker", resource_file],
             env=self.env, text=True, capture_output=True, timeout=15,
         )
         state = self.state()
@@ -91,6 +91,26 @@ class QnapDeploymentTest(unittest.TestCase):
         backups = list((self.root / ".savingsapp-deploy").glob("backup.*/data/portfolio.mv.db"))
         self.assertEqual(len(backups), 1)
         self.assertEqual(backups[0].read_bytes(), h2.read_bytes())
+
+    def test_preserves_qnap_resource_file_before_image_override(self):
+        resource = self.root / "resource settings.yml"
+        resource.write_text("services:\n  savingsapp:\n    mem_limit: 512m\n")
+        result = self.run_deploy(resource_file=str(resource))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        for call in self.state()["calls"]:
+            if call[0] == "compose" and call[1] != "version":
+                files = [call[index + 1] for index, value in enumerate(call) if value == "-f"]
+                self.assertEqual(files[:2], [str(self.compose_file), str(resource)])
+                if "up" in call:
+                    self.assertEqual(files[2], str(self.root / ".savingsapp-deploy/override.yml"))
+
+    def test_missing_or_relative_resource_file_leaves_service_running(self):
+        for resource in (str(self.root / "missing.yml"), "relative.yml"):
+            with self.subTest(resource=resource):
+                result = self.run_deploy(resource_file=resource)
+                self.assertNotEqual(result.returncode, 0)
+                self.assert_old_running()
+                self.assertEqual(self.state()["calls"], [])
 
     def test_preflight_failures_leave_the_existing_service_running(self):
         for config in ({"failure": "ephemeral"}, {"failure": "pull"}, {"database": "./data.json"}, {"database": "/app/data/../secret.json"}, {"version": "1.29.2"}):

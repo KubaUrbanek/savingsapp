@@ -9,6 +9,7 @@ project=${3:?Existing Compose project required}
 service=${4:?Existing Compose service required}
 registry_user=${5:?Registry user required}
 docker_bin=${6:-docker}
+resource_file=${7:-}
 
 fail() { printf '%s\n' "$*" >&2; exit 1; }
 case "$image" in ghcr.io/*@sha256:*) ;; *) fail 'Use an immutable GHCR digest.' ;; esac
@@ -22,6 +23,10 @@ for name in "$project" "$service"; do
     case "$name" in ''|*[!a-zA-Z0-9_-]*|[-_]*) fail 'Invalid project or service name.' ;; esac
 done
 [ -f "$compose_file" ] || fail 'Existing Compose file not found.'
+if [ -n "$resource_file" ]; then
+    case "$resource_file" in /*) ;; *) fail 'Resource Compose path must be absolute.' ;; esac
+    [ -f "$resource_file" ] || fail 'Resource Compose file not found.'
+fi
 cd "$(dirname "$compose_file")"
 
 if "$docker_bin" compose version >/dev/null 2>&1; then
@@ -50,11 +55,18 @@ registry_config=
 old_container=
 old_image=
 
-compose() {
-    if [ -f "$override" ]; then
-        compose_raw -p "$project" -f "$compose_file" -f "$override" "$@"
+compose_base() {
+    if [ -n "$resource_file" ]; then
+        compose_raw -p "$project" -f "$compose_file" -f "$resource_file" "$@"
     else
         compose_raw -p "$project" -f "$compose_file" "$@"
+    fi
+}
+compose() {
+    if [ -f "$override" ]; then
+        compose_base -f "$override" "$@"
+    else
+        compose_base "$@"
     fi
 }
 write_image() {
