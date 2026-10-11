@@ -46,6 +46,7 @@ export function Home({ dependencies }) {
   const { useCases, preferences } = dependencies;
   const [scope, setScope] = React.useState(() => OwnerPortfolio(preferences.selectedOwner()));
   const [activeTab, setActiveTab] = React.useState('summary');
+  const [historyAsset, setHistoryAsset] = React.useState(null);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [typeFilter, setTypeFilter] = React.useState('');
   const [subcategoryFilter, setSubcategoryFilter] = React.useState('');
@@ -109,7 +110,13 @@ export function Home({ dependencies }) {
               : saving
                 ? 'Zapisywanie…'
                 : status;
-  const historyRows = portfolioHistory(entries, operations);
+  const historyRows = portfolioHistory(entries, operations).filter(
+    (row) =>
+      !historyAsset ||
+      (row.owner === historyAsset.owner &&
+        row.type === historyAsset.type &&
+        (row.subcategory || '') === (historyAsset.subcategory || ''))
+  );
   const historyState =
     controller.entries.status === 'failure'
       ? controller.entries
@@ -125,6 +132,7 @@ export function Home({ dependencies }) {
   React.useEffect(() => {
     if (controller.referenceData.status !== 'success') return;
     const loaded = controller.referenceData.data;
+    setHistoryAsset(null);
     setScope((current) =>
       current.kind === PortfolioScopeKind.HOUSEHOLD
         ? HouseholdPortfolio(loaded.users)
@@ -143,6 +151,7 @@ export function Home({ dependencies }) {
 
   function changeScope(next) {
     if (saving) return;
+    setHistoryAsset(null);
     setScope(next);
     setTypeFilter('');
     setSubcategoryFilter('');
@@ -156,6 +165,7 @@ export function Home({ dependencies }) {
     setStatus('');
   }
   function selectTab(id) {
+    setHistoryAsset(null);
     setActiveTab(id);
     setSettingsOpen(false);
   }
@@ -274,7 +284,7 @@ export function Home({ dependencies }) {
       .filter(Boolean)
       .join(' · ');
     const confirmed = window.confirm(
-      `Cofnąć tę zmianę?\n\n${OPERATION_LABELS[row.kind] || 'Aktualizacja wartości'} · ${displayName(row.owner)}\n${asset} · ${row.date}\n${formatMoney(row.amountPln ?? row.valuePln)}\n\nPowiązane salda i późniejsze zmiany zostaną przeliczone.`
+      `Usunąć ten wpis?\n\n${OPERATION_LABELS[row.kind] || 'Aktualizacja wartości'} · ${displayName(row.owner)}\n${asset} · ${row.date}\n${formatMoney(row.amountPln ?? row.valuePln)}\n\nPowiązane salda i późniejsze zmiany zostaną przeliczone.`
     );
     trigger?.focus();
     if (!confirmed) return;
@@ -286,9 +296,9 @@ export function Home({ dependencies }) {
         ? controller.commands.deleteInvestmentOperation
         : controller.commands.deleteInvestmentEntry;
     command(row.id)
-      .then(() => setStatus('Cofnięto zmianę.'))
+      .then(() => setStatus('Usunięto wpis.'))
       .catch((cause) =>
-        setError(cause.status === 400 ? cause.message : 'Nie udało się cofnąć zmiany. Spróbuj ponownie.')
+        setError(cause.status === 400 ? cause.message : 'Nie udało się usunąć wpisu. Spróbuj ponownie.')
       )
       .finally(() => {
         pendingRef.current.delete(key);
@@ -510,6 +520,11 @@ export function Home({ dependencies }) {
               loading={controller.performance.status === 'loading'}
               onUpdate={(asset) => openForm('VALUATION', asset)}
               onCompleteBasis={completeBasis}
+              onManage={(asset) => {
+                selectTab('history');
+                setHistoryAsset(asset);
+                requestAnimationFrame(() => tabsRef.current.history?.focus());
+              }}
             />
           )}
         </QueryBoundary>
@@ -565,6 +580,16 @@ export function Home({ dependencies }) {
         className="ledgerSection"
       >
         <h2>Historia zmian</h2>
+        <p>Edytuj lub usuń wybrany wpis. Po usunięciu powiązane salda zostaną przeliczone.</p>
+        {historyAsset && (
+          <div className="historyFilter">
+            <span>
+              {displayName(historyAsset.owner)} · {TYPE_LABELS[historyAsset.type]}
+              {historyAsset.subcategory ? ` · ${SUBCATEGORY_LABELS[historyAsset.subcategory]}` : ''}
+            </span>
+            <Button onClick={() => setHistoryAsset(null)}>Pokaż całą historię</Button>
+          </div>
+        )}
         <QueryBoundary
           state={historyState}
           skeletonShape="list"
@@ -603,15 +628,15 @@ export function Home({ dependencies }) {
                     </strong>
                     <div className="entryActions">
                       <Button type="button" disabled={pending} onClick={() => editRow(row)}>
-                        Popraw
+                        Edytuj
                       </Button>
                       <Button
-                        variant="quiet"
+                        variant="danger"
                         type="button"
                         disabled={pending}
                         onClick={(event) => undo(row, event.currentTarget)}
                       >
-                        {pending ? 'Cofanie…' : 'Cofnij zmianę'}
+                        {pending ? 'Usuwanie…' : 'Usuń wpis'}
                       </Button>
                     </div>
                   </article>

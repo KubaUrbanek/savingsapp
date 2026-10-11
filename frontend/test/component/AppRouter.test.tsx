@@ -303,6 +303,22 @@ describe('Savings workspace', () => {
     pending.resolve([{ ...entry, owner: 'zosia', valuePln: 2800 }]);
     await screen.findAllByText(/2800,00/);
   });
+  it('opens selected holding history, allows editing and clears the filter', async () => {
+    const gold = { ...entry, id: 'gold', type: 'GIELDA', subcategory: 'ZLOTO' };
+    render(<AppRouter dependencies={dependencies({ loadPortfolio: { execute: async () => [entry, gold] } })} />);
+    const table = await screen.findByRole('table', { name: 'Wpłaty, wartość i wynik każdej inwestycji' });
+    const row = within(table).getByRole('rowheader', { name: /Złoto/ }).closest('tr')!;
+    fireEvent.click(within(row).getByText('Szczegóły'));
+    fireEvent.click(within(row).getByRole('button', { name: 'Edytuj / usuń' }));
+    const history = screen.getByRole('tabpanel', { name: 'Historia' });
+    expect(within(history).getAllByRole('button', { name: 'Edytuj' })).toHaveLength(1);
+    expect(within(history).getByRole('button', { name: 'Usuń wpis' })).toBeEnabled();
+    fireEvent.click(within(history).getByRole('button', { name: 'Edytuj' }));
+    expect(screen.getByLabelText('Inwestycja / rachunek')).toHaveValue('GIELDA');
+    fireEvent.click(screen.getByRole('button', { name: 'Anuluj' }));
+    fireEvent.click(within(history).getByRole('button', { name: 'Pokaż całą historię' }));
+    expect(within(history).getAllByRole('button', { name: 'Edytuj' })).toHaveLength(2);
+  });
   it('keeps independent history available after snapshot failure', async () => {
     render(
       <AppRouter
@@ -316,7 +332,7 @@ describe('Savings workspace', () => {
     );
     await screen.findByRole('alert');
     fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
-    expect(await screen.findByRole('button', { name: 'Popraw' })).toBeEnabled();
+    expect(await screen.findByRole('button', { name: 'Edytuj' })).toBeEnabled();
     expect(screen.queryByText('private')).not.toBeInTheDocument();
   });
   it('merges transfer legs into one correction with its original owner', async () => {
@@ -347,7 +363,7 @@ describe('Savings workspace', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Razem' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Popraw' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Edytuj' }));
     expect(screen.getByText('Zapisujesz dla:')).toHaveTextContent('Zosia');
     expect(screen.getByLabelText('Inwestycja / rachunek')).toBeDisabled();
     fireEvent.change(screen.getByLabelText('Kwota — zł'), { target: { value: '125' } });
@@ -381,7 +397,7 @@ describe('Savings workspace', () => {
     vi.spyOn(window, 'confirm').mockReturnValue(false);
     render(<AppRouter dependencies={dependencies({ deleteInvestmentEntry: { execute } })} />);
     fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
-    const button = await screen.findByRole('button', { name: 'Cofnij zmianę' });
+    const button = await screen.findByRole('button', { name: 'Usuń wpis' });
     fireEvent.click(button);
     expect(execute).not.toHaveBeenCalled();
     expect(button).toHaveFocus();
@@ -402,15 +418,15 @@ describe('Savings workspace', () => {
       />
     );
     fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
-    const buttons = await screen.findAllByRole('button', { name: 'Cofnij zmianę' });
+    const buttons = await screen.findAllByRole('button', { name: 'Usuń wpis' });
     fireEvent.click(buttons[0]!);
     fireEvent.click(buttons[0]!);
     expect(execute).toHaveBeenCalledOnce();
     expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining('2026-09-01'));
-    expect(screen.getByRole('button', { name: 'Cofanie…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Usuwanie…' })).toBeDisabled();
     pending.reject(new Error('failure'));
-    await screen.findByText(/Nie udało się cofnąć/);
-    expect(screen.getAllByRole('button', { name: 'Cofnij zmianę' })[0]).toBeEnabled();
+    await screen.findByText(/Nie udało się usunąć/);
+    expect(screen.getAllByRole('button', { name: 'Usuń wpis' })[0]).toBeEnabled();
   });
   it('announces async export and blocks duplicate downloads', async () => {
     const pending = deferred(),
@@ -489,14 +505,14 @@ describe('Savings workspace', () => {
       />
     );
     fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
-    const buttons = await screen.findAllByRole('button', { name: 'Cofnij zmianę' });
+    const buttons = await screen.findAllByRole('button', { name: 'Usuń wpis' });
     fireEvent.click(buttons[0]!);
-    expect(screen.getByRole('button', { name: 'Cofanie…' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Cofnij zmianę' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Usuwanie…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Usuń wpis' })).toBeEnabled();
     pending.reject(new Error('failure'));
-    await screen.findByText(/Nie udało się cofnąć/);
+    await screen.findByText(/Nie udało się usunąć/);
     expect(
-      screen.getAllByRole('button', { name: 'Cofnij zmianę' }).every((button) => !button.hasAttribute('disabled'))
+      screen.getAllByRole('button', { name: 'Usuń wpis' }).every((button) => !button.hasAttribute('disabled'))
     ).toBe(true);
   });
   it('updates a holding value directly and prefills the correct asset and owner', async () => {

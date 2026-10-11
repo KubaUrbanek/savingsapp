@@ -18,12 +18,60 @@ const entry = {
 };
 const plan = { bonds: 50, stocks: 50, gold: 0, developed: 70, emerging: 30 };
 describe('savings regressions', () => {
+  it('offers separate contribution and management actions in both holding layouts', () => {
+    const complete = vi.fn(),
+      manage = vi.fn();
+    render(<PortfolioOverview entries={[entry]} performance={null} onCompleteBasis={complete} onManage={manage} />);
+    for (const summary of screen.getAllByText('Szczegóły')) fireEvent.click(summary);
+    for (const button of screen.getAllByRole('button', { name: 'Uzupełnij wpłaty' })) {
+      expect(button).toHaveClass('button--secondary');
+      fireEvent.click(button);
+      expect(complete).toHaveBeenLastCalledWith(expect.objectContaining({ id: entry.id }));
+    }
+    for (const button of screen.getAllByRole('button', { name: 'Edytuj / usuń' })) {
+      fireEvent.click(button);
+      expect(manage).toHaveBeenLastCalledWith(expect.objectContaining({ id: entry.id }));
+    }
+  });
+  it('saves equity subweights and shows whole-plan shares and purchase amounts', async () => {
+    const save = vi.fn(async ({ plan: next }) => next);
+    render(
+      <PurchasePlanPanel
+        entries={[]}
+        scope="jakub"
+        useCases={{
+          loadPortfolioPlan: { execute: async () => plan },
+          savePortfolioPlan: { execute: save }
+        }}
+      />
+    );
+    await waitFor(() => expect(screen.getByLabelText('Mam do zainwestowania — zł')).toBeEnabled());
+    const breakdown = screen.getByRole('list', { name: 'Podział akcji w zapisanym planie' });
+    expect(within(breakdown).getByText('35% całego planu')).toBeVisible();
+    expect(within(breakdown).getByText('15% całego planu')).toBeVisible();
+    fireEvent.click(screen.getByText('Zmień mój plan'));
+    fireEvent.change(screen.getByLabelText('Rynki rozwinięte — % akcji'), { target: { value: '80' } });
+    expect(screen.getByRole('button', { name: 'Zapisz mój plan' })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText('Rynki wschodzące — % akcji'), { target: { value: '20' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz mój plan' }));
+    await waitFor(() =>
+      expect(save).toHaveBeenCalledWith({ scope: 'jakub', plan: { ...plan, developed: 80, emerging: 20 } })
+    );
+    await waitFor(() => expect(within(breakdown).getByText('40% całego planu')).toBeVisible());
+    expect(within(breakdown).getByText('10% całego planu')).toBeVisible();
+    fireEvent.change(screen.getByLabelText('Mam do zainwestowania — zł'), { target: { value: '1000' } });
+    const purchases = screen.getByRole('list', { name: 'Proponowane zakupy' });
+    expect(within(purchases).getByText('Rynki rozwinięte').parentElement).toHaveTextContent('400,00');
+    expect(within(purchases).getByText('Rynki wschodzące').parentElement).toHaveTextContent('100,00');
+  });
   it('shows value without inventing profit or zero cost when the history is incomplete', () => {
     render(
       <PortfolioOverview entries={[entry]} performance={{ nominalResultPln: null, contributedCapitalPln: null }} />
     );
     expect(screen.getAllByText('Mam teraz')[0]!.parentElement).toHaveTextContent('200,00');
-    expect(screen.getAllByText('Brak danych o wpłatach')).toHaveLength(3);
+    expect(screen.getAllByText(/Brak danych o wpłatach/)).toHaveLength(1);
+    expect(screen.getAllByRole('columnheader')).toHaveLength(3);
+    expect(screen.getByText('Zysk / strata').parentElement).toHaveTextContent('—');
     expect(screen.queryByText('+200,00 zł')).not.toBeInTheDocument();
     expect(screen.getByText('Wyceny z 2026-09-01')).toBeVisible();
   });
