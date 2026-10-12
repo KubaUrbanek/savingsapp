@@ -41,7 +41,7 @@ function HoldingDetails({ asset, loading, onCompleteBasis, onManage }) {
           </div>
         </dl>
         {!loading && asset.performance?.nominalResultPln == null && onCompleteBasis && (
-          <Button onClick={() => onCompleteBasis(asset)}>Uzupełnij wpłaty</Button>
+          <Button onClick={() => onCompleteBasis(asset)}>Podaj sumę dotychczasowych wpłat</Button>
         )}
         {onManage && <Button onClick={() => onManage(asset)}>Edytuj / usuń</Button>}
       </div>
@@ -111,9 +111,11 @@ export function PortfolioOverview({
         </p>
       )}
       <h2>Moje inwestycje</h2>
+      <p className="holdingsNotice">Obecna wartość to saldo konta lub wartość inwestycji razem z zyskiem lub stratą.</p>
       {missingBasis && (
         <p className="holdingsNotice">
-          Brak danych o wpłatach. Uzupełnij je w szczegółach inwestycji, aby zobaczyć zysk lub stratę.
+          Brak danych o wpłatach. W szczegółach podaj sumę pieniędzy, które wpłaciłeś — bez zysków i strat. Dzięki temu
+          obliczymy wynik inwestycji.
         </p>
       )}
       <div className="tableScroller holdingsTable" role="region" aria-label="Wartości i wyniki inwestycji" tabIndex={0}>
@@ -141,7 +143,7 @@ export function PortfolioOverview({
               header: 'Działania',
               cell: (e) => (
                 <div className="holdingActions">
-                  <Button onClick={() => onUpdate?.(e)}>Aktualizuj wartość</Button>
+                  <Button onClick={() => onUpdate?.(e)}>Zmień obecną wartość</Button>
                   <HoldingDetails asset={e} loading={loading} onCompleteBasis={onCompleteBasis} onManage={onManage} />
                 </div>
               )
@@ -162,7 +164,7 @@ export function PortfolioOverview({
               <HoldingValue asset={e} loading={loading} />
             </div>
             <div className="holdingActions">
-              <Button onClick={() => onUpdate?.(e)}>Aktualizuj wartość</Button>
+              <Button onClick={() => onUpdate?.(e)}>Zmień obecną wartość</Button>
               <HoldingDetails asset={e} loading={loading} onCompleteBasis={onCompleteBasis} onManage={onManage} />
             </div>
           </li>
