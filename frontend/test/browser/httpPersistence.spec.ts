@@ -38,6 +38,11 @@ test.beforeEach(async ({ page, request }) => {
   });
   expect(response.ok()).toBeTruthy();
 });
+test.afterEach(async ({ page }) => {
+  // Finish forwarded requests before Playwright disposes the request fixture.
+  await page.unrouteAll({ behavior: 'wait' });
+});
+
 test('HTTP origins can save an initial value and retain it after reload', async ({ page, request }) => {
   await page.goto(origin);
   expect(
