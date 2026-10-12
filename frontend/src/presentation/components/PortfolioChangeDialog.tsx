@@ -41,20 +41,22 @@ interface Props {
   onClose: () => void;
 }
 const actions = {
-  INITIAL: 'Posiadane oszczędności',
+  INITIAL: 'Wpisuję stan początkowy',
   DEPOSIT: 'Wpłaciłem',
   BUY: 'Kupiłem',
   WITHDRAWAL: 'Wypłaciłem',
   SELL: 'Sprzedałem',
-  VALUATION: 'Aktualizuję wartość'
+  VALUATION: 'Wpisuję obecną wartość'
 };
 const help = {
-  INITIAL: 'Wpisz oszczędności, które już masz. To nie jest nowa wpłata.',
+  INITIAL:
+    'Wpisz saldo konta lub wartość inwestycji na dzień, od którego zaczynasz ją śledzić w aplikacji. Jeśli znasz sumę dotychczasowych wpłat, podaj ją poniżej.',
   DEPOSIT: 'Dodajesz nowe pieniądze do oszczędności. Wpłata zwiększa Twój wkład, a nie zysk.',
   BUY: 'Kupujesz inwestycję za pieniądze z wybranego konta. Sam zakup nie tworzy zysku.',
   WITHDRAWAL: 'Wycofujesz pieniądze z oszczędności, na przykład na wydatek.',
   SELL: 'Pieniądze ze sprzedaży wrócą na wybrane konto i pozostaną w oszczędnościach.',
-  VALUATION: 'Wpisz dzisiejszą wartość pokazywaną na rachunku. Nie dopisujemy wpłaty.'
+  VALUATION:
+    'Podaj saldo konta lub wartość inwestycji na wybrany dzień, już z zyskiem lub stratą. Suma Twoich wpłat pozostaje bez zmian.'
 };
 export function PortfolioChangeDialog(props: Props) {
   const {
@@ -221,6 +223,7 @@ export function PortfolioChangeDialog(props: Props) {
         )}
         <Field
           label={explicit ? 'Ile masz teraz — zł' : 'Kwota — zł'}
+          hint={explicit ? 'Wartość widoczna na rachunku, np. 11 000 zł po wzroście inwestycji.' : undefined}
           error={explicit ? errors.currentValuePln : errors.amountPln}
           control={
             <input
@@ -254,6 +257,7 @@ export function PortfolioChangeDialog(props: Props) {
             {form.costKnown ? (
               <Field
                 label="Ile łącznie wpłaciłem — zł"
+                hint="Suma Twoich wpłat do wybranego dnia, bez zysków i strat, np. 10 000 zł. Służy do obliczenia wyniku inwestycji."
                 error={errors.amountPln}
                 control={
                   <input

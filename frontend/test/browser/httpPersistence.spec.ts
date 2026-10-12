@@ -47,7 +47,7 @@ test('HTTP origins can save an initial value and retain it after reload', async 
       digest: typeof crypto.subtle
     }))
   ).toEqual({ secure: false, uuid: 'undefined', digest: 'undefined' });
-  await page.getByRole('button', { name: 'Dodaj posiadane oszczędności', exact: true }).click();
+  await page.getByRole('button', { name: 'Dodaj aktualny stan konta lub inwestycji', exact: true }).click();
   await page.getByLabel('Ile masz teraz — zł').fill('700');
   await page.getByLabel('Ile łącznie wpłaciłem — zł').fill('600');
   await page.getByLabel('Data zmiany').fill('2020-01-01');
@@ -142,7 +142,7 @@ test('HTTP retry after a lost response and reload creates exactly one deposit', 
 
 test('HTTP can complete unknown contributions and save allocation weights', async ({ page, request }) => {
   await page.goto(origin);
-  await page.getByRole('button', { name: 'Dodaj posiadane oszczędności', exact: true }).click();
+  await page.getByRole('button', { name: 'Dodaj aktualny stan konta lub inwestycji', exact: true }).click();
   await page.getByLabel('Ile masz teraz — zł').fill('700');
   await page.getByLabel('Znam kwotę, którą wpłaciłem').uncheck();
   await page.getByLabel('Data zmiany').fill('2020-01-01');
@@ -152,7 +152,7 @@ test('HTTP can complete unknown contributions and save allocation weights', asyn
   const holding =
     page.viewportSize()!.width < 640 ? page.locator('.holdingCard') : page.locator('.holdingsTable tbody tr');
   await holding.locator('summary').click();
-  await holding.getByRole('button', { name: 'Uzupełnij wpłaty' }).click();
+  await holding.getByRole('button', { name: 'Podaj sumę dotychczasowych wpłat' }).click();
   await page.getByLabel('Ile łącznie wpłaciłem — zł').fill('600');
   await page.getByLabel('Data zmiany').fill('2020-01-02');
   await page.getByRole('button', { name: 'Zapisz zmianę', exact: true }).click();

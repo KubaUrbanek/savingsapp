@@ -112,10 +112,12 @@ describe('Savings workspace', () => {
   });
   it('starts existing savings with INITIAL and allows unknown contributions', async () => {
     render(<AppRouter dependencies={dependencies({ loadPortfolio: { execute: async () => [] } })} />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Dodaj posiadane oszczędności' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Dodaj aktualny stan konta lub inwestycji' }));
     expect(screen.getByLabelText('Co chcesz zrobić?')).toHaveValue('INITIAL');
     expect(screen.getByLabelText('Ile masz teraz — zł')).toBeVisible();
-    expect(screen.getByLabelText('Ile łącznie wpłaciłem — zł')).toBeVisible();
+    expect(screen.getByLabelText('Ile łącznie wpłaciłem — zł')).toHaveAccessibleDescription(
+      'Suma Twoich wpłat do wybranego dnia, bez zysków i strat, np. 10 000 zł. Służy do obliczenia wyniku inwestycji.'
+    );
     fireEvent.click(screen.getByLabelText('Znam kwotę, którą wpłaciłem'));
     expect(screen.queryByLabelText('Ile łącznie wpłaciłem — zł')).not.toBeInTheDocument();
     expect(screen.getByText(/Nie pamiętasz wpłat/)).toBeVisible();
@@ -195,7 +197,14 @@ describe('Savings workspace', () => {
       within(screen.getByLabelText('Co chcesz zrobić?'))
         .getAllByRole('option')
         .map((o) => o.textContent)
-    ).toEqual(['Posiadane oszczędności', 'Wpłaciłem', 'Kupiłem', 'Wypłaciłem', 'Sprzedałem', 'Aktualizuję wartość']);
+    ).toEqual([
+      'Wpisuję stan początkowy',
+      'Wpłaciłem',
+      'Kupiłem',
+      'Wypłaciłem',
+      'Sprzedałem',
+      'Wpisuję obecną wartość'
+    ]);
     fireEvent.change(screen.getByLabelText('Co chcesz zrobić?'), { target: { value: 'BUY' } });
     expect(screen.getByLabelText('Płacę z konta')).toBeVisible();
     fireEvent.change(screen.getByLabelText('Co chcesz zrobić?'), { target: { value: 'VALUATION' } });
@@ -243,7 +252,11 @@ describe('Savings workspace', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
     await waitFor(() => expect(input).toHaveFocus());
     expect(input).toHaveAttribute('aria-invalid', 'true');
-    expect(input).toHaveAccessibleDescription('Niepoprawna kwota.');
+    expect(input).toHaveAccessibleDescription(
+      kind === 'VALUATION'
+        ? 'Wartość widoczna na rachunku, np. 11 000 zł po wzroście inwestycji. Niepoprawna kwota.'
+        : 'Niepoprawna kwota.'
+    );
   });
   it('focuses sanitized general errors and keeps retry drafts', async () => {
     render(
@@ -517,9 +530,14 @@ describe('Savings workspace', () => {
   });
   it('updates a holding value directly and prefills the correct asset and owner', async () => {
     render(<AppRouter dependencies={dependencies()} />);
-    fireEvent.click((await screen.findAllByRole('button', { name: 'Aktualizuj wartość' }))[0]!);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Zmień obecną wartość' }))[0]!);
     expect(screen.getByLabelText('Co chcesz zrobić?')).toHaveValue('VALUATION');
     expect(screen.getByLabelText('Ile masz teraz — zł')).toHaveValue(100);
+    expect(screen.getByLabelText('Ile masz teraz — zł')).toHaveAccessibleDescription(
+      'Wartość widoczna na rachunku, np. 11 000 zł po wzroście inwestycji.'
+    );
+    expect(screen.queryByLabelText('Ile łącznie wpłaciłem — zł')).not.toBeInTheDocument();
+    expect(screen.getByText(/Suma Twoich wpłat pozostaje bez zmian/)).toBeVisible();
     expect(screen.getByText('Zapisujesz dla:')).toHaveTextContent('Jakub');
   });
 });

@@ -23,7 +23,7 @@ describe('savings regressions', () => {
       manage = vi.fn();
     render(<PortfolioOverview entries={[entry]} performance={null} onCompleteBasis={complete} onManage={manage} />);
     for (const summary of screen.getAllByText('Szczegóły')) fireEvent.click(summary);
-    for (const button of screen.getAllByRole('button', { name: 'Uzupełnij wpłaty' })) {
+    for (const button of screen.getAllByRole('button', { name: 'Podaj sumę dotychczasowych wpłat' })) {
       expect(button).toHaveClass('button--secondary');
       fireEvent.click(button);
       expect(complete).toHaveBeenLastCalledWith(expect.objectContaining({ id: entry.id }));

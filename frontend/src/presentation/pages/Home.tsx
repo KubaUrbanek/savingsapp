@@ -504,11 +504,11 @@ export function Home({ dependencies }) {
           state={controller.snapshot}
           skeletonShape="section"
           onRetry={controller.retry.snapshot}
-          emptyTitle="Dodaj oszczędności, które już masz"
-          emptyDescription="Wpisz obecną wartość i kwotę, którą wpłaciłeś. Nie musisz odtwarzać całej historii."
+          emptyTitle="Zacznij od aktualnego stanu konta lub inwestycji"
+          emptyDescription="Wpisz saldo konta lub wartość inwestycji. Sumę dotychczasowych wpłat możesz uzupełnić, jeśli ją znasz."
           emptyAction={
             <Button variant="primary" onClick={() => openForm('INITIAL')}>
-              Dodaj posiadane oszczędności
+              Dodaj aktualny stan konta lub inwestycji
             </Button>
           }
         >
@@ -561,11 +561,11 @@ export function Home({ dependencies }) {
           state={controller.snapshot}
           skeletonShape="section"
           onRetry={controller.retry.snapshot}
-          emptyTitle="Najpierw wpisz posiadane oszczędności"
+          emptyTitle="Najpierw dodaj stan konta lub inwestycji"
           emptyDescription="Na ich podstawie podpowiemy, co dokupić według Twoich proporcji."
           emptyAction={
             <Button variant="primary" onClick={() => openForm('INITIAL')}>
-              Dodaj posiadane oszczędności
+              Dodaj aktualny stan konta lub inwestycji
             </Button>
           }
         >
@@ -599,7 +599,7 @@ export function Home({ dependencies }) {
           }}
           emptyTitle="Tu pojawią się Twoje zmiany"
           emptyDescription="Wpłaty, zakupy i aktualizacje wartości znajdziesz w jednej historii."
-          emptyAction={<Button onClick={() => openForm('INITIAL')}>Dodaj posiadane oszczędności</Button>}
+          emptyAction={<Button onClick={() => openForm('INITIAL')}>Dodaj aktualny stan konta lub inwestycji</Button>}
         >
           {() => (
             <div className="entryList">

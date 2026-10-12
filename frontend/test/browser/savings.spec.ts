@@ -214,7 +214,7 @@ test('first use records existing value without inventing contributions and can c
   request
 }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Dodaj posiadane oszczędności', exact: true }).click();
+  await page.getByRole('button', { name: 'Dodaj aktualny stan konta lub inwestycji', exact: true }).click();
   await expect(page.getByLabel('Co chcesz zrobić?')).toHaveValue('INITIAL');
   await page.getByLabel('Ile masz teraz — zł').fill('700');
   await page.getByLabel('Znam kwotę, którą wpłaciłem').uncheck();
@@ -222,12 +222,12 @@ test('first use records existing value without inventing contributions and can c
   await page.getByRole('button', { name: 'Zapisz zmianę', exact: true }).click();
   await expect(page.locator('.savingsHeadline')).toContainText('700,00');
   await expect(page.locator('.savingsHeadline .metric').last()).toContainText('—');
-  await expect(page.locator('.holdingsNotice')).toContainText('Brak danych o wpłatach');
+  await expect(page.locator('.holdingsNotice').filter({ hasText: 'Brak danych o wpłatach' })).toBeVisible();
   const holding =
     page.viewportSize()!.width < 640 ? page.locator('.holdingCard') : page.locator('.holdingsTable tbody tr');
-  await expect(holding.getByRole('button', { name: 'Uzupełnij wpłaty', exact: true })).toBeHidden();
+  await expect(holding.getByRole('button', { name: 'Podaj sumę dotychczasowych wpłat', exact: true })).toBeHidden();
   await holding.locator('summary').click();
-  await page.getByRole('button', { name: 'Uzupełnij wpłaty', exact: true }).click();
+  await page.getByRole('button', { name: 'Podaj sumę dotychczasowych wpłat', exact: true }).click();
   await expect(page.getByLabel('Ile masz teraz — zł')).toHaveValue('700');
   await page.getByLabel('Ile łącznie wpłaciłem — zł').fill('600');
   await page.getByLabel('Data zmiany').fill('2020-01-02');
