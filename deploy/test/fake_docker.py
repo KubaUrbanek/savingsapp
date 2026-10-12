@@ -53,7 +53,7 @@ elif args[0] == "inspect":
         if state.get("failure") == "wrong_image" and container == "new":
             output = OLD
     elif ".Config.Env" in fmt:
-        output = "APP_DATABASE_FILE=" + state.get("database", "/app/data/investment-entries.json")
+        output = "APP_DATABASE_PATH=" + state.get("database", "/app/data/portfolio")
     elif ".Mounts" in fmt:
         output = "" if state.get("failure") == "ephemeral" else "/app/data"
     elif ".State.Health" in fmt:
@@ -75,7 +75,10 @@ elif args[0] == "cp":
     if state.get("failure") == "backup":
         result = 1
     else:
-        shutil.copyfile(root / "database.json", args[-1])
+        assert args[1].endswith("/app/data/."), "Copy the complete persistent database directory"
+        shutil.copyfile(root / "database.json", Path(args[-1]) / "database.json")
+        if (root / "portfolio.mv.db").exists():
+            shutil.copyfile(root / "portfolio.mv.db", Path(args[-1]) / "portfolio.mv.db")
 else:
     raise AssertionError(args)
 

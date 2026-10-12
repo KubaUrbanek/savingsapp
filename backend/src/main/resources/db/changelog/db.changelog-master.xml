@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.31.xsd">
+    <changeSet id="001-portfolio" author="savingsapp" dbms="h2">
+        <sqlFile path="001-portfolio.sql" relativeToChangelogFile="true" splitStatements="true"/>
+    </changeSet>
+    <changeSet id="002-equity-gold" author="savingsapp" dbms="h2">
+        <sqlFile path="002-equity-gold.sql" relativeToChangelogFile="true" splitStatements="true"/>
+    </changeSet>
+</databaseChangeLog>

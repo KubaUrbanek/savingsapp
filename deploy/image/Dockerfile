@@ -11,7 +11,7 @@ COPY --chown=app:app app.jar /app/app.jar
 USER app
 EXPOSE 8080
 VOLUME ["/app/data"]
-ENV APP_DATABASE_FILE=/app/data/investment-entries.json
+ENV APP_DATABASE_PATH=/app/data/portfolio
 ENV JAVA_OPTS=""
 HEALTHCHECK --interval=5s --timeout=3s --start-period=30s --retries=12 \
     CMD curl --fail --silent --max-time 2 "http://localhost:${SERVER_PORT:-8080}/actuator/health" || exit 1

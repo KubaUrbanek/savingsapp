@@ -11,21 +11,21 @@ import com.tngtech.archunit.lang.ArchRule;
 @AnalyzeClasses(packages = "pl.oszczednosci.app", importOptions = ImportOption.DoNotIncludeTests.class)
 class ArchitectureTest {
     @ArchTest static final ArchRule domain_depends_only_inward = noClasses().that().resideInAPackage("..domain..")
-            .should().dependOnClassesThat().resideInAnyPackage("..application..", "..adapter..", "..configuration..",
-                    "org.springframework..", "jakarta..", "com.fasterxml.jackson..", "tools.jackson..");
+            .should().dependOnClassesThat().resideInAnyPackage("..application..", "..adapter..", "pl.oszczednosci.app.configuration..",
+                    "org.springframework..", "jakarta..", "com.fasterxml.jackson..", "tools.jackson..", "java.sql..", "javax.sql..", "org.h2..", "liquibase..");
 
     @ArchTest static final ArchRule application_depends_only_on_application_and_domain = noClasses()
             .that().resideInAPackage("..application..").should().dependOnClassesThat().resideInAnyPackage(
-                    "..adapter..", "..configuration..", "org.springframework..", "jakarta..",
-                    "com.fasterxml.jackson..", "tools.jackson..");
+                    "..adapter..", "pl.oszczednosci.app.configuration..", "org.springframework..", "jakarta..",
+                    "com.fasterxml.jackson..", "tools.jackson..", "java.sql..", "javax.sql..", "org.h2..", "liquibase..");
 
     @ArchTest static final ArchRule inbound_web_does_not_bypass_ports = noClasses()
             .that().resideInAPackage("..adapter.in.web..").should().dependOnClassesThat().resideInAnyPackage(
-                    "..adapter.out..", "..application.usecase..", "..configuration..");
+                    "..adapter.out..", "..application.usecase..", "pl.oszczednosci.app.configuration..");
 
     @ArchTest static final ArchRule outbound_persistence_does_not_depend_on_inbound_side = noClasses()
             .that().resideInAPackage("..adapter.out.persistence..").should().dependOnClassesThat().resideInAnyPackage(
-                    "..adapter.in..", "..application.port.in..", "..application.usecase..", "..configuration..");
+                    "..adapter.in..", "..application.port.in..", "..application.usecase..", "pl.oszczednosci.app.configuration..");
 
     @ArchTest static final ArchRule controllers_stay_in_web_adapter = classes().that().haveSimpleNameEndingWith("Controller")
             .should().resideInAPackage("..adapter.in.web..");
