@@ -164,17 +164,21 @@ test('budget is conserved and invalid draft weights never persist or produce adv
   await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
   await page.getByText('Zmień mój plan').click();
   await expect(page.getByLabel('Obligacje — % całego planu')).toHaveValue('50');
-  await page.getByLabel('Rynki rozwinięte — % akcji').fill('80');
+  await page.getByLabel('Rynki rozwinięte — % akcji').fill('40');
   await expect(page.getByRole('button', { name: 'Zapisz mój plan' })).toBeDisabled();
-  await page.getByLabel('Rynki wschodzące — % akcji').fill('20');
+  await page.getByLabel('Rynki wschodzące — % akcji').fill('10');
   await page.getByRole('button', { name: 'Zapisz mój plan' }).click();
   const breakdown = page.getByRole('list', { name: 'Podział akcji w zapisanym planie' });
-  await expect(breakdown).toContainText('40% całego planu');
-  await expect(breakdown).toContainText('10% całego planu');
+  await expect(breakdown).toContainText('25% całego planu');
+  await expect(breakdown).toContainText('50% części akcyjnej');
+  await expect(breakdown).toContainText('20% całego planu');
+  await expect(breakdown).toContainText('5% całego planu');
   await page.reload();
   await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
-  await expect(breakdown).toContainText('40% całego planu');
-  await expect(breakdown).toContainText('10% całego planu');
+  await expect(breakdown).toContainText('25% całego planu');
+  await expect(breakdown).toContainText('50% części akcyjnej');
+  await expect(breakdown).toContainText('20% całego planu');
+  await expect(breakdown).toContainText('5% całego planu');
 });
 
 test('lost response followed by reload and retry never duplicates a deposit', async ({ page, request }) => {

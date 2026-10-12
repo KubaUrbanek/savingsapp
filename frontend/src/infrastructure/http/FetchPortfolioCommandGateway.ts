@@ -1,7 +1,8 @@
 // @ts-nocheck
+import { createRequestId, requestSignature } from './BrowserRequestIdentity.js';
 /** Retries of the same intent retain their identifier, including lost HTTP responses. */
 export class FetchPortfolioCommandGateway {
-  constructor(http, idGenerator = () => crypto.randomUUID(), pending = undefined) {
+  constructor(http, idGenerator = createRequestId, pending = undefined) {
     this.http = http;
     this.idGenerator = idGenerator;
     this.requestIds = new WeakMap();
@@ -17,12 +18,7 @@ export class FetchPortfolioCommandGateway {
     };
     const payload = JSON.stringify({ editId: command.editId, ...body });
     // Stable non-sensitive key: no raw portfolio data is persisted in session storage.
-    const bytes = new TextEncoder().encode(payload);
-    const signature = this.pending
-      ? Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)))
-          .map((b) => b.toString(16).padStart(2, '0'))
-          .join('')
-      : payload;
+    const signature = this.pending ? requestSignature(payload) : payload;
     if (!this.requestIds.has(command)) this.requestIds.set(command, this.pending?.get(signature) || this.idGenerator());
     const requestId = command.editId || this.requestIds.get(command);
     this.pending?.put(signature, requestId);

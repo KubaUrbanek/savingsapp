@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { createRequestId } from '../infrastructure/http/BrowserRequestIdentity.js';
 import { SessionStoragePendingChangeRepository } from '../infrastructure/storage/SessionStoragePendingChangeRepository.js';
 import { LoadPortfolioPlan, SavePortfolioPlan } from '../application/PortfolioPlanCommands.js';
 import { FetchPortfolioPlanGateway } from '../infrastructure/http/FetchPortfolioPlanGateway.js';
@@ -35,7 +36,7 @@ export function createApplicationDependencies(browser = window) {
   const backups = new FetchDatabaseBackupGateway(http);
   const portfolioCommands = new FetchPortfolioCommandGateway(
     http,
-    () => browser.crypto.randomUUID(),
+    () => createRequestId(browser.crypto),
     new SessionStoragePendingChangeRepository(browser.sessionStorage)
   );
   const plans = new FetchPortfolioPlanGateway(http);

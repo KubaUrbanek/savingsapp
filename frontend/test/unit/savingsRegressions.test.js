@@ -57,7 +57,7 @@ test('cent rounding conserves every tested budget across allocations, including 
       assert.ok(rows.every((r) => r.purchaseAmount >= 0));
     }
 });
-test('two-level equity targets exclude gold and keep cash and unknown pension composition outside', () => {
+test('two-level equity targets include gold and keep cash and unknown pension composition outside', () => {
   const plan = planPurchases(
     [
       ...entries,
@@ -80,17 +80,17 @@ test('two-level equity targets exclude gold and keep cash and unknown pension co
         createdAt: '2026-10-10T00:00:00Z'
       }
     ],
-    { BONDS: 50, STOCKS: 50, GOLD: 0 },
-    { RYNKI_ROZWINIETE: 70, RYNKI_ROZWIJAJACE_SIE: 30 },
+    { BONDS: 50, STOCKS: 50 },
+    { GOLD: 50, RYNKI_ROZWINIETE: 35, RYNKI_ROZWIJAJACE_SIE: 15 },
     100
   );
   assert.deepEqual(
     plan.rows.map((r) => [r.key, r.targetWeight]),
     [
       ['BONDS', 50],
-      ['GOLD', 0],
-      ['RYNKI_ROZWINIETE', 35],
-      ['RYNKI_ROZWIJAJACE_SIE', 15]
+      ['GOLD', 25],
+      ['RYNKI_ROZWINIETE', 17.5],
+      ['RYNKI_ROZWIJAJACE_SIE', 7.5]
     ]
   );
   assert.equal(plan.cash, 400);
