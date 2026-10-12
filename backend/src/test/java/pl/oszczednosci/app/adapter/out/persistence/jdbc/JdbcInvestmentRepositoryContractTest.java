@@ -96,15 +96,32 @@ final class JdbcInvestmentRepositoryContractTest extends InvestmentRepositoryCon
         reloadAdapters();
         try (var connection = java.sql.DriverManager.getConnection("jdbc:h2:file:" + file, "sa", "");
                 var statement = connection.createStatement();
-                var rows = statement.executeQuery("SELECT ID, AUTHOR, MD5SUM, EXECTYPE FROM DATABASECHANGELOG")) {
+                var rows = statement.executeQuery("SELECT ID, AUTHOR, MD5SUM, EXECTYPE FROM DATABASECHANGELOG ORDER BY ORDEREXECUTED")) {
             assertThat(rows.next()).isTrue();
             assertThat(rows.getString("ID")).isEqualTo("001-portfolio");
             assertThat(rows.getString("AUTHOR")).isEqualTo("savingsapp");
             assertThat(rows.getString("MD5SUM")).isNotBlank();
             assertThat(rows.getString("EXECTYPE")).isEqualTo("EXECUTED");
+            assertThat(rows.next()).isTrue();
+            assertThat(rows.getString("ID")).isEqualTo("002-equity-gold");
             assertThat(rows.next()).isFalse();
         }
         assertThat(store.snapshot().entries()).hasSize(1);
+    }
+
+    @Test void existingSqlPlansMigrateOnceAndKeepLaterCustomWeights() throws Exception {
+        store.close();
+        try (var connection = java.sql.DriverManager.getConnection("jdbc:h2:file:" + file, "sa", "");
+                var statement = connection.createStatement()) {
+            statement.executeUpdate("DELETE FROM DATABASECHANGELOG WHERE ID='002-equity-gold'");
+            statement.executeUpdate("INSERT INTO portfolio_plans (scope,bonds,stocks,gold,developed,emerging) VALUES ('jakub',30,60,10,80,20)");
+        }
+        reloadAdapters();
+        var service = new pl.oszczednosci.app.application.usecase.PortfolioPlanService(store);
+        assertThat(service.load("jakub")).isEqualTo(new PortfolioPlan(30,70,50,40,10));
+        service.save("jakub", new PortfolioPlan(30,70,40,45,15));
+        reloadAdapters();
+        assertThat(store.snapshot().plans().get("jakub")).isEqualTo(new PortfolioPlan(30,70,40,45,15));
     }
 
     @Test void incompatibleMigrationChecksumStopsStartupWithoutChangingPortfolio() throws Exception {

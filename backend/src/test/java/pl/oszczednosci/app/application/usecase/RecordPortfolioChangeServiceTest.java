@@ -60,7 +60,7 @@ class RecordPortfolioChangeServiceTest {
   assertThatThrownBy(()->service.record(c("DEPOSIT",InvestmentType.KONTO_BANKOWE,"2026-10-10","-10",null))).isInstanceOf(IllegalArgumentException.class);
  }
  @Test void plansSurvivePortfolioChangesAndExportImport(){
-  var plans=new PortfolioPlanService(store);var plan=new PortfolioPlan(60,40,0,80,20);plans.save("jakub",plan);plans.save("household",new PortfolioPlan(30,60,10,70,30));
+  var plans=new PortfolioPlanService(store);var plan=new PortfolioPlan(60,40,50,40,10);plans.save("jakub",plan);plans.save("household",new PortfolioPlan(30,70,50,35,15));
   service.record(c("DEPOSIT",InvestmentType.KONTO_BANKOWE,"2026-09-01","100",null));var clone=new JsonInvestmentStore(new JsonMapper(),temp.resolve("clone.json"));clone.importBackup(store.exportBackup());
   assertThat(new PortfolioPlanService(clone).load("jakub")).isEqualTo(plan);assertThat(new PortfolioPlanService(clone).load("zosia")).isEqualTo(PortfolioPlan.defaults());assertThat(clone.snapshot().operations()).hasSize(1);
   assertThatThrownBy(()->new PortfolioPlan(80,30,20,70,30)).isInstanceOf(IllegalArgumentException.class);

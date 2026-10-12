@@ -131,3 +131,7 @@ npm run test:browser
 Testy obejmują wynik bez kosztu, wpłaty i transfery bez pozornego zysku, opłaty bez podwójnego odliczenia, brak salda otwarcia, cofanie i historyczne przeliczenia, retry (również współbieżny i po utracie odpowiedzi), atomowość błędów zapisu, kopie i plany, budżet zakupów z zaokrągleniem groszy, niepoprawne wagi, filtry i widoczność zakładek, obsługę błędów oraz dostępność. Granice warstw opisują `backend/ARCHITECTURE.md`, `frontend/ARCHITECTURE.md` i testy architektury backendu.
 
 Testy przeglądarkowe uruchamiają osobny serwer na porcie 8082 z tymczasową bazą. Sprawdzają Chromium na ekranie komputera i telefonu; nie zmieniają lokalnej bazy użytkownika. Wszystkie te kontrole są skonfigurowane w GitHub Actions.
+
+W planie zakupów „Akcje i ETF-y” obejmują złoty ETF. Domyślny podział tej części to 50% złota, 35% rynków rozwiniętych i 15% wschodzących; przy udziale części akcyjnej 50% cel złota wynosi 25% całego planu. Starsze zapisane plany są dostosowywane do tego podziału z zachowaniem udziału obligacji oraz proporcji między rynkami. API planu wymaga `allocationVersion: 2`; szczegóły migracji opisuje `docs/domain/README.md`.
+
+Zapis zmian działa również przez HTTP w sieci lokalnej (np. QNAP w Tailscale). Generowanie identyfikatorów żądań i skrótów do ponawiania zapisu nie wymaga HTTPS ani funkcji `crypto.randomUUID` / `crypto.subtle`. Testy przeglądarkowe obejmują osobny kontekst HTTP, ponieważ `localhost` udostępnia te funkcje i sam nie odtwarza warunków połączenia z NAS-em.

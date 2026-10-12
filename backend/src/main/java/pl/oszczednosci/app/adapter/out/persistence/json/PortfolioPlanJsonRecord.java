@@ -1,6 +1,21 @@
 package pl.oszczednosci.app.adapter.out.persistence.json;
+
 import pl.oszczednosci.app.domain.model.PortfolioPlan;
-record PortfolioPlanJsonRecord(double bonds,double stocks,double gold,double developed,double emerging) {
- PortfolioPlan toDomain(){return new PortfolioPlan(bonds,stocks,gold,developed,emerging);}
- static PortfolioPlanJsonRecord from(PortfolioPlan p){return new PortfolioPlanJsonRecord(p.bonds(),p.stocks(),p.gold(),p.developed(),p.emerging());}
+
+record PortfolioPlanJsonRecord(Double bonds, Double stocks, Double gold, Double developed, Double emerging,
+                               Integer allocationVersion) {
+    PortfolioPlan toDomain() {
+        if (bonds == null || stocks == null || gold == null || developed == null || emerging == null) {
+            throw new IllegalArgumentException("Niekompletny plan portfela.");
+        }
+        if (allocationVersion == null || allocationVersion == 1) {
+            return PortfolioPlan.fromLegacy(bonds, stocks, gold, developed, emerging);
+        }
+        if (allocationVersion != 2) throw new IllegalArgumentException("Nieobsługiwana wersja planu portfela.");
+        return new PortfolioPlan(bonds, stocks, gold, developed, emerging);
+    }
+
+    static PortfolioPlanJsonRecord from(PortfolioPlan plan) {
+        return new PortfolioPlanJsonRecord(plan.bonds(), plan.stocks(), plan.gold(), plan.developed(), plan.emerging(), 2);
+    }
 }

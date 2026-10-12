@@ -42,8 +42,8 @@ export function allocatePurchases(rows, budget) {
 }
 export function planPurchases(entries, global, equity, budget) {
   if (
-    !validWeights(global, ['BONDS', 'STOCKS', 'GOLD']) ||
-    !validWeights(equity, ['RYNKI_ROZWINIETE', 'RYNKI_ROZWIJAJACE_SIE'])
+    !validWeights(global, ['BONDS', 'STOCKS']) ||
+    !validWeights(equity, ['GOLD', 'RYNKI_ROZWINIETE', 'RYNKI_ROZWIJAJACE_SIE'])
   )
     throw new RangeError('Wagi muszą sumować się do 100%');
   const values = { BONDS: 0, GOLD: 0, RYNKI_ROZWINIETE: 0, RYNKI_ROZWIJAJACE_SIE: 0 };
@@ -57,7 +57,7 @@ export function planPurchases(entries, global, equity, budget) {
   });
   const weights = {
     BONDS: Number(global.BONDS),
-    GOLD: Number(global.GOLD),
+    GOLD: (Number(global.STOCKS) * Number(equity.GOLD)) / 100,
     RYNKI_ROZWINIETE: (Number(global.STOCKS) * Number(equity.RYNKI_ROZWINIETE)) / 100,
     RYNKI_ROZWIJAJACE_SIE: (Number(global.STOCKS) * Number(equity.RYNKI_ROZWIJAJACE_SIE)) / 100
   };

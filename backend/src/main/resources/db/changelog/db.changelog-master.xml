@@ -5,4 +5,7 @@
     <changeSet id="001-portfolio" author="savingsapp" dbms="h2">
         <sqlFile path="001-portfolio.sql" relativeToChangelogFile="true" splitStatements="true"/>
     </changeSet>
+    <changeSet id="002-equity-gold" author="savingsapp" dbms="h2">
+        <sqlFile path="002-equity-gold.sql" relativeToChangelogFile="true" splitStatements="true"/>
+    </changeSet>
 </databaseChangeLog>

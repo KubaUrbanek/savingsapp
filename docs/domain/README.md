@@ -64,7 +64,7 @@ Export includes `formatVersion`, **all entries**, and **all operations** includi
 
 Wynik pojedynczej inwestycji uwzględnia koszt zakupów i wpływy ze sprzedaży. W całym portfelu transfery się znoszą. Nieznany koszt lub brak wyceny nie pozwala obliczyć wyniku; brak wyceny otwarcia nie pozwala obliczyć wyniku miesiąca. Opłaty zawarte w rzeczywistym saldzie nie są odliczane ponownie.
 
-Plan: wagi obligacje/akcje/opcjonalne złoto, a wewnątrz akcji podział na rynki. Gotówka i nieznany skład PPK/PPO są pokazywane osobno. Brak do celu przy dzisiejszej wartości nie jest tą samą liczbą co zakup za nowy budżet. Zakupy są nieujemne, ograniczone budżetem i zaokrąglone do groszy.
+Plan: obligacje oraz część „Akcje i ETF-y”. W tej części złoto ma domyślnie 50%, rynki rozwinięte 35%, a wschodzące 15%. Złoty ETF należy tutaj do części akcyjnej jako świadoma konwencja tego planu, bez zmiany ekonomicznej klasyfikacji złota. Cel złota w całym portfelu to udział części akcyjnej × udział złota w tej części. Gotówka i nieznany skład PPK/PPO są pokazywane osobno. Brak do celu przy dzisiejszej wartości nie jest tą samą liczbą co zakup za nowy budżet. Zakupy są nieujemne, ograniczone budżetem i zaokrąglone do groszy.
 
 
 ## Correcting a tracked change
@@ -72,3 +72,9 @@ Plan: wagi obligacje/akcje/opcjonalne złoto, a wewnątrz akcji podział na rynk
 PUT `/api/portfolio-changes/{id}` corrects an event using the same request identifier as its path. A correction cannot move it to another owner or asset. Purchase/sale corrections change both transfer legs atomically and replay dependent generated balances. Explicit valuations remain historical anchors. An invalid correction or an overdraw leaves the stored document unchanged. Legacy independent operations retain fees, taxes and notes and do not generate a linked valuation. POST and DELETE use the same atomic event boundary; plans use GET/PUT `/api/portfolio-plans?scope=...`.
 
 The UI presents one chronological event row per tracked change, regardless of how many linked balances it updates. Household performance uses the full owner scope and excludes entirely empty owners from known-profit aggregation. A held asset with unknown contributions still makes profit unknown.
+
+### Wersja planu alokacji
+
+GET/PUT `/api/portfolio-plans` używa `allocationVersion: 2`. Przykład: `{"allocationVersion":2,"bonds":50,"stocks":50,"gold":50,"developed":35,"emerging":15}`. `bonds + stocks = 100`, natomiast `gold + developed + emerging = 100`. Złoto jest zatem celem 25% całego planu w tym przykładzie. PUT wymaga wersji 2, aby nie pomylić znaczeń wag ze starszym klientem. Wszystkie wagi muszą być skończone i mieścić się w zakresie 0–100.
+
+Plany w bazie i kopiach danych mają własne `allocationVersion` (format całej kopii pozostaje 2). Starszy plan bez wersji lub z wersją 1 przechodzi na nowy układ: udział obligacji pozostaje bez zmian, dawne globalne akcje i złoto tworzą wspólną część, a jej cele to 50% złota i połowa każdej dotychczasowej wagi rynku. Odczyt nie zapisuje danych; kolejny zapis lub eksport zawiera wersję 2. Wersja 2 zachowuje zapisane wagi bez ponownego przeliczania. Nieznane wersje i niepoprawne wagi są odrzucane.

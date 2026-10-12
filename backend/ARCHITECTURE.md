@@ -130,8 +130,11 @@ Performance reads both collections from one unit-of-work snapshot. Per-asset pur
 
 Inside one locked unit of work, correction removes the old event, inserts its replacement with the original identifiers and creation order, then replays generated balances once. There is no intermediate replay of a deleted initial balance. Explicit valuations remain anchors; negative dependent balances reject the entire write. Independent legacy operations retain fees, taxes, notes and their separate valuations. Repeating a correction replaces the same event rather than inserting another.
 
+`PortfolioPlan` validates bonds + stocks/ETFs = 100 and gold + developed + emerging = 100. Gold defaults to half of the stock/ETF bucket. `PortfolioPlanJsonRecord` versions the allocation independently of backup format 2: missing/version 1 records are validated and migrated through the domain factory, preserving bonds and relative market weights while adopting the requested 50% gold target. Version 2 round trips unchanged; unknown versions fail. HTTP GET returns allocationVersion 2 and PUT requires it to prevent old clients silently changing weight semantics.
 ## Schema migrations
 
 `db/changelog/db.changelog-master.xml` lists ordered Liquibase changesets. The initial H2 schema is `001-portfolio.sql`. For a schema change, add a new numbered SQL file and a new changeset with a unique ID; never edit an already deployed changeset. Liquibase stores execution history and checksums in `DATABASECHANGELOG` and coordinates migration execution through `DATABASECHANGELOGLOCK`. Validation or migration failure stops application startup. JSON import is an explicit user action through the backup API, never part of startup.
 
 H2 DDL may auto-commit: a failed multi-statement schema migration is not guaranteed to roll back. Keep changes small, back up the database before deployment, and resolve failed migrations explicitly. Prefer forward corrective changesets to destructive schema rollback.
+
+Existing H2 plans adopt the same allocation through Liquibase changeset `002-equity-gold`, executed once before domain records are loaded.

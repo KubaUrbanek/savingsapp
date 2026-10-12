@@ -5,10 +5,10 @@ import { Button } from './Button.js';
 import { InlineMessage } from './InlineMessage.js';
 import { planPurchases, validWeights } from '../../domain/portfolio/services/PurchasePlanningService.js';
 import { displayName, formatMoney, formatUnsignedPercent } from '../viewModels/formatters.js';
-const defaults = { bonds: 50, stocks: 50, gold: 0, developed: 70, emerging: 30 };
+const defaults = { bonds: 50, stocks: 50, gold: 50, developed: 35, emerging: 15 };
 const labels = {
   BONDS: 'Obligacje',
-  GOLD: 'Złoto',
+  GOLD: 'Złoto (ETF)',
   RYNKI_ROZWINIETE: 'Rynki rozwinięte',
   RYNKI_ROZWIJAJACE_SIE: 'Rynki wschodzące'
 };
@@ -42,8 +42,8 @@ export function PurchasePlanPanel({ entries, scope, useCases }) {
     );
     return () => abort.abort();
   }, [scope, useCases]);
-  const global = { BONDS: draft.bonds, STOCKS: draft.stocks, GOLD: draft.gold },
-    equity = { RYNKI_ROZWINIETE: draft.developed, RYNKI_ROZWIJAJACE_SIE: draft.emerging };
+  const global = { BONDS: draft.bonds, STOCKS: draft.stocks },
+    equity = { GOLD: draft.gold, RYNKI_ROZWINIETE: draft.developed, RYNKI_ROZWIJAJACE_SIE: draft.emerging };
   const valid = validWeights(global) && validWeights(equity),
     amount = Number(budget || 0),
     budgetValid = Number.isFinite(amount) && amount >= 0 && Number.isSafeInteger(Math.round(amount * 100));
@@ -156,10 +156,14 @@ export function PurchasePlanPanel({ entries, scope, useCases }) {
       <div className="savedPlan">
         <strong>Twój zapisany plan</strong>
         <span>
-          Obligacje {formatUnsignedPercent(saved.bonds)} · Akcje {formatUnsignedPercent(saved.stocks)}
-          {saved.gold > 0 ? ` · Złoto ${formatUnsignedPercent(saved.gold)}` : ''}
+          Obligacje {formatUnsignedPercent(saved.bonds)} · Akcje i ETF-y {formatUnsignedPercent(saved.stocks)}
         </span>
         <ul className="equityBreakdown" aria-label="Podział akcji w zapisanym planie">
+          <li>
+            <strong>Złoto (ETF)</strong>
+            <span>{formatUnsignedPercent(saved.gold)} części akcyjnej</span>
+            <small>{formatUnsignedPercent((saved.stocks * saved.gold) / 100)} całego planu</small>
+          </li>
           <li>
             <strong>Rynki rozwinięte</strong>
             <span>{formatUnsignedPercent(saved.developed)} części akcyjnej</span>
@@ -178,8 +182,7 @@ export function PurchasePlanPanel({ entries, scope, useCases }) {
         <div className="allocationInputs">
           {[
             ['bonds', 'Obligacje'],
-            ['stocks', 'Akcje'],
-            ['gold', 'Złoto (opcjonalnie)']
+            ['stocks', 'Akcje i ETF-y']
           ].map(([key, label]) => (
             <Field
               key={key}
@@ -200,10 +203,12 @@ export function PurchasePlanPanel({ entries, scope, useCases }) {
         </div>
         <h3>Podział części akcyjnej</h3>
         <p>
-          Podziel akcje między rynki rozwinięte i wschodzące. Ich udziały muszą sumować się do 100% części akcyjnej.
+          W tym planie część akcyjna obejmuje również złoty ETF. Podziel ją między złoto, rynki rozwinięte i wschodzące.
+          Ich udziały muszą sumować się do 100% części akcyjnej.
         </p>
         <div className="allocationInputs">
           {[
+            ['gold', 'Złoto (ETF)'],
             ['developed', 'Rynki rozwinięte'],
             ['emerging', 'Rynki wschodzące']
           ].map(([key, label]) => (
@@ -226,7 +231,8 @@ export function PurchasePlanPanel({ entries, scope, useCases }) {
         </div>
         {valid && (
           <p className="equityPreview" role="status">
-            W całym planie: rynki rozwinięte {formatUnsignedPercent((draft.stocks * draft.developed) / 100)}
+            W całym planie: złoto {formatUnsignedPercent((draft.stocks * draft.gold) / 100)}
+            {' · '}rynki rozwinięte {formatUnsignedPercent((draft.stocks * draft.developed) / 100)}
             {' · '}rynki wschodzące {formatUnsignedPercent((draft.stocks * draft.emerging) / 100)}.
           </p>
         )}
