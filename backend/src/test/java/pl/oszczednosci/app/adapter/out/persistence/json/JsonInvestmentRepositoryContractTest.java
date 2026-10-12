@@ -1,4 +1,6 @@
 package pl.oszczednosci.app.adapter.out.persistence.json;
+import pl.oszczednosci.app.adapter.out.persistence.UnitOfWorkInvestmentOperationRepository;
+import pl.oszczednosci.app.adapter.out.persistence.UnitOfWorkInvestmentEntryRepository;
 
 import static org.assertj.core.api.Assertions.*;
 import java.math.BigDecimal;
@@ -18,8 +20,8 @@ final class JsonInvestmentRepositoryContractTest extends InvestmentRepositoryCon
     @TempDir Path directory;
     private Path file;
     private JsonInvestmentStore store;
-    private JsonInvestmentEntryRepository entries;
-    private JsonInvestmentOperationRepository operations;
+    private UnitOfWorkInvestmentEntryRepository entries;
+    private UnitOfWorkInvestmentOperationRepository operations;
 
     @BeforeEach void createAdapter() {
         file = directory.resolve("investments.json");
@@ -29,8 +31,8 @@ final class JsonInvestmentRepositoryContractTest extends InvestmentRepositoryCon
     @Override protected void reloadAdapters() {
         ObjectMapper mapper = new tools.jackson.databind.json.JsonMapper();
         store = new JsonInvestmentStore(mapper, file);
-        entries = new JsonInvestmentEntryRepository(store);
-        operations = new JsonInvestmentOperationRepository(store);
+        entries = new UnitOfWorkInvestmentEntryRepository(store);
+        operations = new UnitOfWorkInvestmentOperationRepository(store);
     }
     @Override protected InvestmentEntryRepository entries() { return entries; }
     @Override protected InvestmentOperationRepository operations() { return operations; }
@@ -64,7 +66,7 @@ final class JsonInvestmentRepositoryContractTest extends InvestmentRepositoryCon
     @Test void independentlyConstructedAdaptersCoordinateAccessToTheSameDocument() throws Exception {
         int count = 30;
         JsonInvestmentStore otherStore = new JsonInvestmentStore(new tools.jackson.databind.json.JsonMapper(), file);
-        JsonInvestmentEntryRepository otherEntries = new JsonInvestmentEntryRepository(otherStore);
+        UnitOfWorkInvestmentEntryRepository otherEntries = new UnitOfWorkInvestmentEntryRepository(otherStore);
         try (ExecutorService executor = Executors.newFixedThreadPool(8)) {
             var tasks = java.util.stream.IntStream.range(0, count).<Callable<Void>>mapToObj(i -> () -> {
                 InvestmentEntryRepository repository = i % 2 == 0 ? entries : otherEntries;

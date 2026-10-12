@@ -1,4 +1,4 @@
-package pl.oszczednosci.app.adapter.out.persistence.json;
+package pl.oszczednosci.app.adapter.out.persistence;
 
 import java.util.Comparator;
 import java.util.List;
@@ -6,12 +6,12 @@ import java.util.Optional;
 import pl.oszczednosci.app.application.port.out.*;
 import pl.oszczednosci.app.domain.model.*;
 
-public final class JsonInvestmentOperationRepository implements InvestmentOperationRepository {
+public final class UnitOfWorkInvestmentOperationRepository implements InvestmentOperationRepository {
     private static final Comparator<InvestmentOperation> NEWEST_FIRST = Comparator
             .comparing(InvestmentOperation::getDate, Comparator.reverseOrder())
             .thenComparing(InvestmentOperation::getCreatedAt, Comparator.reverseOrder());
-    private final JsonInvestmentStore store;
-    public JsonInvestmentOperationRepository(JsonInvestmentStore store) { this.store = store; }
+    private final InvestmentUnitOfWork store;
+    public UnitOfWorkInvestmentOperationRepository(InvestmentUnitOfWork store) { this.store = store; }
     @Override public synchronized InvestmentOperation save(InvestmentOperation operation) {
         store.update(current -> {
             if(current.operations().stream().anyMatch(o->o.getId().equals(operation.getId()) && o.getGroupId()!=null)) throw new IllegalArgumentException("Powiązaną zmianę popraw przez historię portfela.");

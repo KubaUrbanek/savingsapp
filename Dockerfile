@@ -27,7 +27,7 @@ USER app
 EXPOSE 8080
 VOLUME ["/app/data"]
 
-ENV APP_DATABASE_FILE=/app/data/investment-entries.json
+ENV APP_DATABASE_PATH=/app/data/portfolio
 ENV JAVA_OPTS=""
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar /app/app.jar"]

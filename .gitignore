@@ -63,3 +63,8 @@ frontend/test-results/
 # Deployment state and Python test caches
 .savingsapp-deploy/
 __pycache__/
+
+# Embedded H2 runtime storage
+*.mv.db
+*.trace.db
+*.lock.db

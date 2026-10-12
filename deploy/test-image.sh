@@ -21,7 +21,7 @@ curl --fail --silent "http://127.0.0.1:$port/api/users" >/dev/null
 curl --fail --silent --show-error "http://127.0.0.1:$port/api/portfolio-changes" \
   -H 'Content-Type: application/json' \
   --data "{\"requestId\":\"851343e6-adfd-4a7d-bd6c-fcd825f6a39e\",\"kind\":\"DEPOSIT\",\"owner\":\"jakub\",\"type\":\"KONTO_BANKOWE\",\"date\":\"$(date -u +%F)\",\"amountPln\":1}" >/dev/null
-docker exec "$container" test -s /app/data/investment-entries.json
+docker exec "$container" test -s /app/data/portfolio.mv.db
 docker restart "$container" >/dev/null
 wait_for_health
 curl --fail --silent --show-error "http://127.0.0.1:$port/api/portfolio-performance?owner=jakub" |

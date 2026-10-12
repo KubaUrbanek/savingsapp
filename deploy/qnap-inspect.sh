@@ -23,7 +23,7 @@ Compose files: {{index .Config.Labels "com.docker.compose.project.config_files"}
 "$docker_bin" port "$container"
 "$docker_bin" inspect --format '{{range .Mounts}}{{println .Type .Name .Source "->" .Destination "writable=" .RW}}{{end}}' "$container"
 "$docker_bin" inspect --format '{{range .Config.Env}}{{println .}}{{end}}' "$container" |
-    awk '/^APP_DATABASE_FILE=/ {print}'
+    awk '/^APP_DATABASE_(FILE|PATH)=/ {print}'
 project=$("$docker_bin" inspect --format '{{index .Config.Labels "com.docker.compose.project"}}' "$container")
 case "$project" in ''|'<no value>')
     printf '%s\n' 'Deployment not ready: standalone container. Migrate to Compose before enabling QNAP_DEPLOY_ENABLED.'

@@ -1,4 +1,4 @@
-package pl.oszczednosci.app.adapter.out.persistence.json;
+package pl.oszczednosci.app.adapter.out.persistence;
 
 import java.util.Comparator;
 import java.util.List;
@@ -6,12 +6,12 @@ import java.util.Optional;
 import pl.oszczednosci.app.application.port.out.*;
 import pl.oszczednosci.app.domain.model.*;
 
-public final class JsonInvestmentEntryRepository implements InvestmentEntryRepository {
+public final class UnitOfWorkInvestmentEntryRepository implements InvestmentEntryRepository {
     private static final Comparator<InvestmentEntry> NEWEST_FIRST = Comparator
             .comparing(InvestmentEntry::getDate, Comparator.reverseOrder())
             .thenComparing(InvestmentEntry::getCreatedAt, Comparator.reverseOrder());
-    private final JsonInvestmentStore store;
-    public JsonInvestmentEntryRepository(JsonInvestmentStore store) { this.store = store; }
+    private final InvestmentUnitOfWork store;
+    public UnitOfWorkInvestmentEntryRepository(InvestmentUnitOfWork store) { this.store = store; }
 
     @Override public synchronized InvestmentEntry save(InvestmentEntry entry) {
         store.update(current -> {
