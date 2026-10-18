@@ -61,6 +61,43 @@ describe('accessible financial charts', () => {
     expect(within(table).getByText(/100\s000,00\szł/)).toBeInTheDocument();
   });
 
+  it('filters IKZE gold and resets the subinvestment when the investment changes', () => {
+    const gold = entries.slice(0, 2).map((entry) => ({ ...entry, type: 'IKZE', subcategory: 'ZLOTO' }));
+    render(
+      <SummaryChart
+        entries={[...entries, ...gold, { ...entries[2], id: 4, type: 'IKZE', subcategory: 'RYNKI_ROZWINIETE' }]}
+        types={['OBLIGACJE', 'GIELDA', 'IKZE', 'KONTO_BANKOWE']}
+      />
+    );
+    const type = screen.getByLabelText('Zakres inwestycji');
+    expect(screen.queryByLabelText('Podinwestycja')).not.toBeInTheDocument();
+    fireEvent.change(type, { target: { value: 'IKZE' } });
+    fireEvent.change(screen.getByLabelText('Podinwestycja'), { target: { value: 'ZLOTO' } });
+    const chart = screen.getByRole('img', { name: 'Wykres słupkowy podsumowania inwestycji' });
+    expect(chart).toHaveAccessibleDescription(
+      /IKZE — Złoto, miesięcznie: aktualna suma 75\s000,00\szł, zmiana kwotowa 25\s000,00\szł, zmiana procentowa \+50%/
+    );
+    expect(document.querySelector('.metricGrid')).toHaveTextContent(/Aktualna suma75\s000,00\szł/);
+    fireEvent.click(screen.getByText('Pokaż dane wykresu'));
+    const table = screen.getByRole('table', { name: 'Dane dla: IKZE — Złoto, miesięcznie' });
+    expect(within(table).getAllByRole('rowheader')).toHaveLength(2);
+    expect(within(table).getByText(/75\s000,00\szł/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Okres'), { target: { value: 'yearly' } });
+    expect(chart).toHaveAccessibleDescription(/IKZE — Złoto, rocznie: aktualna suma 75\s000,00\szł/);
+    fireEvent.change(screen.getByLabelText('Podinwestycja'), { target: { value: 'ALL' } });
+    expect(chart).toHaveAccessibleDescription(/IKZE, rocznie: aktualna suma 100\s000,00\szł/);
+    fireEvent.change(screen.getByLabelText('Podinwestycja'), { target: { value: 'TRZYLETNIE' } });
+    expect(screen.getByText('Brak danych do narysowania wykresu dla wybranego zakresu.')).toBeVisible();
+    fireEvent.change(type, { target: { value: 'GIELDA' } });
+    expect(screen.getByLabelText('Podinwestycja')).toHaveValue('ALL');
+    expect(within(screen.getByLabelText('Podinwestycja')).getAllByRole('option')).toHaveLength(4);
+    fireEvent.change(screen.getByLabelText('Podinwestycja'), { target: { value: 'ZLOTO' } });
+    fireEvent.change(type, { target: { value: 'KONTO_BANKOWE' } });
+    expect(screen.queryByLabelText('Podinwestycja')).not.toBeInTheDocument();
+    fireEvent.change(type, { target: { value: 'ALL' } });
+    expect(screen.getByRole('img')).toHaveAccessibleDescription(/aktualna suma 200\s000,00\szł/);
+  });
+
   it('announces asset shares and goal completion with bounded progress values', () => {
     render(
       <HouseholdDashboard
