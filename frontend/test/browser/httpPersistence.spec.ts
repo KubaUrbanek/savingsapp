@@ -130,6 +130,18 @@ test('HTTP saves deposits, withdrawals, trades, valuations, corrections and dele
 });
 
 test('HTTP retry after a lost response and reload creates exactly one deposit', async ({ page, request }) => {
+  const seeded = await request.post('/api/portfolio-changes', {
+    data: {
+      requestId: '90000000-0000-4000-8000-000000000003',
+      kind: 'INITIAL',
+      owner: 'jakub',
+      type: 'KONTO_BANKOWE',
+      date: '2019-12-31',
+      valuePln: 0,
+      amountPln: 0
+    }
+  });
+  expect(seeded.ok()).toBeTruthy();
   await page.goto(origin);
   const fillDeposit = async () => {
     await page.getByRole('button', { name: 'Dodaj zmianę', exact: true }).click();
@@ -149,12 +161,12 @@ test('HTTP retry after a lost response and reload creates exactly one deposit', 
   await fillDeposit();
   await page.getByRole('button', { name: 'Zapisz zmianę', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  expect(await (await request.get('/api/investment-operations?owner=jakub')).json()).toHaveLength(1);
+  expect(await (await request.get('/api/investment-operations?owner=jakub')).json()).toHaveLength(2);
   // A new intentional identical deposit must get a new request ID.
   await fillDeposit();
   await page.getByRole('button', { name: 'Zapisz zmianę', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  expect(await (await request.get('/api/investment-operations?owner=jakub')).json()).toHaveLength(2);
+  expect(await (await request.get('/api/investment-operations?owner=jakub')).json()).toHaveLength(3);
   expect((await (await request.get('/api/portfolio-performance?owner=jakub')).json()).currentValuePln).toBe(50);
 });
 
