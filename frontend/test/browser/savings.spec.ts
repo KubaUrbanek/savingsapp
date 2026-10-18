@@ -260,7 +260,9 @@ test('household draft owner is explicit, modal keeps background controls inactiv
   await expect(page.getByLabel('Kwota — zł')).toHaveValue('');
   await expect(page.getByLabel('Inwestycja / rachunek')).toHaveValue('');
   await page.getByLabel('Inwestycja / rachunek').selectOption('KONTO_BANKOWE');
-  await page.getByLabel('Kwota — zł').fill('20');
+  await expect(page.getByLabel('Co chcesz zrobić?')).toHaveValue('INITIAL');
+  await page.getByLabel('Ile masz teraz — zł').fill('20');
+  await page.getByLabel('Ile łącznie wpłaciłem — zł').fill('20');
   await page.getByLabel('Data zmiany').fill('2020-02-01');
   for (let index = 0; index < 12; index++) {
     await page.keyboard.press('Tab');

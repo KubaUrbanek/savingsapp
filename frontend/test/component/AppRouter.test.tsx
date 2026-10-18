@@ -197,14 +197,7 @@ describe('Savings workspace', () => {
       within(screen.getByLabelText('Co chcesz zrobić?'))
         .getAllByRole('option')
         .map((o) => o.textContent)
-    ).toEqual([
-      'Wpisuję stan początkowy',
-      'Wpłaciłem',
-      'Kupiłem',
-      'Wypłaciłem',
-      'Sprzedałem',
-      'Wpisuję obecną wartość'
-    ]);
+    ).toEqual(['Wpłaciłem', 'Kupiłem', 'Wypłaciłem', 'Sprzedałem', 'Wpisuję obecną wartość']);
     fireEvent.change(screen.getByLabelText('Co chcesz zrobić?'), { target: { value: 'BUY' } });
     expect(screen.getByLabelText('Płacę z konta')).toBeVisible();
     fireEvent.change(screen.getByLabelText('Co chcesz zrobić?'), { target: { value: 'VALUATION' } });
@@ -212,11 +205,74 @@ describe('Savings workspace', () => {
     expect(screen.getByLabelText('Ile masz teraz — zł')).toBeVisible();
     await expectNoAccessibilityViolations(dialog);
   });
+  it('preserves the dedicated contribution completion flow for an existing valuation', async () => {
+    const execute = vi.fn(async () => ({ nextValue: 100, kind: 'INITIAL', atomic: true }));
+    render(<AppRouter dependencies={dependencies({ recordPortfolioChange: { execute } })} />);
+    const buttons = await screen.findAllByRole('button', { name: 'Podaj sumę dotychczasowych wpłat', hidden: true });
+    fireEvent.click(buttons[0]!);
+    expect(screen.getByRole('dialog', { name: 'Uzupełnij wpłaty' })).toBeVisible();
+    expect(screen.getByLabelText('Inwestycja / rachunek')).toBeDisabled();
+    expect(screen.getByLabelText('Ile masz teraz — zł')).toHaveValue(100);
+    fireEvent.change(screen.getByLabelText('Ile łącznie wpłaciłem — zł'), { target: { value: '90' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
+    await waitFor(() =>
+      expect(execute).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'INITIAL', amountPln: '90', valuePln: '100' })
+      )
+    );
+  });
+  it('selects the investment before offering actions and updates them for each holding', async () => {
+    render(
+      <AppRouter dependencies={dependencies({ loadPortfolio: { execute: async () => [{ ...entry, valuePln: 0 }] } })} />
+    );
+    const dialog = await openForm();
+    const type = screen.getByLabelText('Inwestycja / rachunek');
+    const action = screen.getByLabelText('Co chcesz zrobić?');
+    expect(within(dialog).getAllByRole('combobox').indexOf(type)).toBeLessThan(
+      within(dialog).getAllByRole('combobox').indexOf(action)
+    );
+    expect(within(action).queryByRole('option', { name: 'Wpisuję stan początkowy' })).not.toBeInTheDocument();
+    fireEvent.change(type, { target: { value: 'IKE' } });
+    expect(action).toHaveValue('INITIAL');
+    expect(
+      within(action)
+        .getAllByRole('option')
+        .map((option) => option.textContent)
+    ).toEqual(['Wpisuję stan początkowy']);
+    fireEvent.change(screen.getByLabelText('Ile masz teraz — zł'), { target: { value: '500' } });
+    fireEvent.change(type, { target: { value: 'KONTO_BANKOWE' } });
+    expect(action).toHaveValue('DEPOSIT');
+    expect(screen.getByLabelText('Kwota — zł')).toHaveValue(null);
+    fireEvent.change(type, { target: { value: '' } });
+    expect(action).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Zapisz zmianę' })).toBeDisabled();
+  });
+  it('checks the owner and subcategory independently when offering initial values', async () => {
+    render(
+      <AppRouter
+        dependencies={dependencies({
+          loadPortfolio: { execute: async () => [entry, { ...entry, type: 'GIELDA', subcategory: 'RYNKI_ROZWINIETE' }] }
+        })}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Razem' }));
+    await openForm();
+    fireEvent.change(screen.getByLabelText('Inwestycja / rachunek'), { target: { value: 'GIELDA' } });
+    fireEvent.change(screen.getByLabelText('Rodzaj inwestycji'), { target: { value: 'RYNKI_ROZWINIETE' } });
+    expect(screen.getByLabelText('Co chcesz zrobić?')).toHaveValue('DEPOSIT');
+    fireEvent.change(screen.getByLabelText('Rodzaj inwestycji'), { target: { value: 'ZLOTO' } });
+    expect(screen.getByLabelText('Co chcesz zrobić?')).toHaveValue('INITIAL');
+    fireEvent.change(screen.getByLabelText('Zapisujesz dla'), { target: { value: 'zosia' } });
+    fireEvent.change(screen.getByLabelText('Inwestycja / rachunek'), { target: { value: 'KONTO_BANKOWE' } });
+    expect(screen.getByLabelText('Co chcesz zrobić?')).toHaveValue('INITIAL');
+  });
   it.each(['DEPOSIT', 'BUY', 'WITHDRAWAL', 'SELL', 'VALUATION', 'INITIAL'])('maps direct %s action', async (kind) => {
     const execute = vi.fn(async () => ({ nextValue: 100, kind, atomic: true }));
     render(<AppRouter dependencies={dependencies({ recordPortfolioChange: { execute } })} />);
     await openForm();
-    fireEvent.change(screen.getByLabelText('Co chcesz zrobić?'), { target: { value: kind } });
+    if (kind === 'INITIAL')
+      fireEvent.change(screen.getByLabelText('Inwestycja / rachunek'), { target: { value: 'IKE' } });
+    else fireEvent.change(screen.getByLabelText('Co chcesz zrobić?'), { target: { value: kind } });
     if (['VALUATION', 'INITIAL'].includes(kind))
       fireEvent.change(screen.getByLabelText('Ile masz teraz — zł'), { target: { value: '100' } });
     if (kind === 'INITIAL')

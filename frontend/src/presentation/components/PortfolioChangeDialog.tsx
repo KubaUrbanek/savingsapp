@@ -32,6 +32,7 @@ interface Props {
   onOwnerChange: (owner: string) => void;
   types: string[];
   entries: Holding[];
+  completingBasis?: boolean;
   editing: boolean;
   legacy: boolean;
   saving: boolean;
@@ -67,6 +68,7 @@ export function PortfolioChangeDialog(props: Props) {
     onOwnerChange,
     types,
     entries,
+    completingBasis = false,
     editing,
     legacy,
     saving,
@@ -95,6 +97,19 @@ export function PortfolioChangeDialog(props: Props) {
     const first = Object.keys(errors)[0];
     if (first) fields.current[first]?.focus();
   }, [errors]);
+  const hasHolding = entries.some(
+    (entry) => entry.owner === owner && entry.type === form.type && (entry.subcategory || '') === form.subcategory
+  );
+  const availableActions = Object.entries(actions).filter(([kind]) =>
+    editing || completingBasis ? kind === form.action : hasHolding ? kind !== 'INITIAL' : kind === 'INITIAL'
+  );
+  React.useEffect(() => {
+    if (editing || completingBasis || !form.type) return;
+    const action = hasHolding ? (form.action === 'INITIAL' ? 'DEPOSIT' : form.action) : 'INITIAL';
+    if (action !== form.action) {
+      setForm((previous) => ({ ...previous, action, operationType: action, amountPln: '', currentValuePln: '' }));
+    }
+  }, [editing, completingBasis, form.type, form.action, hasHolding, setForm]);
   const explicit = form.action === 'INITIAL' || form.action === 'VALUATION';
   const trade = form.action === 'BUY' || form.action === 'SELL';
   const subcategories = form.type ? subcategoriesFor(form.type) : [];
@@ -118,13 +133,15 @@ export function PortfolioChangeDialog(props: Props) {
       }}
     >
       <div className="dialogHeading">
-        <h2 id="change-dialog-title">{editing ? 'Popraw zmianę' : 'Dodaj zmianę'}</h2>
+        <h2 id="change-dialog-title">
+          {editing ? 'Popraw zmianę' : completingBasis ? 'Uzupełnij wpłaty' : 'Dodaj zmianę'}
+        </h2>
         <Button type="button" variant="quiet" onClick={onClose} disabled={saving} aria-label="Zamknij formularz">
           ×
         </Button>
       </div>
       <form className="formPanel unifiedForm" onSubmit={onSubmit} aria-busy={saving}>
-        {owners.length > 1 && !editing ? (
+        {owners.length > 1 && !editing && !completingBasis ? (
           <Field
             label="Zapisujesz dla"
             control={
@@ -143,32 +160,6 @@ export function PortfolioChangeDialog(props: Props) {
           </p>
         )}
         <Field
-          label="Co chcesz zrobić?"
-          control={
-            <select
-              id="portfolio-change-operation-type"
-              value={form.action}
-              disabled={saving || editing}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  action: e.target.value,
-                  operationType: e.target.value,
-                  amountPln: '',
-                  currentValuePln: ''
-                }))
-              }
-            >
-              {Object.entries(actions).map(([kind, label]) => (
-                <option key={kind} value={kind}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          }
-        />
-        <p className="formHint">{help[form.action as keyof typeof help]}</p>
-        <Field
           label="Inwestycja / rachunek"
           error={errors.type}
           control={
@@ -179,7 +170,7 @@ export function PortfolioChangeDialog(props: Props) {
               }}
               required
               value={form.type}
-              disabled={saving || editing}
+              disabled={saving || editing || completingBasis}
               onChange={(e) =>
                 setForm((f) => ({
                   ...f,
@@ -209,7 +200,7 @@ export function PortfolioChangeDialog(props: Props) {
                 }}
                 required
                 value={form.subcategory}
-                disabled={saving || editing}
+                disabled={saving || editing || completingBasis}
                 onChange={(e) => set('subcategory', e.target.value)}
               >
                 {subcategories.map((s: string) => (
@@ -221,6 +212,36 @@ export function PortfolioChangeDialog(props: Props) {
             }
           />
         )}
+        <Field
+          label="Co chcesz zrobić?"
+          control={
+            <select
+              id="portfolio-change-operation-type"
+              value={form.type ? form.action : ''}
+              disabled={saving || editing || completingBasis || !form.type}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  action: e.target.value,
+                  operationType: e.target.value,
+                  amountPln: '',
+                  currentValuePln: ''
+                }))
+              }
+            >
+              {!form.type && <option value="">Najpierw wybierz inwestycję</option>}
+              {form.type &&
+                availableActions.map(([kind, label]) => (
+                  <option key={kind} value={kind}>
+                    {label}
+                  </option>
+                ))}
+            </select>
+          }
+        />
+        <p className="formHint">
+          {form.type ? help[form.action as keyof typeof help] : 'Najpierw wybierz typ inwestycji lub rachunku.'}
+        </p>
         <Field
           label={explicit ? 'Ile masz teraz — zł' : 'Kwota — zł'}
           hint={explicit ? 'Wartość widoczna na rachunku, np. 11 000 zł po wzroście inwestycji.' : undefined}
