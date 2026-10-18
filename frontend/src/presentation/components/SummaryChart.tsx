@@ -1,5 +1,7 @@
 // @ts-nocheck
 import React from 'react';
+import { subcategoriesFor } from '../../domain/portfolio/constants.js';
+import { SUBCATEGORY_LABELS } from '../viewModels/formatters.js';
 import { buildSummary } from '../../domain/portfolio/summary.js';
 import { mapTimeSeriesViewModel } from '../viewModels/portfolioViewModelMappers.js';
 import { DataTable, type DataColumn } from './DataTable.js';
@@ -11,8 +13,14 @@ export function SummaryChart({ id = undefined, entries, types, scopeLabel = unde
   const summaryId = React.useId();
   const scrollHintId = React.useId();
   const [selectedType, setSelectedType] = React.useState('ALL');
+  const [selectedSubcategory, setSelectedSubcategory] = React.useState('ALL');
+  const subcategories = selectedType === 'ALL' ? [] : subcategoriesFor(selectedType);
   const [period, setPeriod] = React.useState('monthly');
-  const filteredEntries = selectedType === 'ALL' ? entries : entries.filter((entry) => entry.type === selectedType);
+  const filteredEntries = entries.filter(
+    (entry) =>
+      (selectedType === 'ALL' || entry.type === selectedType) &&
+      (selectedSubcategory === 'ALL' || entry.subcategory === selectedSubcategory)
+  );
   const points = buildSummary(filteredEntries, period);
   const viewModel = mapTimeSeriesViewModel(points, types, selectedType, period);
   const chartWidth = Math.max(760, points.length * 46 + 86);
@@ -26,6 +34,10 @@ export function SummaryChart({ id = undefined, entries, types, scopeLabel = unde
     (selectedType === 'ALL' && scopeLabel) ||
     viewModel.typeOptions.find((option) => option.value === selectedType)?.label ||
     selectedType;
+  const selectedScopeLabel =
+    selectedSubcategory === 'ALL'
+      ? selectedTypeLabel
+      : `${selectedTypeLabel} — ${SUBCATEGORY_LABELS[selectedSubcategory]}`;
   const periodLabel = period === 'yearly' ? 'rocznie' : 'miesięcznie';
   const latestPoint = points.at(-1);
   const changeSymbol = (latestPoint?.changeAmount || 0) >= 0 ? '↑' : '↓';
@@ -38,7 +50,13 @@ export function SummaryChart({ id = undefined, entries, types, scopeLabel = unde
           <Field
             label="Zakres inwestycji"
             control={
-              <select value={selectedType} onChange={(event) => setSelectedType(event.target.value)}>
+              <select
+                value={selectedType}
+                onChange={(event) => {
+                  setSelectedType(event.target.value);
+                  setSelectedSubcategory('ALL');
+                }}
+              >
                 {viewModel.typeOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
@@ -47,6 +65,21 @@ export function SummaryChart({ id = undefined, entries, types, scopeLabel = unde
               </select>
             }
           />
+          {subcategories.length > 0 && (
+            <Field
+              label="Podinwestycja"
+              control={
+                <select value={selectedSubcategory} onChange={(event) => setSelectedSubcategory(event.target.value)}>
+                  <option value="ALL">Wszystkie podinwestycje</option>
+                  {subcategories.map((subcategory) => (
+                    <option key={subcategory} value={subcategory}>
+                      {SUBCATEGORY_LABELS[subcategory]}
+                    </option>
+                  ))}
+                </select>
+              }
+            />
+          )}
           <Field
             label="Okres"
             control={
@@ -75,7 +108,7 @@ export function SummaryChart({ id = undefined, entries, types, scopeLabel = unde
       </div>
 
       <p id={summaryId} className="chartTextSummary">
-        {selectedTypeLabel}, {periodLabel}: aktualna suma {viewModel.total}, zmiana kwotowa {viewModel.change}, zmiana
+        {selectedScopeLabel}, {periodLabel}: aktualna suma {viewModel.total}, zmiana kwotowa {viewModel.change}, zmiana
         procentowa {viewModel.changePercent}.
       </p>
 
@@ -140,7 +173,7 @@ export function SummaryChart({ id = undefined, entries, types, scopeLabel = unde
         <details className="chartDataDisclosure">
           <summary>Pokaż dane wykresu</summary>
           <DataTable
-            caption={`Dane dla: ${selectedTypeLabel}, ${periodLabel}`}
+            caption={`Dane dla: ${selectedScopeLabel}, ${periodLabel}`}
             rows={viewModel.rows}
             rowKey={(point) => point.key}
             columns={
