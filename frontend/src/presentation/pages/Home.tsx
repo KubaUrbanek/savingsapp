@@ -51,6 +51,7 @@ export function Home({ dependencies }) {
   const [typeFilter, setTypeFilter] = React.useState('');
   const [subcategoryFilter, setSubcategoryFilter] = React.useState('');
   const [formOpen, setFormOpen] = React.useState(false);
+  const [completingBasis, setCompletingBasis] = React.useState(false);
   const [formOwner, setFormOwner] = React.useState(() => preferences.selectedOwner());
   const [form, setForm] = React.useState(() => blankForm());
   const [editing, setEditing] = React.useState(null);
@@ -187,6 +188,7 @@ export function Home({ dependencies }) {
     requestAnimationFrame(() => tabsRef.current[tabs[next].id]?.focus());
   }
   function openForm(kind = 'DEPOSIT', asset = null) {
+    setCompletingBasis(kind === 'INITIAL' && asset != null);
     const draftOwner = asset?.owner || owner || users[0];
     const type = asset?.type || (types.includes('KONTO_BANKOWE') ? 'KONTO_BANKOWE' : types[0] || '');
     setFormOwner(draftOwner);
@@ -203,6 +205,7 @@ export function Home({ dependencies }) {
     setFormOpen(true);
   }
   function editRow(row) {
+    setCompletingBasis(false);
     setEditing(row);
     setFormOwner(row.owner);
     setForm({
@@ -690,6 +693,7 @@ export function Home({ dependencies }) {
           }}
           types={types}
           entries={allEntries}
+          completingBasis={completingBasis}
           editing={!!editing}
           legacy={!!editing?.legacy}
           saving={saving}

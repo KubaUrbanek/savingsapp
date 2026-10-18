@@ -205,6 +205,20 @@ describe('Savings workspace', () => {
     expect(screen.getByLabelText('Ile masz teraz — zł')).toBeVisible();
     await expectNoAccessibilityViolations(dialog);
   });
+  it('preserves the dedicated contribution completion flow for an existing valuation', async () => {
+    const execute = vi.fn(async () => ({ nextValue: 100, kind: 'INITIAL', atomic: true }));
+    render(<AppRouter dependencies={dependencies({ recordPortfolioChange: { execute } })} />);
+    const buttons = await screen.findAllByRole('button', { name: 'Podaj sumę dotychczasowych wpłat', hidden: true });
+    fireEvent.click(buttons[0]!);
+    expect(screen.getByRole('dialog', { name: 'Uzupełnij wpłaty' })).toBeVisible();
+    expect(screen.getByLabelText('Inwestycja / rachunek')).toBeDisabled();
+    expect(screen.getByLabelText('Ile masz teraz — zł')).toHaveValue(100);
+    fireEvent.change(screen.getByLabelText('Ile łącznie wpłaciłem — zł'), { target: { value: '90' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
+    await waitFor(() =>
+      expect(execute).toHaveBeenCalledWith(expect.objectContaining({ kind: 'INITIAL', amountPln: '90', valuePln: '100' }))
+    );
+  });
   it('selects the investment before offering actions and updates them for each holding', async () => {
     render(
       <AppRouter dependencies={dependencies({ loadPortfolio: { execute: async () => [{ ...entry, valuePln: 0 }] } })} />
