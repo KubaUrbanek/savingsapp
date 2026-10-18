@@ -216,7 +216,9 @@ describe('Savings workspace', () => {
     fireEvent.change(screen.getByLabelText('Ile łącznie wpłaciłem — zł'), { target: { value: '90' } });
     fireEvent.click(screen.getByRole('button', { name: 'Zapisz zmianę' }));
     await waitFor(() =>
-      expect(execute).toHaveBeenCalledWith(expect.objectContaining({ kind: 'INITIAL', amountPln: '90', valuePln: '100' }))
+      expect(execute).toHaveBeenCalledWith(
+        expect.objectContaining({ kind: 'INITIAL', amountPln: '90', valuePln: '100' })
+      )
     );
   });
   it('selects the investment before offering actions and updates them for each holding', async () => {
