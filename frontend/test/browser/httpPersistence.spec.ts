@@ -77,6 +77,19 @@ test('HTTP saves deposits, withdrawals, trades, valuations, corrections and dele
     }
   });
   expect(seeded.ok()).toBeTruthy();
+  const stock = await request.post('/api/portfolio-changes', {
+    data: {
+      requestId: '90000000-0000-4000-8000-000000000002',
+      kind: 'INITIAL',
+      owner: 'jakub',
+      type: 'GIELDA',
+      subcategory: 'RYNKI_ROZWINIETE',
+      date: '2020-01-01',
+      valuePln: 0,
+      amountPln: 0
+    }
+  });
+  expect(stock.ok()).toBeTruthy();
   await page.goto(origin);
   const scenarios = [
     { kind: 'DEPOSIT', type: 'KONTO_BANKOWE', amount: '100', total: 1100 },
@@ -87,10 +100,10 @@ test('HTTP saves deposits, withdrawals, trades, valuations, corrections and dele
   ];
   for (const [index, scenario] of scenarios.entries()) {
     await page.getByRole('button', { name: 'Dodaj zmianę', exact: true }).click();
-    await page.getByLabel('Co chcesz zrobić?').selectOption(scenario.kind);
     await page.getByLabel('Inwestycja / rachunek').selectOption(scenario.type);
     if (scenario.type === 'GIELDA')
       await page.getByRole('dialog').getByLabel('Rodzaj inwestycji', { exact: true }).selectOption('RYNKI_ROZWINIETE');
+    await page.getByLabel('Co chcesz zrobić?').selectOption(scenario.kind);
     await page
       .getByLabel(scenario.kind === 'VALUATION' ? 'Ile masz teraz — zł' : 'Kwota — zł', { exact: true })
       .fill(scenario.amount);

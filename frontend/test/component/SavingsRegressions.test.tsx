@@ -153,7 +153,7 @@ describe('savings regressions', () => {
           preferences: { selectedOwner: () => 'jakub', selectOwner: vi.fn() },
           useCases: {
             loadReferenceData: { execute: async () => ({ users: ['jakub'], types: ['KONTO_BANKOWE'] }) },
-            loadPortfolio: { execute: async () => [] },
+            loadPortfolio: { execute: async () => [{ ...entry, type: 'KONTO_BANKOWE', subcategory: null }] },
             loadPortfolioPerformance: { execute: async () => ({ operations: [], performance: null }) },
             recordPortfolioChange: { execute }
           }

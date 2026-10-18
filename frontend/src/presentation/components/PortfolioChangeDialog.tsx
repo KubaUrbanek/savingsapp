@@ -95,6 +95,19 @@ export function PortfolioChangeDialog(props: Props) {
     const first = Object.keys(errors)[0];
     if (first) fields.current[first]?.focus();
   }, [errors]);
+  const hasHolding = entries.some(
+    (entry) => entry.owner === owner && entry.type === form.type && (entry.subcategory || '') === form.subcategory
+  );
+  const availableActions = Object.entries(actions).filter(([kind]) =>
+    editing ? kind === form.action : hasHolding ? kind !== 'INITIAL' : kind === 'INITIAL'
+  );
+  React.useEffect(() => {
+    if (editing || !form.type) return;
+    const action = hasHolding ? (form.action === 'INITIAL' ? 'DEPOSIT' : form.action) : 'INITIAL';
+    if (action !== form.action) {
+      setForm((previous) => ({ ...previous, action, operationType: action, amountPln: '', currentValuePln: '' }));
+    }
+  }, [editing, form.type, form.action, hasHolding, setForm]);
   const explicit = form.action === 'INITIAL' || form.action === 'VALUATION';
   const trade = form.action === 'BUY' || form.action === 'SELL';
   const subcategories = form.type ? subcategoriesFor(form.type) : [];
@@ -142,32 +155,6 @@ export function PortfolioChangeDialog(props: Props) {
             Zapisujesz dla: <strong>{displayName(owner)}</strong>
           </p>
         )}
-        <Field
-          label="Co chcesz zrobić?"
-          control={
-            <select
-              id="portfolio-change-operation-type"
-              value={form.action}
-              disabled={saving || editing}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  action: e.target.value,
-                  operationType: e.target.value,
-                  amountPln: '',
-                  currentValuePln: ''
-                }))
-              }
-            >
-              {Object.entries(actions).map(([kind, label]) => (
-                <option key={kind} value={kind}>
-                  {label}
-                </option>
-              ))}
-            </select>
-          }
-        />
-        <p className="formHint">{help[form.action as keyof typeof help]}</p>
         <Field
           label="Inwestycja / rachunek"
           error={errors.type}
@@ -221,6 +208,36 @@ export function PortfolioChangeDialog(props: Props) {
             }
           />
         )}
+        <Field
+          label="Co chcesz zrobić?"
+          control={
+            <select
+              id="portfolio-change-operation-type"
+              value={form.type ? form.action : ''}
+              disabled={saving || editing || !form.type}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  action: e.target.value,
+                  operationType: e.target.value,
+                  amountPln: '',
+                  currentValuePln: ''
+                }))
+              }
+            >
+              {!form.type && <option value="">Najpierw wybierz inwestycję</option>}
+              {form.type &&
+                availableActions.map(([kind, label]) => (
+                  <option key={kind} value={kind}>
+                    {label}
+                  </option>
+                ))}
+            </select>
+          }
+        />
+        <p className="formHint">
+          {form.type ? help[form.action as keyof typeof help] : 'Najpierw wybierz typ inwestycji lub rachunku.'}
+        </p>
         <Field
           label={explicit ? 'Ile masz teraz — zł' : 'Kwota — zł'}
           hint={explicit ? 'Wartość widoczna na rachunku, np. 11 000 zł po wzroście inwestycji.' : undefined}
