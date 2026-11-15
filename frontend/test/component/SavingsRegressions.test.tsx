@@ -18,6 +18,32 @@ const entry = {
 };
 const plan = { bonds: 50, stocks: 50, gold: 50, developed: 35, emerging: 15 };
 describe('savings regressions', () => {
+  it('combines investments without owners or write actions in both layouts', async () => {
+    const entries = [
+      { ...entry, type: 'IKZE', valuePln: 4836 },
+      { ...entry, id: 'zosia-gold', owner: 'zosia', type: 'IKE', valuePln: 9590.54, date: '2026-11-15' }
+    ];
+    const assets = entries.map((value, index) => ({
+      ...value,
+      performance: { nominalResultPln: index ? -777.41 : 436.11, contributedCapitalPln: 100 }
+    }));
+    const { container } = render(
+      <PortfolioOverview household entries={entries} assets={assets} performance={null} onUpdate={vi.fn()} />
+    );
+    const table = screen.getByRole('table');
+    const cards = screen.getByRole('list', { name: 'Nasze inwestycje' });
+    expect(within(table).getAllByRole('row')).toHaveLength(2);
+    expect(within(cards).getAllByRole('listitem')).toHaveLength(1);
+    for (const layout of [table, cards]) {
+      expect(layout).toHaveTextContent(/14\s426,54/);
+      expect(layout).toHaveTextContent(/-341,30/);
+      expect(layout).not.toHaveTextContent(/Jakub|Zosia|IKE|IKZE/);
+      expect(within(layout).queryByRole('button')).not.toBeInTheDocument();
+      fireEvent.click(within(layout).getByText('Szczegóły'));
+      expect(layout).toHaveTextContent('2026-09-01 – 2026-11-15');
+    }
+    await expectNoAccessibilityViolations(container);
+  });
   it('offers separate contribution and management actions in both holding layouts', () => {
     const complete = vi.fn(),
       manage = vi.fn();

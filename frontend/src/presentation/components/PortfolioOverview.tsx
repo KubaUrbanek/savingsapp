@@ -11,16 +11,18 @@ import {
   TYPE_LABELS,
   SUBCATEGORY_LABELS
 } from '../viewModels/formatters.js';
+import { aggregateHouseholdHoldings } from '../../domain/portfolio/services/HouseholdHoldingsAggregationService.js';
 import { buildCurrentSnapshot } from '../../domain/portfolio/snapshot.js';
 
-function HoldingDetails({ asset, loading, onCompleteBasis, onManage }) {
+function HoldingDetails({ asset, loading, onCompleteBasis, onManage, household = false }) {
   return (
     <details className="holdingDetails">
       <summary>
         Szczegóły
         <span className="visuallyHidden">
           {' '}
-          — {SUBCATEGORY_LABELS[asset.subcategory] || TYPE_LABELS[asset.type]} · {displayName(asset.owner)}
+          — {SUBCATEGORY_LABELS[asset.subcategory] || TYPE_LABELS[asset.type]}
+          {!household && ` · ${displayName(asset.owner)}`}
         </span>
       </summary>
       <div className="holdingDetailsContent">
@@ -62,20 +64,39 @@ function HoldingValue({ asset, loading }) {
 export function PortfolioOverview({
   entries,
   performance,
-  assets = [],
+  assets = [] as Array<{
+    owner: string;
+    type: string;
+    subcategory?: string | null;
+    performance: Record<string, number | null> | null;
+  }>,
+  household = false,
   loading = false,
   children = undefined as React.ReactNode,
-  onUpdate = undefined,
+  onUpdate = undefined as ((asset: object) => void) | undefined,
   onCompleteBasis = undefined as ((asset: object) => void) | undefined,
   onManage = undefined as ((asset: object) => void) | undefined
 }) {
   const current = buildCurrentSnapshot(entries),
     total = current.reduce((s, e) => s + Number(e.valuePln), 0);
-  const rows = current.map((e) => ({
+  const holdings = current.map((e) => ({
     ...e,
     performance: assets.find((a) => a.owner === e.owner && a.type === e.type && a.subcategory === e.subcategory)
       ?.performance
   }));
+  const rows = household ? aggregateHouseholdHoldings(holdings) : holdings;
+  const actions = (asset) => (
+    <div className="holdingActions">
+      {!household && <Button onClick={() => onUpdate?.(asset)}>Zmień obecną wartość</Button>}
+      <HoldingDetails
+        asset={asset}
+        loading={loading}
+        household={household}
+        onCompleteBasis={household ? undefined : onCompleteBasis}
+        onManage={household ? undefined : onManage}
+      />
+    </div>
+  );
   const dates = current.map((e) => e.date).sort(),
     oldest = dates[0],
     newest = dates.at(-1);
@@ -115,12 +136,16 @@ export function PortfolioOverview({
       {rows.length === 0 && (
         <p role="status">Brak inwestycji w wybranym zakresie. Zaznacz grupę lub wybierz „Zaznacz wszystkie”.</p>
       )}
-      <h2>Moje inwestycje</h2>
+      <h2>{household ? 'Nasze inwestycje' : 'Moje inwestycje'}</h2>
+      {household && (
+        <p className="holdingsNotice">Aby zmienić wartość lub uzupełnić wpłaty, wybierz widok konkretnej osoby.</p>
+      )}
       <p className="holdingsNotice">Obecna wartość to saldo konta lub wartość inwestycji razem z zyskiem lub stratą.</p>
       {missingBasis && (
         <p className="holdingsNotice">
-          Brak danych o wpłatach. W szczegółach podaj sumę pieniędzy, które wpłaciłeś — bez zysków i strat. Dzięki temu
-          obliczymy wynik inwestycji.
+          {household
+            ? 'Brak danych o wpłatach. Uzupełnij je w widoku konkretnej osoby, aby obliczyć wspólny wynik inwestycji.'
+            : 'Brak danych o wpłatach. W szczegółach podaj sumę pieniędzy, które wpłaciłeś — bez zysków i strat. Dzięki temu obliczymy wynik inwestycji.'}
         </p>
       )}
       <div className="tableScroller holdingsTable" role="region" aria-label="Wartości i wyniki inwestycji" tabIndex={0}>
@@ -136,9 +161,7 @@ export function PortfolioOverview({
               cell: (e) => (
                 <>
                   {SUBCATEGORY_LABELS[e.subcategory] || TYPE_LABELS[e.type]}
-                  <small>
-                    {TYPE_LABELS[e.type]} · {displayName(e.owner)}
-                  </small>
+                  <small>{household ? 'Razem' : `${TYPE_LABELS[e.type]} · ${displayName(e.owner)}`}</small>
                 </>
               )
             },
@@ -146,32 +169,22 @@ export function PortfolioOverview({
             {
               key: 'action',
               header: 'Działania',
-              cell: (e) => (
-                <div className="holdingActions">
-                  <Button onClick={() => onUpdate?.(e)}>Zmień obecną wartość</Button>
-                  <HoldingDetails asset={e} loading={loading} onCompleteBasis={onCompleteBasis} onManage={onManage} />
-                </div>
-              )
+              cell: actions
             }
           ]}
         />
       </div>
-      <ul className="holdingsCards" aria-label="Moje inwestycje">
+      <ul className="holdingsCards" aria-label={household ? 'Nasze inwestycje' : 'Moje inwestycje'}>
         {rows.map((e) => (
           <li className="holdingCard" key={e.id}>
             <div className="holdingCardHeading">
               <div>
                 <h3>{SUBCATEGORY_LABELS[e.subcategory] || TYPE_LABELS[e.type]}</h3>
-                <small>
-                  {TYPE_LABELS[e.type]} · {displayName(e.owner)}
-                </small>
+                <small>{household ? 'Razem' : `${TYPE_LABELS[e.type]} · ${displayName(e.owner)}`}</small>
               </div>
               <HoldingValue asset={e} loading={loading} />
             </div>
-            <div className="holdingActions">
-              <Button onClick={() => onUpdate?.(e)}>Zmień obecną wartość</Button>
-              <HoldingDetails asset={e} loading={loading} onCompleteBasis={onCompleteBasis} onManage={onManage} />
-            </div>
+            {actions(e)}
           </li>
         ))}
       </ul>
