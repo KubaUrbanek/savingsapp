@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AppRouter } from '../../src/app/AppRouter.js';
 import { PortfolioChangeValidationFailure } from '../../src/application/portfolio/RecordPortfolioChange.js';
@@ -386,6 +386,48 @@ describe('Savings workspace', () => {
     fireEvent.click(within(history).getByRole('button', { name: 'Pokaż całą historię' }));
     expect(within(history).getAllByRole('button', { name: 'Edytuj' })).toHaveLength(2);
   });
+  it.each([
+    { household: false, users: ['jakub', 'zosia'], preservesSelection: true, label: 'the same owner' },
+    {
+      household: true,
+      users: ['zosia', 'jakub'],
+      preservesSelection: true,
+      label: 'the same household in another order'
+    },
+    { household: false, users: ['zosia'], preservesSelection: false, label: 'a replacement owner' },
+    { household: true, users: ['jakub'], preservesSelection: false, label: 'changed household membership' }
+  ])(
+    'reconciles a late reference response for $label without losing a valid history selection',
+    async ({ household, users, preservesSelection }) => {
+      const reference = deferred();
+      const gold = { ...entry, id: 'gold', type: 'GIELDA', subcategory: 'ZLOTO' };
+      render(
+        <AppRouter
+          dependencies={dependencies({
+            loadReferenceData: { execute: () => reference.promise },
+            loadPortfolio: {
+              execute: async ({ scope }: { scope: { ownerId?: string } }) =>
+                [entry, gold].map((holding) => ({ ...holding, owner: scope.ownerId || 'jakub' }))
+            }
+          })}
+        />
+      );
+      if (household) fireEvent.click(screen.getByRole('button', { name: 'Razem' }));
+      const table = await screen.findByRole('table', { name: 'Wpłaty, wartość i wynik każdej inwestycji' });
+      const row = within(table).getByRole('rowheader', { name: /Złoto/ }).closest('tr')!;
+      fireEvent.click(within(row).getByText('Szczegóły'));
+      fireEvent.click(within(row).getByRole('button', { name: 'Edytuj / usuń' }));
+      const history = screen.getByRole('tabpanel', { name: 'Historia' });
+      expect(within(history).getAllByRole('button', { name: 'Edytuj' })).toHaveLength(1);
+      await act(async () => reference.resolve({ users, types: ['KONTO_BANKOWE', 'GIELDA'] }));
+      expect(within(history).getAllByRole('button', { name: 'Edytuj' })).toHaveLength(preservesSelection ? 1 : 2);
+      expect(within(history).queryByRole('button', { name: 'Pokaż całą historię' }) !== null).toBe(preservesSelection);
+      if (!household && !preservesSelection) {
+        expect(screen.getByRole('heading', { name: 'Oszczędności: Zosia' })).toBeVisible();
+      }
+    }
+  );
+
   it('keeps independent history available after snapshot failure', async () => {
     render(
       <AppRouter

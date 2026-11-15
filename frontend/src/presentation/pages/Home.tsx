@@ -140,13 +140,19 @@ export function Home({ dependencies }) {
   React.useEffect(() => {
     if (controller.referenceData.status !== 'success') return;
     const loaded = controller.referenceData.data;
-    setHistoryAsset(null);
-    setScope((current) =>
-      current.kind === PortfolioScopeKind.HOUSEHOLD
+    const resolvedScope =
+      scope.kind === PortfolioScopeKind.HOUSEHOLD
         ? HouseholdPortfolio(loaded.users)
-        : OwnerPortfolio(loaded.users.includes(current.ownerId) ? current.ownerId : loaded.users[0])
-    );
-  }, [controller.referenceData.status, controller.referenceData.data]);
+        : OwnerPortfolio(loaded.users.includes(scope.ownerId) ? scope.ownerId : loaded.users[0]);
+    const sameScope =
+      scope.kind === PortfolioScopeKind.HOUSEHOLD
+        ? scope.ownerIds.length === resolvedScope.ownerIds.length &&
+          scope.ownerIds.every((id) => resolvedScope.ownerIds.includes(id))
+        : scope.ownerId === resolvedScope.ownerId;
+    if (sameScope) return;
+    setHistoryAsset(null);
+    setScope(resolvedScope);
+  }, [controller.referenceData.status, controller.referenceData.data, scope]);
   React.useEffect(() => {
     if (!household) {
       try {
