@@ -288,3 +288,9 @@ HTTP persistence regressions run in both browser projects under an insecure HTTP
 ### Interactive overview visualization
 
 The overview uses the complete owner/household data from the controller and applies a single local group selection to current values, per-asset performance, holdings and both charts. `overviewVisualization` owns pure account/asset-class grouping, snapshot distribution and historical carry-forward with calendar date ranges. It reuses the classification policy, so pensions with unknown composition are not cash. `Home` owns the selection and reset lifecycle; presentation chart components own display controls and accessible SVG/table rendering. Date ranges affect history only, while headlines remain current. No filter triggers network requests or persists UI preferences. The implementation contract and acceptance scenarios are versioned in [the SDD](../docs/specs/overview-visualization-sdd.md).
+
+Household overview holdings use `HouseholdHoldingsAggregationService` after selecting
+current snapshots per owner and account. The service groups by investment subcategory
+across account types, or by asset type for holdings without a subcategory. It propagates
+unknown performance and retains the valuation date range. Household rows are read-only;
+owner views retain write actions. See `docs/specs/household-overview.md` for acceptance criteria.

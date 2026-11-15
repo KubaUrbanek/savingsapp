@@ -137,3 +137,9 @@ Testy przeglądarkowe uruchamiają osobny serwer na porcie 8082 z tymczasową ba
 W planie zakupów „Akcje i ETF-y” obejmują złoty ETF. Domyślny podział tej części to 50% złota, 35% rynków rozwiniętych i 15% wschodzących; przy udziale części akcyjnej 50% cel złota wynosi 25% całego planu. Starsze zapisane plany są dostosowywane do tego podziału z zachowaniem udziału obligacji oraz proporcji między rynkami. API planu wymaga `allocationVersion: 2`; szczegóły migracji opisuje `docs/domain/README.md`.
 
 Zapis zmian działa również przez HTTP w sieci lokalnej (np. QNAP w Tailscale). Generowanie identyfikatorów żądań i skrótów do ponawiania zapisu nie wymaga HTTPS ani funkcji `crypto.randomUUID` / `crypto.subtle`. Testy przeglądarkowe obejmują osobny kontekst HTTP, ponieważ `localhost` udostępnia te funkcje i sam nie odtwarza warunków połączenia z NAS-em.
+
+W „Razem / Przegląd” inwestycje są sumowane między osobami i rachunkami (np. złoto
+w IKE i IKZE tworzy jeden wiersz). Szczegóły pokazują wspólny wkład i zakres dat wycen.
+Brak danych o wpłatach części inwestycji pozostawia jej wspólny wynik nieznany.
+Zmiana wartości i uzupełnianie wpłat są dostępne po wybraniu konkretnej osoby.
+Specyfikacja zmiany: [wspólny przegląd (SDD)](docs/specs/household-overview.md).

@@ -502,6 +502,7 @@ export function Home({ dependencies }) {
         >
           {() => (
             <PortfolioOverview
+              household={household}
               entries={overview}
               performance={overviewPerformance}
               assets={controller.assets}
