@@ -111,6 +111,8 @@ Pipeline [CI](.github/workflows/frontend.yml) automatycznie sprawdza każdy push
 - testy Chromium na komputerze i telefonie, uruchamiane na JAR-ze z tymczasową bazą;
 - testy skryptu wdrożenia na QNAP oraz rzeczywistego kontenera: zdrowie, zapis i zachowanie danych po restarcie.
 
+Zadanie `verify` korzysta z Ubuntu 24.04, obsługiwanego przez przypiętą wersję Playwright. Aktualizację systemu runnera należy sprawdzać razem ze zgodnością Playwright i instalacją Chromium.
+
 Raporty backendu, raport HTML Playwright oraz zrzuty ekranu i ślady błędów przeglądarki są dostępne jako artefakt `verification-reports` przez 14 dni. Przed mergem wymagamy zielonego CI dla bieżącego commita. Nie trzeba powtarzać całego zestawu ręcznie po jego zaliczeniu; lokalnie uruchamiaj wybrane kontrole potrzebne do pracy lub diagnozy. Workflow można też uruchomić ręcznie z GitHub Actions.
 
 Pełny zestaw komend do lokalnej diagnostyki:
