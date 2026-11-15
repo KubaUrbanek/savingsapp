@@ -4,7 +4,13 @@ import { Link } from 'react-router-dom';
 import { subcategoriesFor, FALLBACK_USERS } from '../../domain/portfolio/constants.js';
 import { OwnerPortfolio, HouseholdPortfolio, PortfolioScopeKind } from '../../application/PortfolioScope.js';
 import { PortfolioChangeValidationFailure } from '../../application/portfolio/RecordPortfolioChange.js';
-import { buildCurrentSnapshot } from '../../domain/portfolio/snapshot.js';
+import { buildCurrentSnapshot, snapshotKey } from '../../domain/portfolio/snapshot.js';
+import { aggregatePerformance } from '../../domain/portfolio/services/PerformanceAggregationService.js';
+import {
+  availableGroups,
+  filterOverviewEntries,
+  type OverviewGrouping
+} from '../../domain/portfolio/overviewVisualization.js';
 import { usePortfolioController } from '../portfolio/hooks/usePortfolioController.js';
 import { dataFrom } from '../portfolio/hooks/queryState.js';
 import { mapPortfolioChangeForm } from '../mappers/portfolioChangeFormMapper.js';
@@ -22,7 +28,8 @@ import { InlineMessage } from '../components/InlineMessage.js';
 import { QueryBoundary } from '../components/QueryBoundary.js';
 import { PortfolioOverview } from '../components/PortfolioOverview.js';
 import { PurchasePlanPanel } from '../components/PurchasePlanPanel.js';
-import { SummaryChart } from '../components/SummaryChart.js';
+import { OverviewFilters } from '../components/OverviewFilters.js';
+import { OverviewCharts } from '../components/OverviewCharts.js';
 import { PortfolioChangeDialog } from '../components/PortfolioChangeDialog.js';
 
 const tabs = [
@@ -48,8 +55,9 @@ export function Home({ dependencies }) {
   const [activeTab, setActiveTab] = React.useState('summary');
   const [historyAsset, setHistoryAsset] = React.useState(null);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
-  const [typeFilter, setTypeFilter] = React.useState('');
-  const [subcategoryFilter, setSubcategoryFilter] = React.useState('');
+  const [overviewGrouping, setOverviewGrouping] = React.useState<OverviewGrouping>('accounts');
+  const [excludedGroups, setExcludedGroups] = React.useState<string[]>([]);
+  const [overviewReset, setOverviewReset] = React.useState(0);
   const [formOpen, setFormOpen] = React.useState(false);
   const [completingBasis, setCompletingBasis] = React.useState(false);
   const [formOwner, setFormOwner] = React.useState(() => preferences.selectedOwner());
@@ -76,26 +84,25 @@ export function Home({ dependencies }) {
   }, [error]);
   const household = scope.kind === PortfolioScopeKind.HOUSEHOLD;
   const owner = household ? null : scope.ownerId;
-  // Filters belong to the overview; history, planning and household always use their complete scope.
-  const filters =
-    activeTab === 'summary' && !settingsOpen && !household ? { type: typeFilter, subcategory: subcategoryFilter } : {};
-  const controller = usePortfolioController(useCases, scope, filters);
+  // Fetch complete scopes once; overview selections never filter history, planning or network queries.
+  const controller = usePortfolioController(useCases, scope, {});
   const { users, types } = dataFrom(controller.referenceData, { users: FALLBACK_USERS, types: [] });
-  const allEntries = dataFrom(controller.snapshot, []).filter((e) => e.date <= today());
+  const currentDate = today();
+  const allEntries = dataFrom(controller.snapshot, []).filter((e) => e.date <= currentDate);
   const entries = dataFrom(controller.entries, []);
   const operations = dataFrom(controller.operations, []);
   const snapshot = buildCurrentSnapshot(allEntries);
-  const overview =
-    !household && typeFilter
-      ? snapshot.filter((e) => e.type === typeFilter && (!subcategoryFilter || e.subcategory === subcategoryFilter))
-      : snapshot;
-  const label = household
-    ? 'Wspólne oszczędności'
-    : subcategoryFilter
-      ? SUBCATEGORY_LABELS[subcategoryFilter]
-      : typeFilter
-        ? TYPE_LABELS[typeFilter]
-        : 'Wszystkie oszczędności';
+  const overviewEntries = filterOverviewEntries(allEntries, overviewGrouping, excludedGroups);
+  const overview = buildCurrentSnapshot(overviewEntries);
+  const overviewGroups = availableGroups(allEntries, overviewGrouping);
+  const overviewPerformance =
+    excludedGroups.length === 0
+      ? dataFrom(controller.performance, null)
+      : aggregatePerformance(
+          overview.map(
+            (entry) => controller.assets.find((asset) => snapshotKey(asset) === snapshotKey(entry))?.performance ?? null
+          )
+        );
   const phase = controller.projection.status === 'refreshing' ? 'refreshing' : controller.projection.data?.phase;
   const feedback =
     phase === 'refreshing'
@@ -154,8 +161,7 @@ export function Home({ dependencies }) {
     if (saving) return;
     setHistoryAsset(null);
     setScope(next);
-    setTypeFilter('');
-    setSubcategoryFilter('');
+    resetOverview();
     setFormOpen(false);
     setEditing(null);
     setForm(blankForm());
@@ -165,7 +171,18 @@ export function Home({ dependencies }) {
     setFormError('');
     setStatus('');
   }
+  function resetOverview() {
+    setOverviewGrouping('accounts');
+    setExcludedGroups([]);
+    setOverviewReset((value) => value + 1);
+  }
+  function changeOverviewGrouping(grouping: OverviewGrouping) {
+    if (grouping === overviewGrouping) return;
+    setOverviewGrouping(grouping);
+    setExcludedGroups([]);
+  }
   function selectTab(id) {
+    if (activeTab === 'summary' && id !== activeTab) resetOverview();
     setHistoryAsset(null);
     setActiveTab(id);
     setSettingsOpen(false);
@@ -362,7 +379,10 @@ export function Home({ dependencies }) {
             type="button"
             aria-expanded={settingsOpen}
             aria-controls="portfolio-settings"
-            onClick={() => setSettingsOpen(!settingsOpen)}
+            onClick={() => {
+              if (!settingsOpen) resetOverview();
+              setSettingsOpen(!settingsOpen);
+            }}
           >
             Ustawienia
           </Button>
@@ -452,59 +472,18 @@ export function Home({ dependencies }) {
         aria-labelledby="portfolio-tab-summary"
         hidden={settingsOpen || activeTab !== 'summary'}
       >
-        {!household && snapshot.length > 0 && (
-          <details className="overviewFilters">
-            <summary>Filtruj inwestycje: {label}</summary>
-            <div className="typeNav" role="group" aria-label="Rodzaj inwestycji">
-              <Button
-                variant="quiet"
-                className={!typeFilter ? 'typeTab active' : 'typeTab'}
-                aria-pressed={!typeFilter}
-                onClick={() => {
-                  setTypeFilter('');
-                  setSubcategoryFilter('');
-                }}
-              >
-                Wszystkie inwestycje
-              </Button>
-              {types
-                .filter((t) => snapshot.some((e) => e.type === t))
-                .map((type) => (
-                  <Button
-                    key={type}
-                    variant="quiet"
-                    className={typeFilter === type ? 'typeTab active' : 'typeTab'}
-                    aria-pressed={typeFilter === type}
-                    onClick={() => {
-                      setTypeFilter(type);
-                      setSubcategoryFilter('');
-                    }}
-                  >
-                    {TYPE_LABELS[type]}
-                  </Button>
-                ))}
-            </div>
-            {typeFilter && subcategoriesFor(typeFilter).length > 0 && (
-              <div className="subtypeNav" role="group" aria-label="Rodzaj instrumentu">
-                <Button variant="quiet" aria-pressed={!subcategoryFilter} onClick={() => setSubcategoryFilter('')}>
-                  Wszystkie
-                </Button>
-                {subcategoriesFor(typeFilter).map((sub) => (
-                  <Button
-                    key={sub}
-                    variant="quiet"
-                    aria-pressed={subcategoryFilter === sub}
-                    onClick={() => setSubcategoryFilter(sub)}
-                  >
-                    {SUBCATEGORY_LABELS[sub]}
-                  </Button>
-                ))}
-              </div>
-            )}
-          </details>
+        {snapshot.length > 0 && (
+          <OverviewFilters
+            grouping={overviewGrouping}
+            groups={overviewGroups}
+            excludedGroups={excludedGroups}
+            onGroupingChange={changeOverviewGrouping}
+            onExcludedGroupsChange={setExcludedGroups}
+          />
         )}
         <QueryBoundary
           state={controller.snapshot}
+          isEmpty={() => snapshot.length === 0}
           skeletonShape="section"
           onRetry={controller.retry.snapshot}
           emptyTitle="Zacznij od aktualnego stanu konta lub inwestycji"
@@ -518,7 +497,7 @@ export function Home({ dependencies }) {
           {() => (
             <PortfolioOverview
               entries={overview}
-              performance={dataFrom(controller.performance, null)}
+              performance={overviewPerformance}
               assets={controller.assets}
               loading={controller.performance.status === 'loading'}
               onUpdate={(asset) => openForm('VALUATION', asset)}
@@ -528,29 +507,20 @@ export function Home({ dependencies }) {
                 setHistoryAsset(asset);
                 requestAnimationFrame(() => tabsRef.current.history?.focus());
               }}
-            />
+            >
+              <OverviewCharts
+                key={overviewReset}
+                entries={overviewEntries}
+                grouping={overviewGrouping}
+                today={currentDate}
+              />
+            </PortfolioOverview>
           )}
         </QueryBoundary>
         {controller.performance.status === 'failure' && (
           <InlineMessage variant="warning">
             Nie udało się wczytać wyników. <Button onClick={controller.retry.performance}>Odśwież wyniki</Button>
           </InlineMessage>
-        )}
-        {snapshot.length > 0 && (
-          <details className="valueHistory">
-            <summary>Zobacz historię wartości</summary>
-            <SummaryChart
-              key={`${scope.kind}:${owner}:${typeFilter}:${subcategoryFilter}`}
-              scopeLabel={label}
-              entries={allEntries.filter(
-                (e) =>
-                  household ||
-                  ((!typeFilter || e.type === typeFilter) &&
-                    (!subcategoryFilter || e.subcategory === subcategoryFilter))
-              )}
-              types={types}
-            />
-          </details>
         )}
       </section>
       <section

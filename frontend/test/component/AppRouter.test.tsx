@@ -132,16 +132,15 @@ describe('Savings workspace', () => {
         })}
       />
     );
-    fireEvent.click(await screen.findByText(/Filtruj inwestycje/));
-    fireEvent.click(await screen.findByRole('button', { name: 'Giełda' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Wszystkie inwestycje' }));
-    expect(screen.getByRole('button', { name: 'Wszystkie inwestycje' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Giełda' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Zaznacz wszystkie' }));
+    expect(screen.getByRole('checkbox', { name: 'Giełda' })).toBeChecked();
     await openForm('123.45');
     expect(screen.getByLabelText('Inwestycja / rachunek')).toHaveValue('KONTO_BANKOWE');
     fireEvent.click(screen.getByRole('button', { name: 'Anuluj' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
     fireEvent.click(screen.getByRole('tab', { name: 'Przegląd' }));
-    expect(screen.getByRole('button', { name: 'Wszystkie inwestycje' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('checkbox', { name: 'Giełda' })).toBeChecked();
   });
   it('clears owner filters before loading household performance', async () => {
     const execute = vi.fn(async () => ({ operations: [], performance: null }));
@@ -155,8 +154,7 @@ describe('Savings workspace', () => {
         })}
       />
     );
-    fireEvent.click(await screen.findByText(/Filtruj inwestycje/));
-    fireEvent.click(await screen.findByRole('button', { name: 'Giełda' }));
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'Giełda' }));
     fireEvent.click(screen.getByRole('button', { name: 'Razem' }));
     await waitFor(() =>
       expect(execute).toHaveBeenLastCalledWith(
@@ -166,7 +164,7 @@ describe('Savings workspace', () => {
         })
       )
     );
-    expect(screen.queryByText(/Filtruj inwestycje/)).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Giełda' })).toBeChecked();
   });
   it('displays the actual draft owner and clears fields when selecting another', async () => {
     render(<AppRouter dependencies={dependencies()} />);
@@ -454,12 +452,10 @@ describe('Savings workspace', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Co dokupić?' }));
     expect(await screen.findByLabelText('Mam do zainwestowania — zł')).toBeVisible();
   });
-  it('keeps the value chart collapsed until requested', async () => {
+  it('shows the new value history immediately without the previous disclosure', async () => {
     render(<AppRouter dependencies={dependencies()} />);
-    const summary = await screen.findByText('Zobacz historię wartości');
-    expect(summary.closest('details')).not.toHaveAttribute('open');
-    fireEvent.click(summary);
-    expect(summary.closest('details')).toHaveAttribute('open');
+    expect(await screen.findByRole('heading', { name: 'Historia wartości' })).toBeVisible();
+    expect(screen.queryByText('Zobacz historię wartości')).not.toBeInTheDocument();
   });
   it('cancels undo and restores focus', async () => {
     const execute = vi.fn();
