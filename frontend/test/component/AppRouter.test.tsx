@@ -416,12 +416,18 @@ describe('Savings workspace', () => {
       const table = await screen.findByRole('table', { name: 'Wpłaty, wartość i wynik każdej inwestycji' });
       const row = within(table).getByRole('rowheader', { name: /Złoto/ }).closest('tr')!;
       fireEvent.click(within(row).getByText('Szczegóły'));
-      fireEvent.click(within(row).getByRole('button', { name: 'Edytuj / usuń' }));
+      if (household) {
+        expect(within(row).queryByRole('button', { name: 'Edytuj / usuń' })).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
+      } else {
+        fireEvent.click(within(row).getByRole('button', { name: 'Edytuj / usuń' }));
+      }
       const history = screen.getByRole('tabpanel', { name: 'Historia' });
-      expect(within(history).getAllByRole('button', { name: 'Edytuj' })).toHaveLength(1);
+      expect(within(history).getAllByRole('button', { name: 'Edytuj' })).toHaveLength(household ? 2 : 1);
       await act(async () => reference.resolve({ users, types: ['KONTO_BANKOWE', 'GIELDA'] }));
-      expect(within(history).getAllByRole('button', { name: 'Edytuj' })).toHaveLength(preservesSelection ? 1 : 2);
-      expect(within(history).queryByRole('button', { name: 'Pokaż całą historię' }) !== null).toBe(preservesSelection);
+      const hasSelection = !household && preservesSelection;
+      expect(within(history).getAllByRole('button', { name: 'Edytuj' })).toHaveLength(hasSelection ? 1 : 2);
+      expect(within(history).queryByRole('button', { name: 'Pokaż całą historię' }) !== null).toBe(hasSelection);
       if (!household && !preservesSelection) {
         expect(screen.getByRole('heading', { name: 'Oszczędności: Zosia' })).toBeVisible();
       }
