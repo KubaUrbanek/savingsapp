@@ -64,6 +64,7 @@ export function PortfolioOverview({
   performance,
   assets = [],
   loading = false,
+  children = undefined as React.ReactNode,
   onUpdate = undefined,
   onCompleteBasis = undefined as ((asset: object) => void) | undefined,
   onManage = undefined as ((asset: object) => void) | undefined
@@ -109,6 +110,10 @@ export function PortfolioOverview({
           Wypłaciłem: {formatMoney(performance.withdrawalsTotalPln)}. Kapitał po wypłatach:{' '}
           {metric(performance.contributedCapitalPln)}.
         </p>
+      )}
+      {children}
+      {rows.length === 0 && (
+        <p role="status">Brak inwestycji w wybranym zakresie. Zaznacz grupę lub wybierz „Zaznacz wszystkie”.</p>
       )}
       <h2>Moje inwestycje</h2>
       <p className="holdingsNotice">Obecna wartość to saldo konta lub wartość inwestycji razem z zyskiem lub stratą.</p>

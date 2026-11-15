@@ -30,27 +30,37 @@ test.beforeEach(async ({ request }) => {
   expect(response.ok()).toBeTruthy();
 });
 
-test('filters and real CSS panel visibility remain consistent', async ({ page, request }) => {
+test('overview charts share filters and reset across grouping and application tabs', async ({ page, request }) => {
   await initial(request, 'GIELDA', 200, 'ZLOTO');
   await initial(request, 'GIELDA', 1000, 'RYNKI_ROZWINIETE');
-  await initial(request, 'GIELDA', 500, 'RYNKI_ROZWIJAJACE_SIE');
+  await initial(request, 'PPK', 500);
+  await initial(request, 'PPO', 300);
   await page.goto('/');
-  await page.getByText(/Filtruj inwestycje/).click();
-  await expect(page.getByRole('button', { name: 'Wszystkie inwestycje', exact: true })).toHaveAttribute(
-    'aria-pressed',
-    'true'
-  );
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
-  await expect(page.locator('.savingsHeadline')).toBeVisible();
-  const headline = await page.locator('.savingsHeadline').boundingBox();
-  expect(headline!.y + headline!.height).toBeLessThanOrEqual(page.viewportSize()!.height);
-  await page.getByRole('button', { name: 'Giełda', exact: true }).click();
-  await page.getByRole('button', { name: 'Złoto', exact: true }).click();
-  await expect(page.locator('.savingsHeadline .summaryTotal')).toContainText('200,00');
+  const total = page.locator('.savingsHeadline .summaryTotal');
+  await expect(total).toContainText('2000,00');
+  await expect(page.getByRole('checkbox', { name: 'PPK', exact: true })).toBeChecked();
+  await page.getByRole('checkbox', { name: 'PPK', exact: true }).uncheck();
+  await page.getByRole('checkbox', { name: 'PPO', exact: true }).uncheck();
+  await expect(total).toContainText('1200,00');
+  await expect(page.locator('.savingsHeadline .metric').first()).toContainText('1200,00');
+  await expect(page.getByRole('rowheader', { name: /PPK|PPO/ })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Rozkład oszczędności' })).toBeVisible();
+  await expect(page.getByLabel('Zakres czasu')).toHaveValue('1y');
+  await page.getByLabel('Pokaż rozbicie').check();
+  await page.getByLabel('Zakres czasu').selectOption('all');
+  await page.getByRole('button', { name: 'Rodzaje aktywów', exact: true }).click();
+  await expect(total).toContainText('2000,00');
+  await expect(page.getByRole('checkbox', { name: 'Nieznany skład', exact: true })).toBeChecked();
+  await page.getByRole('checkbox', { name: 'Nieznany skład', exact: true }).uncheck();
+  await page.getByRole('checkbox', { name: 'Akcje', exact: true }).uncheck();
+  await expect(total).toContainText('200,00');
   await expect(page.getByRole('rowheader', { name: /Rynki rozwinięte/ })).toHaveCount(0);
-  await page.getByText('Zobacz historię wartości').click();
-  await expect(page.locator('.graphPanel .metric').first()).toContainText('200,00');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  await page.getByRole('button', { name: 'Odznacz wszystkie', exact: true }).click();
+  await expect(total).toContainText('0,00');
+  await expect(page.getByRole('button', { name: 'Dodaj aktualny stan konta lub inwestycji' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Zaznacz wszystkie', exact: true }).click();
+  await expect(total).toContainText('2000,00');
   for (const tab of ['Co dokupić?', 'Historia']) {
     await page.getByRole('tab', { name: tab, exact: true }).click();
     await expect(page.locator('#portfolio-panel-summary')).toBeHidden();
@@ -58,13 +68,13 @@ test('filters and real CSS panel visibility remain consistent', async ({ page, r
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   }
   await page.getByRole('tab', { name: 'Przegląd' }).click();
-  await page.getByRole('button', { name: 'Wszystkie inwestycje' }).click();
-  await expect(page.locator('.savingsHeadline .summaryTotal')).toContainText('1700,00');
+  await expect(page.getByRole('checkbox', { name: 'PPK', exact: true })).toBeChecked();
+  await expect(page.getByLabel('Zakres czasu')).toHaveValue('1y');
+  await expect(page.getByLabel('Pokaż rozbicie')).not.toBeChecked();
+  await expect(total).toContainText('2000,00');
   await page.getByRole('button', { name: 'Razem' }).click();
-  await expect(page.locator('.savingsHeadline .metric').last()).toContainText('0,00');
-  await expect(page.locator('.savingsHeadline .metric').last()).not.toContainText('Brak danych');
-  await page.getByRole('tab', { name: 'Co dokupić?' }).click();
-  await expect(page.getByLabel('Mam do zainwestowania — zł')).toBeVisible();
+  await page.getByRole('checkbox', { name: 'PPK', exact: true }).uncheck();
+  await expect(total).toContainText('1500,00');
   await page.getByRole('button', { name: 'Ustawienia', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Pobierz kopię danych' })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();

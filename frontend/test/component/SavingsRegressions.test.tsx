@@ -122,16 +122,14 @@ describe('savings regressions', () => {
       }
     };
     render(<AppRouter dependencies={deps} />);
-    fireEvent.click(await screen.findByText(/Filtruj inwestycje/));
-    fireEvent.click(await screen.findByRole('button', { name: 'Giełda' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Złoto' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Rodzaje aktywów' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Akcje' }));
     const summary = screen.getByRole('tabpanel', { name: 'Przegląd' });
     await waitFor(() =>
       expect(within(summary).getAllByText('Mam teraz')[0]!.parentElement).toHaveTextContent('200,00')
     );
     expect(within(summary).queryByRole('rowheader', { name: /Rynki rozwinięte/ })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByText('Zobacz historię wartości'));
-    expect(within(summary).getByText('Aktualna suma').parentElement).toHaveTextContent('200,00');
+    expect(within(summary).getByRole('heading', { name: 'Historia wartości' })).toBeVisible();
     await waitFor(() => expect(screen.getByRole('button', { name: 'Dodaj zmianę' })).toBeEnabled());
     fireEvent.click(screen.getByRole('button', { name: 'Dodaj zmianę' }));
     expect(screen.getByRole('dialog', { name: 'Dodaj zmianę' })).toBeVisible();
