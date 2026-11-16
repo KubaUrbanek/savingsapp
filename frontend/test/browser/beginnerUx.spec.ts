@@ -71,6 +71,61 @@ test('E02 E13 shared draft and per-owner budget survive tabs and scope', async (
   await expect(page.getByLabel('Kwota na zakupy — zł')).toHaveValue('1000');
   expect((await (await request.get('/api/portfolio-plans?scope=zosia')).json()).bonds).toBe('49');
 });
+test('E02 H15 shared targets use only the selected owners investments', async ({ page, request }) => {
+  await seed(request, 'OBLIGACJE', 5000, 'jakub', 'TRZYLETNIE');
+  await seed(request, 'GIELDA', 1750, 'jakub', 'RYNKI_ROZWINIETE');
+  await seed(request, 'GIELDA', 750, 'jakub', 'RYNKI_ROZWIJAJACE_SIE');
+  await seed(request, 'IKE', 2500, 'zosia', 'ZLOTO');
+  await seed(request, 'GIELDA', 1750, 'zosia', 'RYNKI_ROZWINIETE');
+  await seed(request, 'GIELDA', 750, 'zosia', 'RYNKI_ROZWIJAJACE_SIE');
+  expect((await request.put('/api/portfolio-plans', { data: flat })).ok()).toBeTruthy();
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
+  const panel = page.getByRole('tabpanel', { name: 'Co dokupić?', exact: true });
+  const budget = panel.getByLabel('Kwota na zakupy — zł');
+  const cards = panel.getByRole('list', { name: 'Proponowane zakupy' }).getByRole('listitem');
+  const savedPlan = panel.locator('.savedPlan');
+  await expect(savedPlan).toContainText('Zapisany wspólny plan');
+  const originalWeights = [
+    'Obligacje: 50%',
+    'Złoto: 25%',
+    'Akcje — rynki rozwinięte: 17,5%',
+    'Akcje — rynki wschodzące: 7,5%'
+  ];
+
+  for (const scenario of [
+    { owner: 'Jakub', basis: /Plan obejmuje 7500,00/, purchases: [['Złoto', '1000,00']] },
+    { owner: 'Zosia', basis: /Plan obejmuje 5000,00/, purchases: [['Obligacje', '1000,00']] },
+    {
+      owner: 'Razem',
+      basis: /Plan obejmuje 12\s500,00/,
+      purchases: [
+        ['Obligacje', '666,67'],
+        ['Złoto', '333,33']
+      ]
+    }
+  ] as const) {
+    await page.getByRole('button', { name: scenario.owner, exact: true }).click();
+    await expect(panel).toContainText(`Obliczenia dla: ${scenario.owner}`);
+    await expect(panel).toContainText(scenario.basis);
+    await expect(budget).toHaveValue('');
+    await budget.fill('1000');
+    await expect(cards).toHaveCount(scenario.purchases.length);
+    for (const [category, amount] of scenario.purchases) {
+      await expect(cards.filter({ has: page.getByRole('heading', { name: category, exact: true }) })).toContainText(
+        `Dokup za ${amount}`
+      );
+    }
+    await expect(savedPlan.getByRole('listitem')).toHaveText(originalWeights);
+  }
+
+  await page.getByRole('button', { name: 'Zosia', exact: true }).click();
+  await expect(budget).toHaveValue('1000');
+  await expect(panel).toContainText(/Plan obejmuje 5000,00/);
+  await expect(cards).toHaveCount(1);
+  await expect(cards).toContainText('Obligacje');
+  await expect(cards).toContainText('1000,00');
+});
 test('E07 E14 network errors are distinct from missing data and retry locally', async ({ page, request }) => {
   await seed(request);
   await request.put('/api/portfolio-plans', { data: flat });
