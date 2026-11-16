@@ -219,3 +219,28 @@ test('HTTP can complete unknown contributions and save allocation weights', asyn
   await expect(page.locator('.savedPlan')).toContainText('Złoto: 15%');
   await expect(page.locator('.savedPlan')).toContainText('Obligacje: 60%');
 });
+
+test('Bitcoin initial value and plan persist across reload', async ({ page, request }) => {
+  await page.goto(origin);
+  await page.getByRole('button', { name: 'Dodaj aktualny stan konta lub inwestycji', exact: true }).click();
+  await page.getByLabel('Konto lub produkt').selectOption('GIELDA');
+  await page.getByLabel('Rodzaj inwestycji').selectOption('BITCOIN');
+  await page.getByLabel('Ile masz teraz — zł').fill('600');
+  await page.getByLabel('Znam sumę wpłat (odznaczone: Nie znam)').check();
+  await page.getByLabel('Wpłaty łącznie — zł').fill('500');
+  await page.getByLabel('Data zmiany').fill('2020-01-01');
+  await page.getByRole('button', { name: 'Zapisz oszczędności', exact: true }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByText('Bitcoin (BTC)').filter({ visible: true }).first()).toBeVisible();
+  const performance = await (
+    await request.get('/api/portfolio-performance?owner=jakub&type=GIELDA&subcategory=BITCOIN')
+  ).json();
+  expect(performance.nominalResultPln).toBe(100);
+  const plan = { allocationVersion: 4, bonds: '50', gold: '20', developed: '17.5', emerging: '7.5', bitcoin: '5' };
+  expect((await request.put('/api/portfolio-plans?scope=jakub', { data: plan })).ok()).toBeTruthy();
+  expect(await (await request.get('/api/portfolio-plans?scope=jakub')).json()).toEqual(plan);
+  expect(
+    (await request.put('/api/portfolio-plans?scope=jakub', { data: { ...plan, allocationVersion: 2 } })).status()
+  ).toBe(400);
+});

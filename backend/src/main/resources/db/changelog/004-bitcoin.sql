@@ -1,0 +1,1 @@
+ALTER TABLE portfolio_plans ADD COLUMN bitcoin NUMERIC(100,50) DEFAULT 0 NOT NULL;

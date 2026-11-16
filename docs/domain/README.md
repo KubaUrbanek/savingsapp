@@ -90,3 +90,6 @@ Obliczenia używają wspólnego planu v3 i pełnego zakresu wybranej osoby lub g
 Docelowe wartości w groszach wyznacza metoda największych reszt; remis rozstrzyga kolejność obligacje, złoto, rozwinięte, wschodzące. Suma zakupów równa się sumie sprzedaży. Po rebalansie widoczne są rzeczywiste udziały zaokrąglonych kwot. Dla pustego portfela udziały są nieokreślone. Plan nie zapisuje operacji ani nie uwzględnia kosztów, podatków czy ograniczeń rachunków.
 
 Rebalans wybranych kategorii zamraża wartość pozostałych. Wagi wybranych aktywów normalizujemy do 100% ich obecnej łącznej wartości i rozdzielamy grosze metodą największych reszt. Całkowite odchylenia nadal odnoszą się do całego zapisanego planu. Brak wyboru, pojedyncza kategoria, zerowa suma wybranych wag i brak kapitału nie generują mylących rekomendacji. Szczegóły: [SDD widoku i wyboru aktywów](../specs/2026-11-16-visual-selective-rebalance.md).
+
+
+Bitcoin integration: the shared flat household plan includes bitcoin as a direct percentage of the entire plan (default zero). Allocation API/version 4 requires exact decimal weights including bitcoin. Backup allocation versions 1–3 migrate with bitcoin=0; backup format remains 2. Liquibase 004-bitcoin adds NUMERIC(100,50) after the existing shared-plan migration. Bitcoin participates in purchases and selective rebalancing.

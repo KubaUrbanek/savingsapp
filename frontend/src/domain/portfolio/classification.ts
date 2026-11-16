@@ -25,6 +25,7 @@ export const InvestmentType = enumType('investment type', [
 ]);
 export const InvestmentSubcategory = enumType('investment subcategory', [
   'ZLOTO',
+  'BITCOIN',
   'RYNKI_ROZWINIETE',
   'RYNKI_ROZWIJAJACE_SIE',
   'TRZYLETNIE',
@@ -42,6 +43,7 @@ export const OperationType = enumType('operation type', [
 
 const MARKETS = Object.freeze([
   InvestmentSubcategory.ZLOTO,
+  InvestmentSubcategory.BITCOIN,
   InvestmentSubcategory.RYNKI_ROZWINIETE,
   InvestmentSubcategory.RYNKI_ROZWIJAJACE_SIE
 ]);
@@ -99,6 +101,7 @@ export const InvestmentClassificationPolicy = Object.freeze({
       ].includes(category.subcategory)
     )
       return 'BONDS';
+    if (category.subcategory === InvestmentSubcategory.BITCOIN) return 'BITCOIN';
     if (category.subcategory === InvestmentSubcategory.ZLOTO) return 'GOLD';
     if ([InvestmentType.GIELDA, InvestmentType.IKE, InvestmentType.IKZE].includes(category.type)) return 'STOCKS';
     if (['PPK', 'PPO'].includes(category.type)) return 'UNCLASSIFIED';

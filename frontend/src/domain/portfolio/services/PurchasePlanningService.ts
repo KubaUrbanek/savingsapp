@@ -43,6 +43,7 @@ export function planPurchases(entries, global, equity, budget) {
   return planFlatPurchases(
     entries,
     {
+      BITCOIN: (Number(global.STOCKS) * Number(equity.BITCOIN ?? 0)) / 100,
       BONDS: Number(global.BONDS),
       GOLD: (Number(global.STOCKS) * Number(equity.GOLD)) / 100,
       RYNKI_ROZWINIETE: (Number(global.STOCKS) * Number(equity.RYNKI_ROZWINIETE)) / 100,
@@ -54,14 +55,16 @@ export function planPurchases(entries, global, equity, budget) {
 export function planningSnapshot(entries, global, equity) {
   const weights = equity
     ? {
+        BITCOIN: (Number(global.STOCKS) * Number(equity.BITCOIN ?? 0)) / 100,
         BONDS: Number(global.BONDS),
         GOLD: (Number(global.STOCKS) * Number(equity.GOLD)) / 100,
         RYNKI_ROZWINIETE: (Number(global.STOCKS) * Number(equity.RYNKI_ROZWINIETE)) / 100,
         RYNKI_ROZWIJAJACE_SIE: (Number(global.STOCKS) * Number(equity.RYNKI_ROZWIJAJACE_SIE)) / 100
       }
     : global;
+  weights.BITCOIN ??= 0;
   if (!validWeights(weights)) throw new RangeError('Nieprawidłowe udziały');
-  const values = { BONDS: 0, GOLD: 0, RYNKI_ROZWINIETE: 0, RYNKI_ROZWIJAJACE_SIE: 0 };
+  const values = { BONDS: 0, GOLD: 0, RYNKI_ROZWINIETE: 0, RYNKI_ROZWIJAJACE_SIE: 0, BITCOIN: 0 };
   let cash = 0,
     unclassified = 0;
   buildCurrentSnapshot(entries).forEach((e) => {

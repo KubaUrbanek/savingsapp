@@ -3,10 +3,11 @@ package pl.oszczednosci.app.domain.model;
 import java.math.BigDecimal;
 
 /** Exact decimal, flat allocation shared by every calculation scope. */
-public record PortfolioPlan(BigDecimal bonds, BigDecimal gold, BigDecimal developed, BigDecimal emerging) {
+public record PortfolioPlan(BigDecimal bonds, BigDecimal gold, BigDecimal developed, BigDecimal emerging, BigDecimal bitcoin) {
+    public PortfolioPlan(BigDecimal bonds, BigDecimal gold, BigDecimal developed, BigDecimal emerging) { this(bonds, gold, developed, emerging, BigDecimal.ZERO); }
     public PortfolioPlan {
         BigDecimal total = BigDecimal.ZERO;
-        for (BigDecimal weight : new BigDecimal[]{bonds, gold, developed, emerging}) {
+        for (BigDecimal weight : new BigDecimal[]{bonds, gold, developed, emerging, bitcoin}) {
             if (weight == null || weight.signum() < 0 || weight.compareTo(BigDecimal.valueOf(100)) > 0)
                 throw new IllegalArgumentException("Waga musi mieścić się w zakresie 0–100%.");
             if (weight.stripTrailingZeros().scale() > 50)
@@ -16,11 +17,12 @@ public record PortfolioPlan(BigDecimal bonds, BigDecimal gold, BigDecimal develo
         if (total.compareTo(BigDecimal.valueOf(100)) != 0)
             throw new IllegalArgumentException("Udziały muszą sumować się do 100%.");
         bonds = bonds.stripTrailingZeros(); gold = gold.stripTrailingZeros();
-        developed = developed.stripTrailingZeros(); emerging = emerging.stripTrailingZeros();
+        developed = developed.stripTrailingZeros(); emerging = emerging.stripTrailingZeros(); bitcoin = bitcoin.stripTrailingZeros();
     }
     public PortfolioPlan(double bonds, double gold, double developed, double emerging) {
         this(decimal(bonds), decimal(gold), decimal(developed), decimal(emerging));
     }
+    public PortfolioPlan(double bonds, double gold, double developed, double emerging, double bitcoin) { this(decimal(bonds), decimal(gold), decimal(developed), decimal(emerging), decimal(bitcoin)); }
     private static BigDecimal decimal(double number) {
         if (!Double.isFinite(number)) throw new IllegalArgumentException("Udział musi być liczbą.");
         return BigDecimal.valueOf(number);

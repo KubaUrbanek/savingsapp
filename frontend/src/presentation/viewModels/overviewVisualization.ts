@@ -5,6 +5,7 @@ const assetLabels: Record<string, string> = {
   BONDS: 'Obligacje',
   STOCKS: 'Akcje',
   GOLD: 'Złoto',
+  BITCOIN: 'Bitcoin (BTC)',
   CASH: 'Gotówka',
   UNCLASSIFIED: 'Nieznany skład'
 };
@@ -19,6 +20,7 @@ const styles: Record<string, { color: string; dash: string }> = {
   PPO: { color: '#626476', dash: '14 3 2 3' },
   BONDS: { color: '#1f6840', dash: '8 3' },
   STOCKS: { color: '#246b9c', dash: '3 3' },
+  BITCOIN: { color: '#a25324', dash: '6 3 2 3' },
   GOLD: { color: '#8a610c', dash: '10 3 2 3' },
   CASH: { color: '#855a9f', dash: '12 5' },
   UNCLASSIFIED: { color: '#a25324', dash: '2 4' }

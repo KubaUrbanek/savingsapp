@@ -329,7 +329,7 @@ test('rebalances the full current portfolio without deposit or writes on desktop
   expect(
     (
       await request.put('/api/portfolio-plans?scope=household', {
-        data: { allocationVersion: 3, bonds: 50, gold: 25, developed: 17.5, emerging: 7.5 }
+        data: { allocationVersion: 4, bitcoin: 0, bonds: 50, gold: 25, developed: 17.5, emerging: 7.5 }
       })
     ).ok()
   ).toBeTruthy();

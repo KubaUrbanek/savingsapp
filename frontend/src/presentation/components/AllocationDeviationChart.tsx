@@ -7,6 +7,7 @@ import {
 } from '../viewModels/formatters.js';
 
 export const rebalanceLabels: Record<string, string> = {
+  BITCOIN: 'Bitcoin (BTC)',
   BONDS: 'Obligacje',
   GOLD: 'Złoto (ETF)',
   RYNKI_ROZWINIETE: 'Rynki rozwinięte',

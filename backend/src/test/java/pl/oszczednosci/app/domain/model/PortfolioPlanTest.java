@@ -3,6 +3,15 @@ import static org.assertj.core.api.Assertions.*;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 class PortfolioPlanTest {
+ @Test void bitcoinIsAnExactWholePlanWeightAndMarketSubcategory() {
+  assertThat(new PortfolioPlan(50,20,17.5,7.5,5).bitcoin()).isEqualByComparingTo("5");
+  assertThat(PortfolioPlan.defaults().bitcoin()).isZero();
+  assertThatThrownBy(()->new PortfolioPlan(50,25,17.5,7.5,5)).isInstanceOf(IllegalArgumentException.class);
+  for (var type : java.util.List.of(InvestmentType.GIELDA,InvestmentType.IKE,InvestmentType.IKZE))
+   assertThat(AssetCategory.of(type,InvestmentSubcategory.BITCOIN).subcategory()).isEqualTo(InvestmentSubcategory.BITCOIN);
+  assertThatThrownBy(()->AssetCategory.of(InvestmentType.OBLIGACJE,InvestmentSubcategory.BITCOIN)).isInstanceOf(IllegalArgumentException.class);
+ }
+
  @Test void flatPlanIsExactAndValidatesAllFourWeights() {
   assertThat(PortfolioPlan.defaults()).isEqualTo(new PortfolioPlan(50,25,17.5,7.5));
   for (double[] v : new double[][]{{50,25,17.5,7.4},{-1,101,0,0},{Double.NaN,0,0,0},{101,0,0,0}})

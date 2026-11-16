@@ -157,14 +157,14 @@ class WebAdapterConfigurationTest {
         mvc.perform(get("/api/portfolio-performance").queryParam("owner","jakub"))
             .andExpect(jsonPath("$.nominalResultPln").value(100)).andExpect(jsonPath("$.depositsTotalPln").value(1000));
         mvc.perform(put("/api/portfolio-plans").queryParam("scope","jakub").contentType(MediaType.APPLICATION_JSON)
-            .content("{\"allocationVersion\":3,\"bonds\":60,\"gold\":20,\"developed\":16,\"emerging\":4}"))
+            .content("{\"allocationVersion\":4,\"bitcoin\":0,\"bonds\":60,\"gold\":20,\"developed\":16,\"emerging\":4}"))
             .andExpect(status().isOk());
         mvc.perform(put("/api/portfolio-plans").queryParam("scope","jakub").contentType(MediaType.APPLICATION_JSON)
             .content("{\"bonds\":80,\"stocks\":30,\"gold\":20,\"developed\":80,\"emerging\":20}"))
             .andExpect(status().isBadRequest());
         mvc.perform(put("/api/portfolio-plans").queryParam("scope","jakub").contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andExpect(status().isBadRequest());
-        mvc.perform(get("/api/portfolio-plans").queryParam("scope","jakub")).andExpect(jsonPath("$.bonds").value("60")).andExpect(jsonPath("$.gold").value("20")).andExpect(jsonPath("$.allocationVersion").value(3));
+        mvc.perform(get("/api/portfolio-plans").queryParam("scope","jakub")).andExpect(jsonPath("$.bonds").value("60")).andExpect(jsonPath("$.gold").value("20")).andExpect(jsonPath("$.allocationVersion").value(4));
         for (String invalidPlan : new String[]{
             "{\"allocationVersion\":2,\"bonds\":50,\"stocks\":50,\"gold\":50,\"developed\":70,\"emerging\":30}",
             "{\"allocationVersion\":3,\"bonds\":50,\"stocks\":50,\"gold\":50,\"developed\":35,\"emerging\":15}"
@@ -172,7 +172,7 @@ class WebAdapterConfigurationTest {
         mvc.perform(delete("/api/portfolio-changes/ddc36cab-a704-4a38-b5ac-e39711ab5bb9")).andExpect(status().isNoContent());
         mvc.perform(get("/api/investments").queryParam("owner","jakub")).andExpect(jsonPath("$").isEmpty());
         mvc.perform(get("/api/investment-operations").queryParam("owner","jakub")).andExpect(jsonPath("$").isEmpty());
-        mvc.perform(get("/api/portfolio-plans").queryParam("scope","jakub")).andExpect(jsonPath("$.bonds").value("60")).andExpect(jsonPath("$.gold").value("20")).andExpect(jsonPath("$.allocationVersion").value(3));
+        mvc.perform(get("/api/portfolio-plans").queryParam("scope","jakub")).andExpect(jsonPath("$.bonds").value("60")).andExpect(jsonPath("$.gold").value("20")).andExpect(jsonPath("$.allocationVersion").value(4));
     }
 
     @Test

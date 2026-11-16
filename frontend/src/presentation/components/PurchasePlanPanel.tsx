@@ -7,9 +7,10 @@ import { Button } from './Button.js';
 import { planFlatPurchases, validWeights } from '../../domain/portfolio/services/PurchasePlanningService.js';
 import { decimalText, moneyInput, percentageTotal } from '../../domain/portfolio/decimal.js';
 import { displayName, formatMoney, formatUnsignedPercent } from '../viewModels/formatters.js';
-const defaults = { bonds: 50, gold: 25, developed: 17.5, emerging: 7.5 };
+const defaults = { bonds: 50, gold: 25, developed: 17.5, emerging: 7.5, bitcoin: 0 };
 const categories = [
   ['bonds', 'BONDS', 'Obligacje'],
+  ['bitcoin', 'BITCOIN', 'Bitcoin (BTC)'],
   ['gold', 'GOLD', 'Złoto'],
   ['developed', 'RYNKI_ROZWINIETE', 'Akcje — rynki rozwinięte'],
   ['emerging', 'RYNKI_ROZWIJAJACE_SIE', 'Akcje — rynki wschodzące']
@@ -35,8 +36,8 @@ export function PurchasePlanPanel({ entries, scope, useCases, revision = 0, asse
     Promise.resolve(useCases.loadPortfolioPlan?.execute({ scope: 'household', signal: abort.signal }) ?? null).then(
       (p) => {
         if (!abort.signal.aborted) {
-          setSaved(p);
-          setDraft(p ?? defaults);
+          setSaved(p ? { bitcoin: 0, ...p } : null);
+          setDraft(p ? { bitcoin: 0, ...p } : defaults);
           setState('ready');
         }
       },
@@ -86,8 +87,8 @@ export function PurchasePlanPanel({ entries, scope, useCases, revision = 0, asse
         scope: 'household',
         plan: Object.fromEntries(Object.entries(draft).map(([k, v]) => [k, decimalText(v)]))
       });
-      setSaved(p);
-      setDraft(p);
+      setSaved(p ? { bitcoin: 0, ...p } : null);
+      setDraft({ bitcoin: 0, ...p });
       setState('ready');
       setMessage('Zapisano wspólny plan.');
       if (editor.current) editor.current.open = false;

@@ -7,12 +7,14 @@ export class FetchPortfolioPlanGateway {
   validate(p) {
     if (
       !p ||
-      p.allocationVersion !== 3 ||
-      !['bonds', 'gold', 'developed', 'emerging'].every((k) => typeof p[k] === 'number' || typeof p[k] === 'string') ||
-      !validWeights({ bonds: p.bonds, gold: p.gold, developed: p.developed, emerging: p.emerging })
+      p.allocationVersion !== 4 ||
+      !['bonds', 'gold', 'developed', 'emerging', 'bitcoin'].every(
+        (k) => typeof p[k] === 'number' || typeof p[k] === 'string'
+      ) ||
+      !validWeights({ bonds: p.bonds, bitcoin: p.bitcoin, gold: p.gold, developed: p.developed, emerging: p.emerging })
     )
       throw new TypeError('Nieprawidłowy plan portfela');
-    return Object.fromEntries(['bonds', 'gold', 'developed', 'emerging'].map((key) => [key, p[key]]));
+    return Object.fromEntries(['bonds', 'gold', 'developed', 'emerging', 'bitcoin'].map((key) => [key, p[key]]));
   }
   async load(scope, { signal } = {}) {
     const plan = await this.http.json('/portfolio-plans', { query: { scope: 'household' }, signal });
@@ -23,7 +25,7 @@ export class FetchPortfolioPlanGateway {
       await this.http.json('/portfolio-plans', {
         method: 'PUT',
         query: { scope },
-        body: { ...this.validate({ ...plan, allocationVersion: 3 }), allocationVersion: 3 }
+        body: { ...this.validate({ ...plan, allocationVersion: 4 }), allocationVersion: 4 }
       })
     );
   }

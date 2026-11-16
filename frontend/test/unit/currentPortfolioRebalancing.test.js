@@ -21,15 +21,15 @@ test('specification example balances trades and gives signed deviations and actu
   const result = planRebalancing(holdings, global, equity);
   assert.deepEqual(
     result.rows.map((r) => r.tradeAmount),
-    [-2000, 1500, 250, 250]
+    [-2000, 1500, 250, 250, 0]
   );
   assert.deepEqual(
     result.rows.map((r) => r.deviation),
-    [20, -15, -2.5, -2.5]
+    [20, -15, -2.5, -2.5, 0]
   );
   assert.deepEqual(
     result.rows.map((r) => r.afterValue),
-    [5000, 2500, 1750, 750]
+    [5000, 2500, 1750, 750, 0]
   );
   assert.equal(result.tradeTotal, 2000);
   assert.equal(result.total, 10000);
@@ -65,7 +65,7 @@ test('zero target liquidates a holding and missing categories can be purchased',
   const result = planRebalancing([entry(100, 'ZLOTO')], { BONDS: 100, STOCKS: 0 }, equity);
   assert.deepEqual(
     result.rows.map((r) => r.tradeAmount),
-    [100, -100, 0, 0]
+    [100, -100, 0, 0, 0]
   );
 });
 test('empty investment portfolio has undefined percentages and no trades', () => {
@@ -93,7 +93,7 @@ test('rounding conserves cents across small portfolios and fractional targets', 
   }
   assert.deepEqual(
     planRebalancing([entry(0.01, 'ZLOTO')], global, equity).rows.map((r) => r.afterValue),
-    [0.01, 0, 0, 0]
+    [0.01, 0, 0, 0, 0]
   );
 });
 test('invalid weights, negative values and unsafe cents are rejected', () => {
@@ -119,7 +119,7 @@ test('persisted decimal weights are apportioned exactly even below floating poin
   });
   assert.deepEqual(
     result.rows.map((row) => row.afterValue),
-    [0, 0.01, 0, 0]
+    [0, 0.01, 0, 0, 0]
   );
 });
 
@@ -128,15 +128,15 @@ test('freezing bonds redistributes only the selected capital while global deviat
   const result = planRebalancing(holdings, flat, undefined, ['GOLD', 'RYNKI_ROZWINIETE', 'RYNKI_ROZWIJAJACE_SIE']);
   assert.deepEqual(
     result.rows.map((r) => r.afterValue),
-    [7000, 1500, 1050, 450]
+    [7000, 1500, 1050, 450, 0]
   );
   assert.deepEqual(
     result.rows.map((r) => r.tradeAmount),
-    [0, 500, -450, -50]
+    [0, 500, -450, -50, 0]
   );
   assert.deepEqual(
     result.rows.map((r) => r.deviationAmount),
-    [2000, -1500, -250, -250]
+    [2000, -1500, -250, -250, 0]
   );
   assert.equal(result.selectedTotal, 3000);
   assert.equal(result.excludedTotal, 7000);

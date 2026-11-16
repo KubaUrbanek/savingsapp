@@ -43,7 +43,7 @@ test('E15 water filling retains the all-gold 1000 PLN regression instead of spli
   ];
   assert.deepEqual(
     planFlatPurchases(entries, weights, 1000).rows.map((r) => r.purchaseAmount),
-    [0, 1000, 0, 0]
+    [0, 1000, 0, 0, 0]
   );
 });
 test('E16 money accepts Polish paste, zero and cents and rejects silent rounding', () => {
@@ -79,7 +79,7 @@ test('E18 empty holdings plan purchases without recording any event', () => {
   const entries = [];
   assert.deepEqual(
     planFlatPurchases(entries, weights, 1000).rows.map((r) => r.purchaseAmount),
-    [500, 250, 175, 75]
+    [500, 250, 175, 75, 0]
   );
   assert.deepEqual(entries, []);
 });

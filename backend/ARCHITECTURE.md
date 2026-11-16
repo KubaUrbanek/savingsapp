@@ -141,3 +141,6 @@ H2 DDL may auto-commit: a failed multi-statement schema migration is not guarant
 Changeset `002-equity-gold` retains its deployed behavior. New changeset `003-shared-flat-plan` archives old personal plans, converts only household to four effective weights, and removes personal plans from the active table. Both migrations are one-time; portfolio records remain unchanged.
 
 Legacy plan selection is performed by PreviewBackupService after validating every plan. The codec serializes the canonical file with exact monetary decimals; the preview response carries preparedDocument as Base64. Infrastructure decodes bytes into the confirmed file without JSON.stringify of financial values. No preview writes to storage.
+
+
+Bitcoin integration: the shared flat household plan includes bitcoin as a direct percentage of the entire plan (default zero). Allocation API/version 4 requires exact decimal weights including bitcoin. Backup allocation versions 1–3 migrate with bitcoin=0; backup format remains 2. Liquibase 004-bitcoin adds NUMERIC(100,50) after the existing shared-plan migration. Bitcoin participates in purchases and selective rebalancing.
