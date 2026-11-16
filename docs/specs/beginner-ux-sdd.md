@@ -2,8 +2,8 @@
 
 **Wersja:** 1.1 · 16 listopada 2026
 **Status:** zaakceptowana przez użytkownika z poprawkami z 16 listopada 2026; implementację wykona osobny agent.
-**Punkt odniesienia:** aplikacja http://qnap:8090/ po wdrożeniu wskazanym podczas rozmowy, sprawdzona w Brave.
-**Dokument towarzyszący:** [pełny audyt](./beginner-ux-audit.md).
+**Punkt odniesienia:** aplikacja Oszczędności po wdrożeniu wskazanym podczas rozmowy, sprawdzona w Brave.
+**Podstawa:** audyt interfejsu z 15 listopada 2026. Pełne wymagania i kryteria odbioru zawarto w tym dokumencie; prywatny audyt i dowody nie są wymagane do implementacji.
 
 ## 1. Cel i granice
 
@@ -309,4 +309,4 @@ Etapy służą organizacji pracy. Akceptacja obejmuje całość SDD; etap ten ni
 | KOD-02 — hipoteza | Sprawdzenie i spójne odświeżenie po imporcie, §10, §12 | E29 |
 | KOD-03 | Obie strony transferu w historii, §9 | E25–E26 |
 
-Zakres audytu i jego ograniczenia są opisane w dokumencie towarzyszącym. Ostatnie ponowne sprawdzenie wersji QNAP było niedostępne z powodu limitu automatycznej kontroli uprawnień. Przed implementacją należy porównać SDD z faktycznie bieżącym wdrożeniem; dotychczasowe obserwacje pozostają przypisane do zweryfikowanej wersji z audytu.
+Zakres i ograniczenia testów opisano w §1; szczegółowe materiały dowodowe pozostają prywatne. Ostatnie ponowne sprawdzenie wersji QNAP było niedostępne z powodu limitu automatycznej kontroli uprawnień. Przed implementacją należy porównać SDD z faktycznie bieżącym wdrożeniem; dotychczasowe obserwacje pozostają przypisane do zweryfikowanej wersji z audytu.
