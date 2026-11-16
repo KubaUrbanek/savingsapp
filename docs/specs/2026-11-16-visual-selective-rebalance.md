@@ -2,6 +2,8 @@
 
 Status: realizacja autoryzowana przez użytkownika 2026-11-16, łącznie ze scaleniem po CI. Rozszerzenie [specyfikacji rebalansu](2026-11-16-rebalans-portfela.md).
 
+Wdrożenie tego rozszerzenia scalono w [PR #106](https://github.com/KubaUrbanek/savingsapp/pull/106). Kolejna propozycja, [SDD uporządkowania ekranu „Plan portfela”](2026-11-16-planning-screen-order.md), została zatwierdzona do scalenia jako dokumentacja. Zastępuje układ i sposób prezentacji opisane tutaj (w tym położenie łącznej wartości i szczegółów po rebalansie), zachowując dane wykresu oraz reguły wyboru i wyliczeń.
+
 ## Widok odchyleń
 
 Obecny zestaw kart zastępujemy jednym panelem porównawczym. Wartość inwestycji stanowi wyraźne podsumowanie. Każda z czterech kategorii ma parę poziomych słupków „Teraz” i „Cel”, na wspólnej skali 0–100%, czytelne wartości procentowe, bieżącą kwotę i tekstową informację o nadwyżce/niedoborze w PLN i pp. Wykres pokazuje pełny zakres wybranej osoby lub gospodarstwa względem zapisanego wspólnego planu v3.
