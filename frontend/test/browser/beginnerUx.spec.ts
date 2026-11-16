@@ -265,6 +265,11 @@ for (const width of [320, 390, 768, 1440])
         width
       )
     ).toBeTruthy();
+    const trackWidths = await page
+      .locator('.allocationTrack')
+      .evaluateAll((elements) => elements.map((element) => Math.round(element.getBoundingClientRect().width)));
+    expect(trackWidths).toHaveLength(8);
+    expect(new Set(trackWidths).size).toBe(1);
     await page.evaluate(() => {
       for (const size of [12, 14, 16, 20, 26, 36, 48])
         document.documentElement.style.setProperty(`--font-size-${size}`, `${size * 2}px`);

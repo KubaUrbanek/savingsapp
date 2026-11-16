@@ -2302,7 +2302,7 @@ body {
 .allocationVisualIdentity, .allocationDelta { display: grid; gap: var(--space-2); min-width: 0; }
 .allocationVisualIdentity > span, .allocationDelta small { color: var(--color-muted); }
 .allocationBars { display: grid; gap: var(--space-3); min-width: 0; }
-.allocationBarLine { display: grid; grid-template-columns: 38px minmax(0, 1fr) 58px; gap: var(--space-2); align-items: center; font-size: var(--font-size-label); }
+.allocationBarLine { display: grid; grid-template-columns: 2.75em minmax(0, 1fr) 4em; gap: var(--space-2); align-items: center; font-size: var(--font-size-label); }
 .allocationBarLine > strong { text-align: right; font-variant-numeric: tabular-nums; }
 .allocationTrack { height: 12px; border-radius: 3px; background: var(--color-surface-muted); overflow: hidden; }
 .allocationCurrentFill, .allocationTargetFill { height: 100%; border-radius: inherit; }
@@ -2325,3 +2325,5 @@ body {
   .allocationDelta small { flex-basis: 100%; }
   .rebalanceSelectionOptions { grid-template-columns: minmax(0, 1fr); }
 }
+/* Text zoom and long valuations must not impose a minimum viewport width. */
+.allocationVisualHeader > *, .allocationVisualIdentity > *, .allocationDelta > * { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
