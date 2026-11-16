@@ -81,7 +81,7 @@ describe('responsive allocation representations', () => {
     expect(scroller).toHaveAttribute('tabindex', '0');
     expect(scroller).toHaveAccessibleDescription(/przewija się poziomo.*klawiszy strzałek/i);
     const mobile = screen.getByLabelText('Globalna alokacja majątku — widok mobilny');
-    for (const label of ['Obligacje', 'Akcje', 'Złoto', 'Bitcoin (BTC)']) {
+    for (const label of ['Obligacje', 'Akcje', 'Złoto']) {
       expect(within(desktop).getByText(label)).toBeInTheDocument();
       expect(within(mobile).getByRole('heading', { name: label })).toBeInTheDocument();
     }
@@ -110,7 +110,7 @@ describe('responsive allocation representations', () => {
     expect(scroller).toHaveAttribute('tabindex', '0');
     expect(scroller).toHaveAccessibleDescription(/przewija się poziomo.*klawiszy strzałek/i);
     const mobile = screen.getByLabelText('Docelowa alokacja ETF — widok mobilny');
-    for (const label of ['Złoto', 'Rynki rozwinięte', 'Rynki rozwijające się', 'Bitcoin (BTC)']) {
+    for (const label of ['Złoto', 'Rynki rozwinięte', 'Rynki wschodzące']) {
       expect(within(desktop).getByText(label)).toBeInTheDocument();
       expect(within(mobile).getByRole('heading', { name: label })).toBeInTheDocument();
     }

@@ -25,6 +25,7 @@
   --color-focus: #008ca3;
   --color-shadow-subtle: rgb(23 35 28 / 4%);
   --color-control-text: #314136;
+  --color-control-border: #647b6c;
   --color-code-background: #101915;
   --color-progress-track: #e8efe9;
   --color-disabled-text: #59675e;
@@ -2053,7 +2054,48 @@ body {
   box-shadow: none;
 }
 
+/* Shared scope and responsive visual overview. */
+.overviewSelection { display: grid; gap: var(--space-3); min-width: 0; }
+.overviewGrouping, .overviewSelectionActions { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.overviewGrouping { width: fit-content; padding: var(--space-1); border: 1px solid var(--color-ledger); border-radius: var(--radius-control); background: var(--color-surface-muted); }
+.overviewGrouping .button[aria-pressed=true] { background: var(--color-portfolio); color: var(--color-on-portfolio); }
+.overviewGroupOptions { min-width: 0; margin: 0; padding: 0; border: 0; }
+.overviewGroupOptions legend { margin-bottom: var(--space-2); font-weight: var(--font-weight-label); }
+.overviewCheckboxes { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); }
+.overviewCheckbox { display: flex; align-items: center; gap: var(--space-2); min-height: 44px; width: fit-content; cursor: pointer; }
+.overviewCheckbox input { flex: 0 0 auto; width: 20px; height: 20px; margin: 0; accent-color: var(--color-portfolio); }
+.overviewCheckbox input:focus-visible, .overviewHistoryControls input:focus-visible, .overviewHistoryControls select:focus-visible, .overviewHistoryTable:focus-visible { outline: 3px solid var(--color-focus); outline-offset: 3px; }
+.overviewColor { flex: 0 0 auto; width: 10px; height: 10px; border-radius: 50%; }
+.overviewHint { margin: 0; color: var(--color-muted); font-size: var(--font-size-label); }
+.overviewCharts { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr); align-items: start; gap: var(--space-6); min-width: 0; }
+.overviewChartPanel { display: grid; gap: var(--space-3); min-width: 0; padding: var(--space-5); border: 1px solid var(--color-ledger); border-radius: var(--radius-control); background: var(--color-surface); }
+.overviewChartPanel h2 { margin: 0; font-size: var(--font-size-section-title); }
+.overviewChartTotal { margin: 0; color: var(--color-portfolio-strong); font-size: var(--font-size-26); font-weight: var(--font-weight-financial); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.overviewDistribution { display: grid; gap: var(--space-5); list-style: none; margin: var(--space-2) 0; padding: 0; }
+.overviewDistributionLabel { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-1) var(--space-3); font-size: var(--font-size-label); }
+.overviewDistributionLabel strong { font-variant-numeric: tabular-nums; }
+.overviewDistributionShare { display: grid; grid-template-columns: minmax(0, 1fr) 64px; align-items: center; gap: var(--space-3); margin-top: var(--space-2); }
+.overviewDistributionShare > span { text-align: right; font-size: var(--font-size-label); font-variant-numeric: tabular-nums; }
+.overviewDistributionTrack { height: 12px; overflow: hidden; border-radius: var(--radius-pill); background: var(--color-progress-track); }
+.overviewDistributionTrack span { display: block; height: 100%; border-radius: inherit; }
+.overviewHistoryControls { display: flex; align-items: end; flex-wrap: wrap; gap: var(--space-3); }
+.overviewHistoryControls .field { min-width: 0; }
+.overviewHistoryControls select, .overviewHistoryControls input[type=date] { width: 100%; min-width: 0; min-height: 44px; padding: var(--space-2); border: 1px solid var(--color-ledger); border-radius: var(--radius-control); background: var(--color-surface); color: var(--color-ink); font: inherit; }
+.overviewCustomRange { flex-basis: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.overviewHistoryGraphic { min-width: 0; }
+.overviewHistoryGraphic > svg { display: block; width: 100%; height: auto; overflow: visible; }
+.overviewGridLine { stroke: var(--color-ledger); stroke-width: 1; }
+.overviewAxisLabel { fill: var(--color-muted); font: 18px var(--font-family-sans); }
+.overviewChartDates { display: flex; justify-content: space-between; flex-wrap: wrap; gap: var(--space-2); font-size: var(--font-size-caption); color: var(--color-muted); }
+.overviewLegend { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-4); list-style: none; margin: 0; padding: 0; font-size: var(--font-size-label); }
+.overviewLegend li { display: flex; align-items: center; gap: var(--space-2); }
+.overviewLegend svg { flex: 0 0 32px; width: 32px; height: 12px; }
+.overviewHistoryTable { max-width: 100%; overflow-x: auto; }
+.overviewHistoryTable table { min-width: max-content; }
+.overviewChartPanel .chartDataDisclosure { margin: 0; }
+
 @media (max-width: 860px) {
+  .overviewCharts { grid-template-columns: 1fr; }
   .householdMetricGrid {
     gap: 0;
   }
@@ -2172,6 +2214,10 @@ body {
 .savingsWorkspace .entryRow { grid-template-columns: minmax(0, 1fr) auto auto; }
 
 @media (max-width: 640px) {
+  .overviewChartPanel { padding: var(--space-3); }
+  .overviewGrouping { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .overviewGrouping .button { min-width: 0; padding: var(--space-2); }
+  .overviewCustomRange { grid-template-columns: 1fr; }
   .workspaceHeading { align-items: flex-start; }
   .workspaceControls { flex-wrap: wrap; }
   .savingsWorkspace .savingsTabs { top: 0; }
@@ -2196,3 +2242,88 @@ body {
   .summaryGrid, .summaryResults { grid-template-columns: 1fr; }
   .summaryTotal .metricValue { font-size: clamp(var(--font-size-26), 11vw, var(--font-size-48)); }
 }
+
+/* Beginner UX: bounded grid children, readable amounts and reachable dialog actions. */
+.savingsWorkspace, .summaryPanel, .queryBoundaryContent, .chartsDisclosure, .chartDataDisclosure, .overviewHistoryTable, .purchasePlanPanel, .overviewChartPanel, .backupPreview { min-width: 0; max-width: 100%; }
+.overviewHistoryTable, .tableScroller { overflow-x: auto; }
+.savingsHeadline .summaryTotal { order: -1; }
+.savingsHeadline .metricValue, .holdingAmount strong, .entryValue { overflow-wrap: anywhere; white-space: normal; font-variant-numeric: tabular-nums; }
+.overviewFilterDisclosure, .chartsDisclosure { margin-block: 16px; }
+.overviewFilterDisclosure > summary, .chartsDisclosure > summary, .planEditor > summary { padding-block: 12px; cursor: pointer; }
+.overviewCheckbox { min-height: 44px; accent-color: var(--color-portfolio-strong); }
+.overviewCheckbox small { margin-inline-start: auto; }
+.activeOverviewScope { padding: 12px; background: var(--color-surface-muted); }
+.purchaseBudget { max-width: 24rem; }
+.purchaseDetails table { min-width: 760px; }
+.purchaseDetails th, .purchaseDetails td { padding: 12px; text-align: left; }
+.purchaseDetails small, .holdingAmount small { display: block; }
+.deleteAction { color: var(--color-danger-text); margin-inline-start: 16px; }
+.helpPage { max-width: 65ch; }
+.helpPage li { margin-block: 16px; line-height: 1.6; }
+.changeDialog input, .changeDialog select { scroll-margin-block: 80px; }
+.changeDialog .dialogActions { position: sticky; bottom: -1px; background: var(--color-surface); padding-block: 12px; flex-wrap: wrap; }
+.changeDialog { max-height: calc(100dvh - 16px); }
+.databaseActions { align-items: start; }
+@media (max-width: 767px) {
+ .summaryTotal .metricValue { font-size: clamp(24px, 8vw, 42px); }
+ .entryRow { min-width: 0; }
+ .entryValue { max-width: 100%; }
+ .workspaceHeading h1 { font-size: 1.4rem; }
+ .savingsWorkspace { padding-inline: 12px; }
+}
+.purchaseDetails[open], .planEditor[open] { grid-template-columns: minmax(0, 1fr); }
+.savingsWorkspace .workspaceHeader { grid-template-columns: minmax(0, 1fr); }
+.workspaceHeading, .workspaceControls, .workspaceHeading > div, .userSwitcher { min-width: 0; max-width: 100%; }
+.workspaceHeading, .workspaceControls .userSwitcher { flex-wrap: wrap; }
+.savingsTabs .button { overflow-wrap: anywhere; }
+.workspaceHeading h1 { overflow-wrap: anywhere; white-space: normal; }
+
+:is(.formPanel, .allocationInputs, .overviewHistoryControls, .purchasePlanPanel, .field) :is(input:not([type=checkbox]), select, textarea) { border-color: var(--color-control-border); }
+
+.planningModes { display: flex; flex-wrap: wrap; gap: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-control); padding: var(--space-3); }
+.planningModes label { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
+.purchasePlanPanel .planningModes input { width: auto; }
+
+/* Allocation: shared 0–100% tracks keep current and target values directly comparable. */
+.allocationVisual { min-width: 0; padding: var(--space-5); background: var(--color-surface); border: 1px solid var(--color-ledger); border-radius: var(--radius-panel); }
+.allocationVisualHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
+.allocationVisualHeader h3 { margin: var(--space-2) 0 0; }
+.allocationEyebrow { margin: 0; color: var(--color-muted); font-size: var(--font-size-label); }
+.allocationVisualTotal { display: grid; gap: var(--space-2); }
+.allocationVisualTotal span, .allocationVisualIntro { color: var(--color-muted); }
+.allocationVisualTotal strong { font-size: clamp(1.5rem, 3vw, 2rem); color: var(--color-portfolio-strong); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.allocationVisualLegend { display: flex; gap: var(--space-4); align-items: center; flex-wrap: wrap; margin-block: var(--space-5) var(--space-3); }
+.allocationVisualLegend span { display: inline-flex; align-items: center; gap: var(--space-2); }
+.allocationVisualLegend i { width: 24px; height: 10px; border-radius: 3px; background: var(--color-portfolio-strong); }
+.allocationVisualLegend .allocationTargetSwatch, .allocationTargetFill { background: repeating-linear-gradient(135deg, var(--color-portfolio-strong) 0 2px, var(--color-surface-muted) 2px 6px); }
+.allocationVisualLegend small { margin-left: auto; color: var(--color-muted); }
+.allocationVisualRows { list-style: none; margin: 0; padding: 0; }
+.allocationVisualRow { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(170px, 2fr) minmax(140px, 1fr); align-items: center; gap: var(--space-4); padding-block: var(--space-5); border-top: 1px solid var(--color-ledger); }
+.allocationVisualIdentity, .allocationDelta { display: grid; gap: var(--space-2); min-width: 0; }
+.allocationVisualIdentity > span, .allocationDelta small { color: var(--color-muted); }
+.allocationBars { display: grid; gap: var(--space-3); min-width: 0; }
+.allocationBarLine { display: grid; grid-template-columns: 2.75em minmax(0, 1fr) 4em; gap: var(--space-2); align-items: center; font-size: var(--font-size-label); }
+.allocationBarLine > strong { text-align: right; font-variant-numeric: tabular-nums; }
+.allocationTrack { height: 12px; border-radius: 3px; background: var(--color-surface-muted); overflow: hidden; }
+.allocationCurrentFill, .allocationTargetFill { height: 100%; border-radius: inherit; }
+.allocationCurrentFill { background: var(--color-portfolio-strong); }
+.allocationDelta { text-align: right; justify-items: end; font-variant-numeric: tabular-nums; }
+.allocationDeltaBadge { padding: 3px 8px; border-radius: var(--radius-control); background: var(--color-surface-muted); font-weight: var(--font-weight-label); }
+.rebalanceSelection { min-width: 0; margin-block: var(--space-4); border: 1px solid var(--color-ledger); border-radius: var(--radius-panel); padding: var(--space-4); }
+.rebalanceSelectionOptions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.rebalanceSelectionOptions label { display: flex; align-items: center; gap: var(--space-3); min-height: 60px; padding: var(--space-3); border: 1px solid var(--color-control-border); border-radius: var(--radius-control); cursor: pointer; }
+.purchasePlanPanel .rebalanceSelection input { width: 20px; height: 20px; padding: 0; flex-shrink: 0; accent-color: var(--color-portfolio-strong); }
+.rebalanceSelectionOptions label > span { display: grid; gap: var(--space-2); }
+.rebalanceSelectionOptions small { color: var(--color-muted); }
+.rebalanceScope { display: flex; flex-wrap: wrap; gap: var(--space-4); padding: var(--space-4); background: var(--color-surface-muted); border-radius: var(--radius-control); }
+.rebalancePartialNotice { border-left: 3px solid var(--color-portfolio-strong); padding-left: var(--space-4); }
+@media (max-width: 767px) {
+  .allocationVisual { padding: var(--space-4); }
+  .allocationVisualRow { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
+  .allocationVisualIdentity { display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+  .allocationDelta { display: flex; flex-wrap: wrap; align-items: center; text-align: left; gap: var(--space-2) var(--space-3); }
+  .allocationDelta small { flex-basis: 100%; }
+  .rebalanceSelectionOptions { grid-template-columns: minmax(0, 1fr); }
+}
+/* Text zoom and long valuations must not impose a minimum viewport width. */
+.allocationVisualHeader > *, .allocationVisualIdentity > *, .allocationDelta > * { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }

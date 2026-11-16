@@ -30,11 +30,11 @@ test('AC-08 held Bitcoin with zero target counts in total without purchases', ()
   assert.equal(bitcoin.purchaseAmount, 0);
 });
 test('version 3 plan round trips and rejects old clients and missing Bitcoin', async () => {
-  const plan = { bonds: 50, stocks: 50, gold: 40, developed: 35, emerging: 15, bitcoin: 10 };
+  const plan = { bonds: 50, gold: 20, developed: 17.5, emerging: 7.5, bitcoin: 5 };
   const gateway = new FetchPortfolioPlanGateway({ json: async (_url, options) => options.body });
   assert.deepEqual(await gateway.save('jakub', plan), plan);
   assert.throws(() => gateway.validate({ ...plan, allocationVersion: 2 }));
-  assert.throws(() => gateway.validate({ ...plan, bitcoin: undefined, allocationVersion: 3 }));
+  assert.throws(() => gateway.validate({ ...plan, bitcoin: undefined, allocationVersion: 4 }));
 });
 
 test('older preferences gain zero Bitcoin targets without losing weights', async () => {

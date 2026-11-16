@@ -105,7 +105,9 @@ final class JdbcInvestmentRepositoryContractTest extends InvestmentRepositoryCon
             assertThat(rows.next()).isTrue();
             assertThat(rows.getString("ID")).isEqualTo("002-equity-gold");
             assertThat(rows.next()).isTrue();
-            assertThat(rows.getString("ID")).isEqualTo("003-bitcoin");
+            assertThat(rows.getString("ID")).isEqualTo("003-shared-flat-plan");
+            assertThat(rows.next()).isTrue();
+            assertThat(rows.getString("ID")).isEqualTo("004-bitcoin");
             assertThat(rows.next()).isFalse();
         }
         assertThat(store.snapshot().entries()).hasSize(1);
@@ -115,15 +117,38 @@ final class JdbcInvestmentRepositoryContractTest extends InvestmentRepositoryCon
         store.close();
         try (var connection = java.sql.DriverManager.getConnection("jdbc:h2:file:" + file, "sa", "");
                 var statement = connection.createStatement()) {
-            statement.executeUpdate("DELETE FROM DATABASECHANGELOG WHERE ID='002-equity-gold'");
-            statement.executeUpdate("INSERT INTO portfolio_plans (scope,bonds,stocks,gold,developed,emerging) VALUES ('jakub',30,60,10,80,20)");
+            statement.executeUpdate("DELETE FROM DATABASECHANGELOG WHERE ID IN ('002-equity-gold','003-shared-flat-plan')");
+            statement.executeUpdate("DROP TABLE archived_personal_plans");
+            statement.executeUpdate("INSERT INTO portfolio_plans (scope,bonds,stocks,gold,developed,emerging) VALUES ('household',30,60,10,80,20)");
         }
         reloadAdapters();
         var service = new pl.oszczednosci.app.application.usecase.PortfolioPlanService(store);
-        assertThat(service.load("jakub")).isEqualTo(new PortfolioPlan(30,70,50,40,10));
-        service.save("jakub", new PortfolioPlan(30,70,40,45,15));
+        assertThat(service.load("jakub")).isEqualTo(new PortfolioPlan(30, 35, 28, 7));
+        service.save("jakub", new PortfolioPlan(30, 28, 31.5, 10.5));
         reloadAdapters();
-        assertThat(store.snapshot().plans().get("jakub")).isEqualTo(new PortfolioPlan(30,70,40,45,15));
+        assertThat(store.snapshot().plans().get("household")).isEqualTo(new PortfolioPlan(30, 28, 31.5, 10.5));
+    }
+
+    @Test void sharedMigrationUsesHouseholdOnlyAndPreservesPortfolio() throws Exception {
+        var saved = entry(UUID.randomUUID(), LocalDate.of(2025, 1, 1), Instant.EPOCH);
+        entries.save(saved);
+        store.close();
+        try (var connection = java.sql.DriverManager.getConnection("jdbc:h2:file:" + file, "sa", ""); var sql = connection.createStatement()) {
+            sql.executeUpdate("DELETE FROM DATABASECHANGELOG WHERE ID='003-shared-flat-plan'");
+            sql.executeUpdate("DROP TABLE archived_personal_plans");
+            sql.executeUpdate("INSERT INTO portfolio_plans (scope,bonds,stocks,gold,developed,emerging) VALUES ('household',50,50,50,35,15),('jakub',80,20,0,100,0)");
+        }
+        reloadAdapters();
+        assertThat(store.snapshot().plans()).containsOnlyKeys("household").containsEntry("household", PortfolioPlan.defaults());
+        assertThat(store.snapshot().entries()).hasSize(1);
+        assertThat(store.snapshot().entries().getFirst().getId()).isEqualTo(saved.getId());
+        var precise = new PortfolioPlan(new java.math.BigDecimal("33.333333333"),new java.math.BigDecimal("22.22222222211111111111"),new java.math.BigDecimal("22.22222222211111111111"),new java.math.BigDecimal("22.22222222277777777778"));
+        new pl.oszczednosci.app.application.usecase.PortfolioPlanService(store).save("zosia", precise);
+        reloadAdapters();
+        assertThat(new pl.oszczednosci.app.application.usecase.PortfolioPlanService(store).load("jakub")).isEqualTo(precise);
+        try (var connection = java.sql.DriverManager.getConnection("jdbc:h2:file:" + file, "sa", ""); var sql = connection.createStatement(); var archived = sql.executeQuery("SELECT COUNT(*) FROM archived_personal_plans")) {
+            archived.next(); assertThat(archived.getInt(1)).isEqualTo(1);
+        }
     }
 
     @Test void incompatibleMigrationChecksumStopsStartupWithoutChangingPortfolio() throws Exception {

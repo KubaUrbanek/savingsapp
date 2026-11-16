@@ -1,13 +1,39 @@
-// @ts-nocheck
-
+import { Link } from 'react-router-dom';
 export function About() {
   return (
-    <main className="page" id="main-content">
-      <section className="hero heroCompact">
-        <p className="eyebrow">Informacje</p>
-        <h1 tabIndex={-1}>Portfele bez logowania.</h1>
-        <p>Wybór użytkownika filtruje i dodaje wpisy dla konkretnej osoby.</p>
-      </section>
+    <main className="page helpPage" id="main-content">
+      <h1 tabIndex={-1}>Jak korzystać</h1>
+      <Link className="button" to="/">
+        Wróć do poprzedniego widoku
+      </Link>
+      <ol>
+        <li>
+          <strong>Dodaj posiadane oszczędności.</strong> Wpisz obecną wartość. Jeśli nie znasz sumy wpłat, wybierz „Nie
+          znam”.
+        </li>
+        <li>
+          <strong>Zapisuj wpłaty i zakupy.</strong> Wpłata to nowe pieniądze w oszczędnościach. Zakup przenosi pieniądze
+          z konta na inwestycję.
+        </li>
+        <li>
+          <strong>Aktualizuj wartość.</strong> Nowe saldo nie jest nową wpłatą. Przykład: po wzroście z 1000 do 1100 zł
+          aktualizujesz wartość do 1100 zł.
+        </li>
+        <li>
+          <strong>Zaplanuj zakupy.</strong> Wspólny plan ma te same proporcje dla wszystkich. Wybór osoby zmienia
+          inwestycje do obliczeń. Budżet jest symulacją; zakup zapisz osobno po jego wykonaniu.
+        </li>
+        <li>
+          <strong>Pobierz kopię.</strong> W Ustawieniach zapiszesz kopię obu osób i wspólnego planu.
+        </li>
+      </ol>
+      <details>
+        <summary>Co oznaczają skróty?</summary>
+        <p>
+          IKE i IKZE oznaczają rachunki, w których możesz trzymać różne inwestycje. PPK i PPO są osobnymi produktami w
+          ewidencji; ich skład nie jest znany aplikacji.
+        </p>
+      </details>
     </main>
   );
 }

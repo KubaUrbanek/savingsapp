@@ -61,14 +61,18 @@ describe('automated accessibility checks', () => {
     const { container } = render(<AppRouter dependencies={dependencies} />);
 
     await screen.findByRole('heading', { level: 1, name: 'Oszczędności: Jakub' });
-    fireEvent.click(screen.getByRole('button', { name: 'Dodaj zmianę' }));
-    expect(await screen.findByRole('heading', { level: 2, name: 'Dodaj zmianę' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Dodaj wpis' }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Dodaj wpis' })).toBeInTheDocument();
     expect(screen.getByLabelText('Co chcesz zrobić?')).toBeInTheDocument();
-    expect(screen.getByLabelText('Inwestycja / rachunek')).toBeInTheDocument();
+    expect(screen.getByLabelText('Konto lub produkt')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Konto lub produkt'), { target: { value: 'OBLIGACJE' } });
+    fireEvent.change(screen.getByLabelText('Co chcesz zrobić?'), { target: { value: 'DEPOSIT' } });
     expect(document.getElementById('portfolio-change-subcategory')).toBeInTheDocument();
     expect(screen.getByLabelText('Kwota — zł')).toBeInTheDocument();
     expect(screen.getByLabelText('Data zmiany')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Zapisz zmianę' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /^Zapisz (wpłatę|zakup|sprzedaż|wypłatę|wartość|oszczędności)$/ })
+    ).toBeInTheDocument();
     await expectNoAccessibilityViolations(container);
   });
 

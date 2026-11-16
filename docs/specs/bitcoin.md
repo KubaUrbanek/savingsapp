@@ -4,6 +4,25 @@ Status: **zaakceptowana — zaimplementowana, zweryfikowana lokalnie**.
 
 Data: 2026-11-16. Podejście: Specification-Driven Development (SDD).
 
+## Aktualizacja integracyjna po zmianach na main
+
+Podczas scalania main zawiera już wspólny, płaski plan (specyfikacja rebalansu).
+Poniższe ustalenia zastępują dwupoziomowe zasady BTC-04/BTC-05 i przykład kontraktu:
+
+- Jeden wspólny plan household obejmuje obligacje, złoto, akcje rozwinięte,
+  akcje wschodzące i Bitcoin. Ich udziały sumują się dokładnie do 100%.
+- bitcoin jest bezpośrednim udziałem całego planu, domyślnie 0%. Przykład:
+  bonds=50, gold=20, developed=17.5, emerging=7.5, bitcoin=5.
+  Budżet 1000 zł daje zakupy 500/200/175/75/50 zł.
+- API planu używa allocationVersion 4 i dziesiętnych ciągów znaków;
+  wymaga pola bitcoin i odrzuca zapisy starszych klientów.
+- Kopie wersji alokacji 3 otrzymują bitcoin=0. Wersje 1/2 przechodzą istniejącą
+  migrację do płaskiego planu i otrzymują bitcoin=0. Format kopii pozostaje 2.
+- Nowa migracja 004-bitcoin następuje po 003-shared-flat-plan i dodaje dokładną
+  kolumnę NUMERIC(100,50). Istniejące migracje i archiwum planów są zachowane.
+- Bitcoin bierze udział również w rebalansie, wykresie odchyleń i wyborze aktywów.
+- Preferencje lokalne nadal migrują do wersji 3 z wagą BITCOIN=0.
+
 ## 1. Cel i granica akceptacji
 
 Użytkownik może ewidencjonować inwestycję w Bitcoin analogicznie do złota i akcji:
