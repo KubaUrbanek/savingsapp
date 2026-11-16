@@ -7,7 +7,7 @@ export function planRebalancing(entries, global, equity) {
   const currentCents = snapshot.rows.map((row) => Math.round(row.currentValue * 100));
   const totalCents = currentCents.reduce((sum, value) => sum + value, 0);
   if (!Number.isSafeInteger(totalCents)) throw new RangeError('Nieprawidłowa wartość portfela');
-  const weightTotal = snapshot.rows.reduce((sum, row) => sum + row.targetWeight, 0);
+  const weightTotal = snapshot.rows.reduce((sum, row) => sum + Number(row.targetWeight), 0);
   const raw = snapshot.rows.map((row) => totalCents * (row.targetWeight / weightTotal));
   const targets = raw.map(Math.floor);
   const order = snapshot.rows
@@ -18,6 +18,7 @@ export function planRebalancing(entries, global, equity) {
   for (let i = 0; i < remaining; i++) targets[order[i % order.length]]++;
   const rows = snapshot.rows.map((row, index) => ({
     ...row,
+    targetWeight: Number(row.targetWeight),
     currentValue: currentCents[index] / 100,
     currentWeight: totalCents ? (currentCents[index] / totalCents) * 100 : null,
     deviation: totalCents ? (currentCents[index] / totalCents) * 100 - row.targetWeight : null,

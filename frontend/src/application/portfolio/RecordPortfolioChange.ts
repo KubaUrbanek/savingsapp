@@ -93,6 +93,20 @@ export class RecordPortfolioChange {
 
   async execute(command) {
     const nextValue = resultingValue(command);
+    if (!command.editId && command.kind === 'BUY' && 'cashAvailable' in command) {
+      if (command.cashAvailable == null)
+        throw new PortfolioChangeValidationFailure(
+          'amountPln',
+          'Dodaj stan konta źródłowego dla daty zakupu.',
+          'UNKNOWN_CASH'
+        );
+      if (Number(command.amountPln) > Number(command.cashAvailable))
+        throw new PortfolioChangeValidationFailure(
+          'amountPln',
+          'Na koncie źródłowym w tym dniu nie ma wystarczających środków.',
+          'INSUFFICIENT_CASH'
+        );
+    }
     if (
       command.kind === 'INITIAL' &&
       (command.amountPln === '' || !Number.isFinite(Number(command.amountPln)) || Number(command.amountPln) < 0)

@@ -4,6 +4,10 @@ Status: **zaakceptowana 2026-11-16; implementacja i weryfikacja w toku**.
 
 Data: 2026-11-16. SDD oznacza tutaj pracę od specyfikacji zachowania i kryteriów akceptacji do implementacji oraz weryfikacji. Zgodnie z prośbą użytkownika implementacja rozpocznie się dopiero po akceptacji tej specyfikacji.
 
+## Dostosowanie do aktualnej gałęzi głównej
+
+W trakcie realizacji połączono zmiany z `main` zawierające PR #102 i #104. Aktualny produkt używa jednego wspólnego planu `allocationVersion: 3`, z czterema udziałami całego planu (obligacje, złoto, rozwinięte, wschodzące). Rebalans korzysta z tego zapisanego planu, ale stan inwestycji bierze z aktualnie wybranego zakresu osoby lub gospodarstwa. Zachowuje istniejącą edycję wspólnego planu i osobne budżety dokupowania dla zakresów. Opis v2 poniżej dokumentuje pierwotny stan; w implementacji i testach celów obowiązuje v3. Własności liczbowe, odchylenia oraz rebalans bez dopłaty pozostają zgodne z kryteriami.
+
 ## 1. Cel
 
 W zakładce „Co dokupić?” użytkownik ma widzieć obecne odchylenia od swojego zapisanego planu oraz kwoty sprzedaży i zakupu, które doprowadzą obecny portfel do docelowych proporcji. Rebalans ma działać bez dopłacania nowych pieniędzy. Dotychczasowe dokupowanie za podany budżet pozostaje dostępne.

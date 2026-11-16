@@ -53,10 +53,12 @@ test('HTTP origins can save an initial value and retain it after reload', async 
     }))
   ).toEqual({ secure: false, uuid: 'undefined', digest: 'undefined' });
   await page.getByRole('button', { name: 'Dodaj aktualny stan konta lub inwestycji', exact: true }).click();
+  await page.getByLabel('Konto lub produkt').selectOption('KONTO_BANKOWE');
   await page.getByLabel('Ile masz teraz — zł').fill('700');
-  await page.getByLabel('Ile łącznie wpłaciłem — zł').fill('600');
+  await page.getByLabel('Znam sumę wpłat (odznaczone: Nie znam)').check();
+  await page.getByLabel('Wpłaty łącznie — zł').fill('600');
   await page.getByLabel('Data zmiany').fill('2020-01-01');
-  await page.getByRole('button', { name: 'Zapisz zmianę', exact: true }).click();
+  await page.getByRole('button', { name: /^Zapisz (wpłatę|zakup|sprzedaż|wypłatę|wartość|oszczędności)$/ }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.reload();
   await expect(page.locator('.savingsHeadline .summaryTotal')).toContainText('700,00');
@@ -99,8 +101,10 @@ test('HTTP saves deposits, withdrawals, trades, valuations, corrections and dele
     { kind: 'VALUATION', type: 'GIELDA', amount: '180', total: 1080 }
   ];
   for (const [index, scenario] of scenarios.entries()) {
-    await page.getByRole('button', { name: 'Dodaj zmianę', exact: true }).click();
-    await page.getByLabel('Inwestycja / rachunek').selectOption(scenario.type);
+    await page.getByRole('button', { name: 'Dodaj wpis', exact: true }).click();
+    await page.getByLabel('Co chcesz zrobić?').selectOption('DEPOSIT');
+    await page.getByLabel('Konto lub produkt').selectOption('KONTO_BANKOWE');
+    await page.getByLabel('Konto lub produkt').selectOption(scenario.type);
     if (scenario.type === 'GIELDA')
       await page.getByRole('dialog').getByLabel('Rodzaj inwestycji', { exact: true }).selectOption('RYNKI_ROZWINIETE');
     await page.getByLabel('Co chcesz zrobić?').selectOption(scenario.kind);
@@ -108,23 +112,23 @@ test('HTTP saves deposits, withdrawals, trades, valuations, corrections and dele
       .getByLabel(scenario.kind === 'VALUATION' ? 'Ile masz teraz — zł' : 'Kwota — zł', { exact: true })
       .fill(scenario.amount);
     await page.getByLabel('Data zmiany').fill(`2020-02-0${index + 1}`);
-    await page.getByRole('button', { name: 'Zapisz zmianę', exact: true }).click();
+    await page.getByRole('button', { name: /^Zapisz (wpłatę|zakup|sprzedaż|wypłatę|wartość|oszczędności)$/ }).click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await page.reload();
-    await expect(page.getByRole('button', { name: 'Dodaj zmianę', exact: true })).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Dodaj wpis', exact: true })).toBeEnabled();
     expect((await (await request.get('/api/portfolio-performance?owner=jakub')).json()).currentValuePln).toBe(
       scenario.total
     );
   }
   await page.getByRole('tab', { name: 'Historia', exact: true }).click();
   const valuation = page.locator('.entryRow').filter({ hasText: 'Aktualizacja wartości' });
-  await valuation.getByRole('button', { name: 'Edytuj', exact: true }).click();
+  await valuation.getByRole('button', { name: /^Edytuj:/ }).click();
   await page.getByLabel('Ile masz teraz — zł').fill('200');
   await page.getByRole('button', { name: 'Zapisz poprawkę' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   expect((await (await request.get('/api/portfolio-performance?owner=jakub')).json()).currentValuePln).toBe(1100);
   page.once('dialog', (dialog) => dialog.accept());
-  await valuation.getByRole('button', { name: 'Usuń wpis' }).click();
+  await valuation.getByRole('button', { name: /^Usuń wpis:/ }).click();
   await expect(valuation).toHaveCount(0);
   expect((await (await request.get('/api/portfolio-performance?owner=jakub')).json()).currentValuePln).toBe(1050);
 });
@@ -144,7 +148,9 @@ test('HTTP retry after a lost response and reload creates exactly one deposit', 
   expect(seeded.ok()).toBeTruthy();
   await page.goto(origin);
   const fillDeposit = async () => {
-    await page.getByRole('button', { name: 'Dodaj zmianę', exact: true }).click();
+    await page.getByRole('button', { name: 'Dodaj wpis', exact: true }).click();
+    await page.getByLabel('Co chcesz zrobić?').selectOption('DEPOSIT');
+    await page.getByLabel('Konto lub produkt').selectOption('KONTO_BANKOWE');
     await page.getByLabel('Kwota — zł', { exact: true }).fill('25');
     await page.getByLabel('Data zmiany').fill('2020-01-01');
   };
@@ -154,17 +160,17 @@ test('HTTP retry after a lost response and reload creates exactly one deposit', 
     expect(response.ok()).toBeTruthy();
     await route.abort();
   });
-  await page.getByRole('button', { name: 'Zapisz zmianę', exact: true }).click();
-  await expect(page.getByRole('alert')).toContainText('Nie udało się zapisać');
+  await page.getByRole('button', { name: /^Zapisz (wpłatę|zakup|sprzedaż|wypłatę|wartość|oszczędności)$/ }).click();
+  await expect(page.getByRole('alert')).toContainText('Nie potwierdzono zapisu');
   await page.unroute('**/api/portfolio-changes');
   await page.reload();
   await fillDeposit();
-  await page.getByRole('button', { name: 'Zapisz zmianę', exact: true }).click();
+  await page.getByRole('button', { name: /^Zapisz (wpłatę|zakup|sprzedaż|wypłatę|wartość|oszczędności)$/ }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   expect(await (await request.get('/api/investment-operations?owner=jakub')).json()).toHaveLength(2);
   // A new intentional identical deposit must get a new request ID.
   await fillDeposit();
-  await page.getByRole('button', { name: 'Zapisz zmianę', exact: true }).click();
+  await page.getByRole('button', { name: /^Zapisz (wpłatę|zakup|sprzedaż|wypłatę|wartość|oszczędności)$/ }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   expect(await (await request.get('/api/investment-operations?owner=jakub')).json()).toHaveLength(3);
   expect((await (await request.get('/api/portfolio-performance?owner=jakub')).json()).currentValuePln).toBe(50);
@@ -173,29 +179,43 @@ test('HTTP retry after a lost response and reload creates exactly one deposit', 
 test('HTTP can complete unknown contributions and save allocation weights', async ({ page, request }) => {
   await page.goto(origin);
   await page.getByRole('button', { name: 'Dodaj aktualny stan konta lub inwestycji', exact: true }).click();
+  await page.getByLabel('Konto lub produkt').selectOption('KONTO_BANKOWE');
   await page.getByLabel('Ile masz teraz — zł').fill('700');
-  await page.getByLabel('Znam kwotę, którą wpłaciłem').uncheck();
+  await page.getByLabel('Znam sumę wpłat (odznaczone: Nie znam)').uncheck();
   await page.getByLabel('Data zmiany').fill('2020-01-01');
-  await page.getByRole('button', { name: 'Zapisz zmianę', exact: true }).click();
+  await page.getByRole('button', { name: /^Zapisz (wpłatę|zakup|sprzedaż|wypłatę|wartość|oszczędności)$/ }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await page.reload();
   const holding =
     page.viewportSize()!.width < 640 ? page.locator('.holdingCard') : page.locator('.holdingsTable tbody tr');
   await holding.locator('summary').click();
   await holding.getByRole('button', { name: 'Podaj sumę dotychczasowych wpłat' }).click();
-  await page.getByLabel('Ile łącznie wpłaciłem — zł').fill('600');
-  await page.getByLabel('Data zmiany').fill('2020-01-02');
-  await page.getByRole('button', { name: 'Zapisz zmianę', exact: true }).click();
+  await page.getByLabel('Znam sumę wpłat (odznaczone: Nie znam)').check();
+  await page.getByLabel('Wpłaty łącznie — zł').fill('600');
+  await expect(page.getByLabel('Data zmiany')).toBeDisabled();
+  await page.getByRole('button', { name: 'Zapisz poprawkę' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   expect((await (await request.get('/api/portfolio-performance?owner=jakub')).json()).nominalResultPln).toBe(100);
   await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
-  await page.getByText('Zmień mój plan').click();
-  await page.getByLabel('Obligacje — % całego planu').fill('60');
-  await page.getByLabel('Akcje i ETF-y — % całego planu').fill('40');
-  await page.getByRole('button', { name: 'Zapisz mój plan' }).click();
-  await expect(page.getByText('Zapisano Twój plan.')).toBeVisible();
+  await expect(page.getByLabel('Kwota na zakupy — zł')).toBeVisible();
+  if (await page.getByRole('button', { name: 'Zapisz propozycję planu' }).count()) {
+    await page.getByRole('button', { name: 'Zapisz propozycję planu' }).click();
+    await expect(page.getByText('Zapisano wspólny plan.')).toBeVisible();
+  }
+  await page.getByText('Zmień proporcje').click();
+  await page.getByLabel('Obligacje — %').fill('60');
+  await page.getByLabel('Złoto — %').fill('15');
+  await page.getByLabel('Akcje — rynki rozwinięte — %').fill('17,5');
+  await page.getByLabel('Akcje — rynki wschodzące — %').fill('7,5');
+  await page.getByRole('button', { name: 'Zapisz wspólny plan' }).click();
+  await expect(page.getByText('Zapisano wspólny plan.')).toBeVisible();
   await page.reload();
   await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
-  await expect(page.locator('.savedPlan')).toContainText('Akcje i ETF-y 40%');
-  await expect(page.locator('.savedPlan')).toContainText('20% całego planu');
+  await expect(page.getByLabel('Kwota na zakupy — zł')).toBeVisible();
+  if (await page.getByRole('button', { name: 'Zapisz propozycję planu' }).count()) {
+    await page.getByRole('button', { name: 'Zapisz propozycję planu' }).click();
+    await expect(page.getByText('Zapisano wspólny plan.')).toBeVisible();
+  }
+  await expect(page.locator('.savedPlan')).toContainText('Złoto: 15%');
+  await expect(page.locator('.savedPlan')).toContainText('Obligacje: 60%');
 });

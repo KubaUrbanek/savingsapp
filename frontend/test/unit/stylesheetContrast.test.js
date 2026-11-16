@@ -78,3 +78,10 @@ test('calm ledger hierarchy keeps supporting sections open and the current balan
   assert.doesNotMatch(stylesheet, /min-height:\s*(?:440|620)px/);
   assert.match(stylesheet, /\.chartBar\s*{[^}]*fill:\s*var\(--color-portfolio\)[^}]*filter:\s*none/s);
 });
+
+test('form control boundaries meet 3:1 on white and canvas surfaces', () => {
+  assert.match(tokens['color-control-border'] ?? '', /^#[\da-f]{6}$/);
+  for (const background of ['surface', 'canvas'])
+    assert.ok(contrast(tokens['color-control-border'], tokens[`color-${background}`]) >= 3);
+  assert.match(stylesheet, /border-color:\s*var\(--color-control-border\)/);
+});

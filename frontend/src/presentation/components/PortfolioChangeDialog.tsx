@@ -2,6 +2,7 @@ import React from 'react';
 import { Button } from './Button.js';
 import { Field } from './Field.js';
 import { InlineMessage } from './InlineMessage.js';
+import { moneyInput } from '../../domain/portfolio/decimal.js';
 import { subcategoriesFor } from '../../domain/portfolio/constants.js';
 import { TYPE_LABELS, SUBCATEGORY_LABELS, displayName, formatMoney, today } from '../viewModels/formatters.js';
 
@@ -40,14 +41,16 @@ interface Props {
   error: string;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   onClose: () => void;
+  onAddSource?: () => void;
+  onReturnToPurchase?: (() => void) | undefined;
 }
 const actions = {
-  INITIAL: 'Wpisuję stan początkowy',
-  DEPOSIT: 'Wpłaciłem',
-  BUY: 'Kupiłem',
-  WITHDRAWAL: 'Wypłaciłem',
-  SELL: 'Sprzedałem',
-  VALUATION: 'Wpisuję obecną wartość'
+  INITIAL: 'Dodaj posiadane oszczędności',
+  DEPOSIT: 'Zapisz wpłatę',
+  BUY: 'Zapisz zakup',
+  WITHDRAWAL: 'Zapisz wypłatę',
+  SELL: 'Zapisz sprzedaż',
+  VALUATION: 'Aktualizuj wartość'
 };
 const help = {
   INITIAL:
@@ -75,7 +78,9 @@ export function PortfolioChangeDialog(props: Props) {
     errors,
     error,
     onSubmit,
-    onClose
+    onClose,
+    onAddSource,
+    onReturnToPurchase
   } = props;
   const dialog = React.useRef<HTMLDialogElement>(null);
   const errorRef = React.useRef<HTMLDivElement>(null);
@@ -97,19 +102,25 @@ export function PortfolioChangeDialog(props: Props) {
     const first = Object.keys(errors)[0];
     if (first) fields.current[first]?.focus();
   }, [errors]);
-  const hasHolding = entries.some(
-    (entry) => entry.owner === owner && entry.type === form.type && (entry.subcategory || '') === form.subcategory
-  );
-  const availableActions = Object.entries(actions).filter(([kind]) =>
-    editing || completingBasis ? kind === form.action : hasHolding ? kind !== 'INITIAL' : kind === 'INITIAL'
-  );
+  const [initialForm] = React.useState(() => JSON.stringify({ form, owner }));
+  const [discarding, setDiscarding] = React.useState(false);
+  const [returningToPurchase, setReturningToPurchase] = React.useState(false);
+
+  const dirty = initialForm !== JSON.stringify({ form, owner });
+  const close = () => {
+    setReturningToPurchase(false);
+    if (dirty) setDiscarding(true);
+    else onClose();
+  };
   React.useEffect(() => {
-    if (editing || completingBasis || !form.type) return;
-    const action = hasHolding ? (form.action === 'INITIAL' ? 'DEPOSIT' : form.action) : 'INITIAL';
-    if (action !== form.action) {
-      setForm((previous) => ({ ...previous, action, operationType: action, amountPln: '', currentValuePln: '' }));
-    }
-  }, [editing, completingBasis, form.type, form.action, hasHolding, setForm]);
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    if (dirty) window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
+  const availableActions = Object.entries(actions);
   const explicit = form.action === 'INITIAL' || form.action === 'VALUATION';
   const trade = form.action === 'BUY' || form.action === 'SELL';
   const subcategories = form.type ? subcategoriesFor(form.type) : [];
@@ -120,7 +131,7 @@ export function PortfolioChangeDialog(props: Props) {
     owned.find((e) => e.type === form.type && (e.subcategory || '') === form.subcategory)?.valuePln || 0
   );
   const cash = Number(owned.find((e) => e.type === form.cashType)?.valuePln || 0);
-  const amount = Number(form.amountPln);
+  const amount = moneyInput(form.amountPln) ?? 0;
   const set = (key: keyof ChangeForm, value: string | boolean) => setForm((f) => ({ ...f, [key]: value }));
   return (
     <dialog
@@ -129,23 +140,88 @@ export function PortfolioChangeDialog(props: Props) {
       aria-labelledby="change-dialog-title"
       onCancel={(e) => {
         e.preventDefault();
-        if (!saving) onClose();
+        if (!saving) close();
       }}
     >
       <div className="dialogHeading">
         <h2 id="change-dialog-title">
-          {editing ? 'Popraw zmianę' : completingBasis ? 'Uzupełnij wpłaty' : 'Dodaj zmianę'}
+          {completingBasis
+            ? 'Uzupełnij wpłaty'
+            : editing
+              ? 'Popraw wpis'
+              : form.action === 'VALUATION'
+                ? `Aktualizuj wartość ${TYPE_LABELS[form.type as keyof typeof TYPE_LABELS] || ''}`
+                : actions[form.action as keyof typeof actions] || 'Dodaj wpis'}
         </h2>
-        <Button type="button" variant="quiet" onClick={onClose} disabled={saving} aria-label="Zamknij formularz">
+        <Button type="button" variant="quiet" onClick={close} disabled={saving} aria-label="Zamknij formularz">
           ×
         </Button>
       </div>
-      <form className="formPanel unifiedForm" onSubmit={onSubmit} aria-busy={saving}>
+      <form noValidate className="formPanel unifiedForm" onSubmit={onSubmit} aria-busy={saving}>
+        <Field
+          label="Co chcesz zrobić?"
+          control={
+            <select
+              id="portfolio-change-operation-type"
+              value={form.action}
+              disabled={saving || editing || completingBasis}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  action: e.target.value,
+                  operationType: e.target.value,
+                  amountPln: '',
+                  currentValuePln: ''
+                }))
+              }
+            >
+              <option value="">Wybierz działanie</option>
+              {availableActions
+                .filter(([kind]) => !['SELL', 'WITHDRAWAL'].includes(kind))
+                .map(([kind, label]) => (
+                  <option key={kind} value={kind}>
+                    {label}
+                  </option>
+                ))}
+              <optgroup label="Więcej działań">
+                {availableActions
+                  .filter(([kind]) => ['SELL', 'WITHDRAWAL'].includes(kind))
+                  .map(([kind, label]) => (
+                    <option key={kind} value={kind}>
+                      {label}
+                    </option>
+                  ))}
+              </optgroup>
+            </select>
+          }
+        />
+        {onReturnToPurchase && (
+          <Button
+            type="button"
+            onClick={() => {
+              if (dirty) {
+                setReturningToPurchase(true);
+                setDiscarding(true);
+              } else onReturnToPurchase?.();
+            }}
+          >
+            Wróć do szkicu zakupu
+          </Button>
+        )}
         {owners.length > 1 && !editing && !completingBasis ? (
           <Field
             label="Zapisujesz dla"
+            error={errors.owner}
             control={
-              <select value={owner} onChange={(e) => onOwnerChange(e.target.value)} disabled={saving}>
+              <select
+                ref={(element) => {
+                  fields.current.owner = element;
+                }}
+                value={owner}
+                onChange={(e) => onOwnerChange(e.target.value)}
+                disabled={saving}
+              >
+                <option value="">Wybierz osobę</option>
                 {owners.map((o) => (
                   <option key={o} value={o}>
                     {displayName(o)}
@@ -160,7 +236,7 @@ export function PortfolioChangeDialog(props: Props) {
           </p>
         )}
         <Field
-          label="Inwestycja / rachunek"
+          label="Konto lub produkt"
           error={errors.type}
           control={
             <select
@@ -212,35 +288,8 @@ export function PortfolioChangeDialog(props: Props) {
             }
           />
         )}
-        <Field
-          label="Co chcesz zrobić?"
-          control={
-            <select
-              id="portfolio-change-operation-type"
-              value={form.type ? form.action : ''}
-              disabled={saving || editing || completingBasis || !form.type}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  action: e.target.value,
-                  operationType: e.target.value,
-                  amountPln: '',
-                  currentValuePln: ''
-                }))
-              }
-            >
-              {!form.type && <option value="">Najpierw wybierz inwestycję</option>}
-              {form.type &&
-                availableActions.map(([kind, label]) => (
-                  <option key={kind} value={kind}>
-                    {label}
-                  </option>
-                ))}
-            </select>
-          }
-        />
         <p className="formHint">
-          {form.type ? help[form.action as keyof typeof help] : 'Najpierw wybierz typ inwestycji lub rachunku.'}
+          {help[form.action as keyof typeof help] || 'Wybierz działanie, a potem konto lub produkt.'}
         </p>
         <Field
           label={explicit ? 'Ile masz teraz — zł' : 'Kwota — zł'}
@@ -252,12 +301,13 @@ export function PortfolioChangeDialog(props: Props) {
               ref={(e) => {
                 fields.current[explicit ? 'currentValuePln' : 'amountPln'] = e;
               }}
-              type="number"
+              type="text"
+              inputMode="decimal"
               min={explicit ? '0' : '0.01'}
               step="0.01"
               required
               value={explicit ? form.currentValuePln : form.amountPln}
-              disabled={saving}
+              disabled={saving || completingBasis}
               onChange={(e) => set(explicit ? 'currentValuePln' : 'amountPln', e.target.value)}
             />
           }
@@ -265,19 +315,19 @@ export function PortfolioChangeDialog(props: Props) {
         {form.action === 'INITIAL' && (
           <>
             <Field
-              label="Znam kwotę, którą wpłaciłem"
+              label="Znam sumę wpłat (odznaczone: Nie znam)"
               control={
                 <input
                   type="checkbox"
                   checked={form.costKnown}
-                  disabled={saving}
+                  disabled={saving || completingBasis}
                   onChange={(e) => set('costKnown', e.target.checked)}
                 />
               }
             />
             {form.costKnown ? (
               <Field
-                label="Ile łącznie wpłaciłem — zł"
+                label="Wpłaty łącznie — zł"
                 hint="Suma Twoich wpłat do wybranego dnia, bez zysków i strat, np. 10 000 zł. Służy do obliczenia wyniku inwestycji."
                 error={errors.amountPln}
                 control={
@@ -285,7 +335,8 @@ export function PortfolioChangeDialog(props: Props) {
                     ref={(e) => {
                       fields.current.amountPln = e;
                     }}
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     min="0"
                     step="0.01"
                     required
@@ -324,7 +375,7 @@ export function PortfolioChangeDialog(props: Props) {
               required
               max={today()}
               value={form.date}
-              disabled={saving}
+              disabled={saving || completingBasis}
               onChange={(e) => set('date', e.target.value)}
             />
           }
@@ -332,7 +383,12 @@ export function PortfolioChangeDialog(props: Props) {
         {trade && !editing && (
           <div className="changePreview">
             <p>
-              Na wybranym koncie: <strong>{formatMoney(cash)}</strong>
+              Na wybranym koncie:{' '}
+              <strong>
+                {owned.some((e) => e.type === form.cashType)
+                  ? formatMoney(cash)
+                  : 'Brak zapisanego salda dla wybranej daty'}
+              </strong>
             </p>
             {amount > 0 && Number.isFinite(amount) && (
               <p>
@@ -343,9 +399,22 @@ export function PortfolioChangeDialog(props: Props) {
             )}
           </div>
         )}
+        {trade && form.action === 'BUY' && !editing && !owned.some((e) => e.type === form.cashType) && (
+          <p>
+            Najpierw dodaj znany stan konta źródłowego.{' '}
+            <Button type="button" onClick={onAddSource}>
+              Dodaj stan konta źródłowego
+            </Button>
+          </p>
+        )}
+
         {!trade && !explicit && !editing && <p>Wartość inwestycji przed zmianą: {formatMoney(current)}.</p>}
         {editing && (
-          <p>Korekta przeliczy powiązane salda i późniejsze zmiany. Samodzielnie wpisane wyceny zostaną zachowane.</p>
+          <p>
+            Tutaj poprawisz kwotę i datę. Zły rachunek lub rodzaj wpisu wymaga usunięcia błędnego wpisu i dodania
+            poprawnego. Korekta przeliczy powiązane salda i późniejsze zmiany. Samodzielnie wpisane wyceny zostaną
+            zachowane.
+          </p>
         )}
         {legacy && (
           <p>Ten starszy wpis ma osobną wycenę. Jeśli zmieniła się też wartość inwestycji, zaktualizuj ją osobno.</p>
@@ -356,14 +425,39 @@ export function PortfolioChangeDialog(props: Props) {
           </InlineMessage>
         )}
         <div className="dialogActions">
-          <Button type="button" onClick={onClose} disabled={saving}>
+          <Button type="button" onClick={close} disabled={saving}>
             Anuluj
           </Button>
-          <Button variant="primary" type="submit" disabled={!form.type} busy={saving} busyLabel="Zapisywanie…">
-            {editing ? 'Zapisz poprawkę' : 'Zapisz zmianę'}
+          <Button
+            variant="primary"
+            type="submit"
+            disabled={!form.type || !form.action}
+            busy={saving}
+            busyLabel="Zapisywanie…"
+          >
+            {editing
+              ? 'Zapisz poprawkę'
+              : form.action === 'VALUATION'
+                ? 'Zapisz wartość'
+                : form.action === 'INITIAL'
+                  ? 'Zapisz oszczędności'
+                  : form.action === 'BUY'
+                    ? 'Zapisz zakup'
+                    : form.action === 'SELL'
+                      ? 'Zapisz sprzedaż'
+                      : form.action === 'WITHDRAWAL'
+                        ? 'Zapisz wypłatę'
+                        : 'Zapisz wpłatę'}
           </Button>
         </div>
       </form>
+      {discarding && (
+        <div role="alert">
+          <p>Masz niezapisane zmiany.</p>
+          <Button onClick={() => setDiscarding(false)}>Wróć do edycji</Button>
+          <Button onClick={returningToPurchase ? onReturnToPurchase : onClose}>Odrzuć zmiany</Button>
+        </div>
+      )}
     </dialog>
   );
 }

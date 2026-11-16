@@ -36,9 +36,10 @@ for (const [action, operationType] of operationCases) {
     assert.deepEqual(command, {
       kind: operationType,
       asset: { type: 'GIELDA', owner: 'JAN', subcategory: 'ETF', date: '2026-09-01' },
-      amountPln: '25.50',
+      amountPln: 25.5,
       previousValue: 100,
-      cashType: undefined
+      cashType: undefined,
+      cashAvailable: null
     });
   });
 }
@@ -60,6 +61,6 @@ test('maps the valuation UI action directly to VALUATION regardless of a stale r
   assert.deepEqual(command, {
     kind: 'VALUATION',
     asset: { type: 'GIELDA', owner: 'JAN', subcategory: 'ETF', date: '2026-09-01' },
-    valuePln: '125'
+    valuePln: 125
   });
 });

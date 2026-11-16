@@ -5,7 +5,7 @@ import { afterEach, it, expect, vi } from 'vitest';
 import { PurchasePlanPanel } from '../../src/presentation/components/PurchasePlanPanel.js';
 import { expectNoAccessibilityViolations } from './accessibility.js';
 afterEach(cleanup);
-const plan = { bonds: 50, stocks: 50, gold: 50, developed: 35, emerging: 15 };
+const plan = { bonds: 50, gold: 25, developed: 17.5, emerging: 7.5 };
 const entries = [
   {
     owner: 'jakub',
@@ -24,16 +24,16 @@ it('shows deviations without budget, balances trades and keeps rebalancing indep
   const useCases = deps();
   const { container } = render(<PurchasePlanPanel entries={entries} scope="jakub" useCases={useCases} />);
   expect(await screen.findByRole('region', { name: 'Obecne odchylenia od planu' })).toHaveTextContent('+50 pp');
-  fireEvent.change(screen.getByLabelText('Mam do zainwestowania — zł'), { target: { value: '-1' } });
+  fireEvent.change(screen.getByLabelText('Kwota na zakupy — zł'), { target: { value: '-1' } });
   fireEvent.click(screen.getByLabelText('Rebalans obecnego portfela'));
-  expect(screen.queryByLabelText('Mam do zainwestowania — zł')).not.toBeInTheDocument();
+  expect(screen.queryByLabelText('Kwota na zakupy — zł')).not.toBeInTheDocument();
   expect(screen.getByRole('list', { name: 'Co sprzedać' })).toHaveTextContent(/5\s?000,00/);
   expect(within(screen.getByRole('list', { name: 'Co kupić' })).getAllByRole('listitem')).toHaveLength(3);
   expect(screen.getByRole('list', { name: 'Po rebalansie' })).toHaveTextContent('25%');
   expect(useCases.savePortfolioPlan.execute).not.toHaveBeenCalled();
   await expectNoAccessibilityViolations(container);
-  fireEvent.click(screen.getByText('Zmień mój plan'));
-  fireEvent.change(screen.getByLabelText('Obligacje — % całego planu'), { target: { value: '80' } });
+  fireEvent.click(screen.getByText('Zmień proporcje'));
+  fireEvent.change(screen.getByLabelText('Obligacje — %'), { target: { value: '80' } });
   expect(screen.queryByRole('region', { name: 'Obecne odchylenia od planu' })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole('button', { name: 'Anuluj zmiany planu' }));
   expect(screen.getByRole('list', { name: 'Co sprzedać' })).toBeInTheDocument();
@@ -51,29 +51,16 @@ it('shows excluded cash and empty rebalance instead of claiming success', async 
   expect(screen.getByText('Brak inwestycji do rebalansu.')).toBeVisible();
   expect(screen.queryByRole('list', { name: 'Co sprzedać' })).not.toBeInTheDocument();
 });
-it('ignores an old save response after switching scope and resets the mode', async () => {
-  let finish: (value: typeof plan) => void = () => {};
+it('uses the shared plan for the selected scope and suppresses calculations while assets reload', async () => {
   const useCases = deps();
-  useCases.savePortfolioPlan.execute = vi.fn(
-    () =>
-      new Promise((resolve) => {
-        finish = resolve;
-      })
-  );
   const { rerender } = render(<PurchasePlanPanel entries={entries} scope="jakub" useCases={useCases} />);
   await screen.findByRole('region', { name: 'Obecne odchylenia od planu' });
   fireEvent.click(screen.getByLabelText('Rebalans obecnego portfela'));
-  fireEvent.click(screen.getByText('Zmień mój plan'));
-  fireEvent.change(screen.getByLabelText('Rynki rozwinięte — % akcji'), { target: { value: '40' } });
-  fireEvent.change(screen.getByLabelText('Rynki wschodzące — % akcji'), { target: { value: '10' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Zapisz mój plan' }));
-  rerender(<PurchasePlanPanel entries={[]} scope="zosia" useCases={useCases} />);
-  await screen.findByRole('region', { name: 'Obecne odchylenia od planu' });
-  finish({ ...plan, developed: 40, emerging: 10 });
+  rerender(<PurchasePlanPanel entries={[]} scope="zosia" useCases={useCases} assetsReady={false} />);
+  expect(screen.queryByRole('region', { name: 'Obecne odchylenia od planu' })).not.toBeInTheDocument();
+  rerender(<PurchasePlanPanel entries={[]} scope="zosia" useCases={useCases} assetsReady={true} />);
   await waitFor(() => expect(screen.getByLabelText('Dokupowanie')).toBeChecked());
-  expect(screen.getByRole('list', { name: 'Podział akcji w zapisanym planie' })).toHaveTextContent(
-    '17,5% całego planu'
-  );
+  expect(useCases.loadPortfolioPlan.execute).toHaveBeenCalledWith(expect.objectContaining({ scope: 'household' }));
 });
 it('load errors suppress recommendations', async () => {
   render(

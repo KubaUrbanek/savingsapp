@@ -12,7 +12,7 @@ export const TYPE_LABELS = {
 export const SUBCATEGORY_LABELS = {
   ZLOTO: 'Złoto',
   RYNKI_ROZWINIETE: 'Rynki rozwinięte',
-  RYNKI_ROZWIJAJACE_SIE: 'Rynki rozwijające się',
+  RYNKI_ROZWIJAJACE_SIE: 'Rynki wschodzące',
   TRZYLETNIE: '3-letnie',
   DZIESIECIOLETNIE: '10-letnie',
   DWUNASTOLETNIE: '12-letnie'
@@ -26,10 +26,12 @@ export const OPERATION_LABELS = {
   SELL: 'Sprzedaż'
 };
 export const formatMoney = (value) =>
-  new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(Number(value));
+  new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' })
+    .format(Number(value))
+    .replace(/\u00a0(?=\d)/g, ' ');
 export const formatDateTime = (value) =>
   new Intl.DateTimeFormat('pl-PL', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
-export const displayName = (user) => user.charAt(0).toUpperCase() + user.slice(1).toLowerCase();
+export const displayName = (user) => (user || '').charAt(0).toUpperCase() + (user || '').slice(1).toLowerCase();
 export const formatPercent = (value) =>
   !Number.isFinite(value)
     ? '—'
@@ -41,4 +43,10 @@ export const formatPercentagePoints = (value) =>
     ? '—'
     : `${value > 0 ? '+' : ''}${new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 2 }).format(value)} pp`;
 export const formatSignedMoney = (value) => `${value > 0 ? '+' : ''}${formatMoney(value)}`;
-export const today = () => new Date().toISOString().slice(0, 10);
+export const today = (date = new Date()) =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Warsaw',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(date);

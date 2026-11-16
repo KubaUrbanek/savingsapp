@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { planPurchases } from '../../src/domain/portfolio/services/PurchasePlanningService.js';
 import { FetchPortfolioPlanGateway } from '../../src/infrastructure/http/FetchPortfolioPlanGateway.js';
-const plan = { bonds: 50, stocks: 50, gold: 50, developed: 35, emerging: 15 };
+const plan = { bonds: 50, gold: 25, developed: 17.5, emerging: 7.5 };
 
 test('gold gets half of the stock/ETF bucket, with no budget double counting', () => {
   const result = planPurchases(
@@ -38,18 +38,18 @@ test('plan adapter round trips versioned allocations and rejects old or invalid 
   const gateway = new FetchPortfolioPlanGateway({
     json: async (_url, options) => {
       if (options.method === 'PUT') saved = options.body;
-      return saved || { ...plan, allocationVersion: 2 };
+      return saved || { ...plan, allocationVersion: 3 };
     }
   });
   assert.deepEqual(await gateway.load('jakub'), plan);
   assert.deepEqual(await gateway.save('jakub', plan), plan);
-  assert.deepEqual(saved, { ...plan, allocationVersion: 2 });
+  assert.deepEqual(saved, { ...plan, allocationVersion: 3 });
   for (const value of [
     plan,
     { ...plan, allocationVersion: 1 },
-    { ...plan, allocationVersion: 2, gold: 100 },
-    { ...plan, allocationVersion: 2, stocks: 40 },
-    { ...plan, allocationVersion: 2, gold: NaN }
+    { ...plan, allocationVersion: 3, gold: 100 },
+    { ...plan, allocationVersion: 3, bonds: 40 },
+    { ...plan, allocationVersion: 3, gold: NaN }
   ]) {
     assert.throws(() => gateway.validate(value));
   }

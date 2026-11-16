@@ -45,3 +45,11 @@ export function portfolioHistory(entries: HistoryEntry[], operations: HistoryOpe
       b.date.localeCompare(a.date) || (b.createdAt || '').localeCompare(a.createdAt || '') || b.id.localeCompare(a.id)
   );
 }
+
+/** The same labelled amounts are used in history and deletion confirmation. */
+export function historyValues(row: HistoryRow): string {
+  const money = (value: number | undefined) =>
+    value == null ? 'nieznane' : new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(value);
+  if (row.kind === 'INITIAL') return `Wartość: ${money(row.valuePln)} · Wpłaty: ${money(row.amountPln)}`;
+  return `${row.kind === 'VALUATION' ? 'Nowa wartość' : 'Kwota'}: ${money(row.kind === 'VALUATION' ? row.valuePln : row.amountPln)}`;
+}

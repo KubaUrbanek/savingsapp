@@ -4,21 +4,21 @@ Aplikacja do kontroli oszczędności: ile wpłaciłem, ile mam, ile zarobiłem i
 
 ## Korzystanie
 
-- **Przegląd** pokazuje wpłaty, obecną wartość i zysk lub stratę. Filtry rachunków i inwestycji są rozwijane tylko w tym widoku; wybór „Razem” pokazuje pełne wspólne oszczędności. Na telefonie inwestycje mają karty, na komputerze tabelę. Historię wartości można rozwinąć osobno i zawęzić do rodzaju inwestycji oraz podinwestycji, np. IKZE → Złoto. Zmiana rodzaju przywraca wszystkie jego podinwestycje.
-- **Dodaj zmianę** otwiera formularz, w którym najpierw wybierasz inwestycję / rachunek i jej rodzaj. Dla pozycji bez zapisanych danych dostępne jest tylko „Wpisuję stan początkowy”; dla istniejącej pozycji (również z zerową wartością) dostępne są pozostałe operacje. Dostępność jest ustalana osobno dla właściciela i rodzaju inwestycji. Formularz zawiera bezpośrednie wybory „Wpłaciłem”, „Kupiłem”, „Wypłaciłem”, „Sprzedałem” i „Wpisuję obecną wartość”. Właściciel wpisu jest zawsze widoczny. Przy pierwszym użyciu wpisz posiadane oszczędności i znaną kwotę wpłat; bez tej informacji wynik pozostaje nieznany. Zakup i sprzedaż przenoszą pieniądze między inwestycją a wybranym kontem. IKE i IKZE mogą zawierać obligacje oraz aktywa rynkowe. Wycena może wynosić zero.
-- **Co dokupić?** oferuje tryby „Dokupowanie” i „Rebalans obecnego portfela”. Rebalans bez dopłaty pokazuje, co sprzedać i kupić, a także proporcje po zmianach; sprzedaż finansuje zakupy co do grosza. Obecne odchylenia w PLN i punktach procentowych są widoczne w obu trybach. Kwoty wynikają z zapisanych wycen, przed kosztami i podatkami, i nie zapisują transakcji. Tryb dokupowania zaczyna od budżetu i konkretnych kwot zakupów. Zapisane proporcje obligacji/akcji/opcjonalnego złota i podział samych akcji na rynki rozwinięte i rozwijające się są poniżej; edycję otwiera „Zmień mój plan”. Suma zakupów mieści się w budżecie, bez sprzedaży. Wagi muszą sumować się do 100% na obu poziomach. Niepoprawny lub niezapisany plan nie generuje podpowiedzi. Szczegóły pokazują obecne udziały, cele i brakujące kwoty.
-- **Historia** łączy wpłaty, zakupy i wyceny chronologicznie. „Popraw” koryguje całe zdarzenie z powiązanymi saldami; „Cofnij zmianę” usuwa je po potwierdzeniu. Późniejsze operacje są przeliczane, a ręczne wyceny pozostają punktami odniesienia. Zmiana powodująca ujemne saldo jest odrzucana bez zapisu. Starsze niezależne operacje zachowują osobne wyceny oraz opłaty, podatki i notatki.
-- **Ustawienia** obok nagłówka zawierają pobieranie i przywracanie kopii danych oraz informacje o aplikacji. Wszystkie trzy zakładki są dostępne także w widoku wspólnym.
+- **Przegląd** pokazuje najpierw wartość oszczędności, wpłaty łącznie i wynik. Rozwijane „Filtruj inwestycje” wybiera konta/produkty lub rodzaje inwestycji; wybory, okres wykresu i kontekst są pamiętane osobno dla każdej osoby i Razem. Na telefonie wykresy są początkowo zwinięte. Lista inwestycji ma karty na telefonie i tabelę na komputerze. Brak danych, błąd sieci i pusty filtr są osobnymi stanami. Pełny kontrakt: [SDD początkującego użytkownika](docs/specs/beginner-ux-sdd.md).
+- **Dodaj wpis** zaczyna od zamiaru: posiadane oszczędności, wpłata, zakup lub aktualizacja wartości; wypłata i sprzedaż są w „Więcej działań”. Produkt i osoba w Razem wymagają jawnego wyboru. Sumę wpłat można pozostawić nieznaną. Zakup nowej inwestycji nie wymaga fikcyjnego stanu początkowego; brak konta źródłowego można uzupełnić z zachowaniem szkicu. Zmieniony formularz ostrzega przed zamknięciem. Kwoty obsługują polski przecinek bez cichego zaokrąglania.
+- **Co dokupić?** pokazuje jeden wspólny plan: obligacje 50%, złoto 25%, akcje rynków rozwiniętych 17,5%, wschodzących 7,5%. Cztery udziały sumują się do 100%. Zmiana osoby wybiera inwestycje do obliczeń. Zakupy wyrównują udziały portfela bez sprzedaży; budżet jest dowolną symulowaną kwotą i nie zapisuje transakcji.
+- **Historia** pokazuje najnowsze wpisy w grupach dat, opisane kwoty i obie strony transferu. „Znajdź wpis” i filtr okresu/działania pomagają odnaleźć zdarzenie. „Edytuj” koryguje całe zdarzenie; „Usuń wpis” wymaga potwierdzenia z tymi samymi wartościami. Późniejsze salda są przeliczane atomowo, a samodzielne wyceny pozostają punktami odniesienia.
+- **Ustawienia** zawierają pobranie kopii, podgląd i potwierdzone przywrócenie kopii oraz pomoc „Jak korzystać”. Obejmują obie osoby i wspólny plan. Powrót zachowuje poprzedni widok i kontekst.
 
 ### Znaczenie liczb
 
-„Wpłaciłem” oznacza wpłaty zewnętrzne i zadeklarowany wkład początkowy. Kapitał w szczegółach obejmuje także zakupy i wpływy ze sprzedaży danej inwestycji. Dwie strony wewnętrznego transferu znoszą się w całym portfelu. Zakup nie tworzy zysku i nie tworzy dodatkowych pieniędzy.
+„Wpłaty łącznie” oznacza wpłaty zewnętrzne i zadeklarowany wkład początkowy. Kapitał w szczegółach obejmuje także zakupy i wpływy ze sprzedaży danej inwestycji. Dwie strony wewnętrznego transferu znoszą się w całym portfelu. Zakup nie tworzy zysku i nie tworzy dodatkowych pieniędzy.
 
 Wynik = aktualna wartość − kapitał po wypłatach / sprzedażach. Wartość jest rzeczywistym saldem po kosztach, więc opłaty i podatki ujawnione w historii nie są odejmowane z wyniku drugi raz. Przy brakującym koszcie lub wycenie wynik pozostaje nieznany. Wynik miesiąca pozostaje nieznany również przy brakującej wycenie otwarcia lub wpisaniu posiadanych oszczędności w tym miesiącu. Wykres przedstawia zmianę wartości, obejmującą wpłaty i wypłaty; nie jest wykresem stopy zysku.
 
-Stan początkowy można wykorzystać do uzupełnienia nieznanego kosztu istniejącej inwestycji. Jest to nowy punkt odniesienia na wskazaną datę: jego wkład zastępuje wcześniejsze przepływy tej inwestycji w obliczeniach. Nie zmienia historycznych wycen. Dla jednej inwestycji można zapisać jeden taki stan; poprawę wykonuje się przez cofnięcie poprzedniego i zapisanie prawidłowego.
+Stan początkowy można wykorzystać do uzupełnienia nieznanego kosztu istniejącej inwestycji. Jest to nowy punkt odniesienia na wskazaną datę: jego wkład zastępuje wcześniejsze przepływy tej inwestycji w obliczeniach. Nie zmienia historycznych wycen. Dla jednej inwestycji można zapisać jeden taki stan; „Edytuj” w historii poprawia go atomowo. Uzupełnienie brakujących wpłat koryguje wybraną wycenę, zachowując jej wartość i datę.
 
-Gotówka nie bierze udziału w wagach inwestycyjnych. PPK/PPO o nieznanym składzie pozostają osobno: są częścią oszczędności, lecz nie są automatycznie traktowane jako gotówka ani pomijane w łącznym majątku. Plan informuje o ich wyłączeniu. Plan określa kwoty zakupów, a nie liczbę jednostek instrumentu.
+Przegląd obejmuje wszystkie oszczędności. Kalkulator liczy wyłącznie obligacje, złoto i akcje, również w IKE/IKZE. Budżet dodaje dokładnie raz do tych inwestycji; nie dodaje salda gotówki. Plan określa kwoty zakupów, a nie liczbę jednostek instrumentu.
 
 ## Uruchomienie
 
@@ -72,7 +72,7 @@ Pipeline może automatycznie wdrażać po zielonym CI na `main` przez Tailscale 
 | PUT        | `/api/portfolio-changes/{id}` | Atomowa korekta całego zdarzenia z zachowaniem identyfikatora |
 | DELETE     | `/api/portfolio-changes/{id}`                                                                             | Atomowe cofnięcie całego zdarzenia                                          |
 | GET        | `/api/portfolio-performance?owner=jakub`                                                                  | Wynik; opcjonalne `type`, `subcategory`, `date`                             |
-| GET/PUT    | `/api/portfolio-plans?scope=jakub`                                                                        | Plan osoby; `scope=household` dla wspólnego planu                           |
+| GET/PUT | `/api/portfolio-plans` | Jeden wspólny plan; `allocationVersion: 3`; GET bez planu: 204. Parametr `scope` zachowano dla zgodności adresów, nie wybiera osobnego planu. |
 | GET        | `/api/database/export`                                                                                    | Kopia całych danych i planów                                                |
 | POST       | `/api/database/import`                                                                                    | Zastąpienie danych kopią (`multipart`, pole `file`)                         |
 | GET        | `/actuator/health`                                                                                        | Stan serwera                                                                |
@@ -96,7 +96,7 @@ Odpowiedź: `id`, `nextValue`, `kind`, `atomic: true`. Powtórzenie tego samego 
 
 W wyniku `contributedCapitalPln`, `nominalResultPln`, `resultAfterFeesAndTaxesPln` i `monthlyResultPln` mogą być `null`. `depositsTotalPln` oraz `withdrawalsTotalPln` ujawniają znane przepływy. `xirrStatus=INCOMPLETE_HISTORY` oznacza brak podstaw do obliczenia stopy. UI nie zamienia `null` na zero.
 
-Kopia JSON w wersji 2 zawiera wyceny, operacje z `groupId` oraz plany zakresów. Czytanie poprzedniej wersji 1 i starszej tablicy wycen jest zachowane. Nie odgadujemy powiązań starych, niezależnych operacji z wycenami. Starych rekordów nie przeliczamy automatycznie na nowy model transakcji.
+Kopia JSON w wersji 2 zawiera wyceny, operacje z `groupId` oraz jeden plan `household`. Czytanie wersji 1, starszej tablicy wycen i planów alokacji v1/v2 jest zachowane. Podgląd kopii niczego nie zmienia. Stara kopia bez planu Razem wymaga jawnego wyboru planu przed zatwierdzeniem. Import pozostaje atomowy.
 
 Aplikacja nie ma logowania ani autoryzacji: każdy klient z dostępem do serwera ma dostęp do danych i operacji administracyjnych. Ogranicz dostęp sieciowy do zaufanych klientów. Domyślnie CORS nie dopuszcza obcych originów.
 
@@ -110,6 +110,8 @@ Pipeline [CI](.github/workflows/frontend.yml) automatycznie sprawdza każdy push
 - produkcyjny build frontendu i kompletny JAR aplikacji;
 - testy Chromium na komputerze i telefonie, uruchamiane na JAR-ze z tymczasową bazą;
 - testy skryptu wdrożenia na QNAP oraz rzeczywistego kontenera: zdrowie, zapis i zachowanie danych po restarcie.
+
+Zadanie `verify` korzysta z Ubuntu 24.04, obsługiwanego przez przypiętą wersję Playwright. Aktualizację systemu runnera należy sprawdzać razem ze zgodnością Playwright i instalacją Chromium.
 
 Raporty backendu, raport HTML Playwright oraz zrzuty ekranu i ślady błędów przeglądarki są dostępne jako artefakt `verification-reports` przez 14 dni. Przed mergem wymagamy zielonego CI dla bieżącego commita. Nie trzeba powtarzać całego zestawu ręcznie po jego zaliczeniu; lokalnie uruchamiaj wybrane kontrole potrzebne do pracy lub diagnozy. Workflow można też uruchomić ręcznie z GitHub Actions.
 
@@ -132,6 +134,18 @@ Testy obejmują wynik bez kosztu, wpłaty i transfery bez pozornego zysku, opła
 
 Testy przeglądarkowe uruchamiają osobny serwer na porcie 8082 z tymczasową bazą. Sprawdzają Chromium na ekranie komputera i telefonu; nie zmieniają lokalnej bazy użytkownika. Wszystkie te kontrole są skonfigurowane w GitHub Actions.
 
-W planie zakupów „Akcje i ETF-y” obejmują złoty ETF. Domyślny podział tej części to 50% złota, 35% rynków rozwiniętych i 15% wschodzących; przy udziale części akcyjnej 50% cel złota wynosi 25% całego planu. Starsze zapisane plany są dostosowywane do tego podziału z zachowaniem udziału obligacji oraz proporcji między rynkami. API planu wymaga `allocationVersion: 2`; szczegóły migracji opisuje `docs/domain/README.md`.
+Plan alokacji v3 jest płaski. Udziały są dokładnymi dziesiętnymi tekstami w API i kopiach, aby migracja nie traciła precyzji. Migracja H2 `003-shared-flat-plan` wybiera dotychczasowy plan Razem i mnoży jego podudziały przez wielkość dawnej części akcyjnej. Plany osobiste archiwizuje w tabeli `archived_personal_plans`. Brak planu Razem nie tworzy automatycznego zapisu domyślnego. Szczegóły: `docs/domain/README.md`, checklista E01–E32: `docs/specs/beginner-ux-implementation.md`.
 
 Zapis zmian działa również przez HTTP w sieci lokalnej (np. QNAP w Tailscale). Generowanie identyfikatorów żądań i skrótów do ponawiania zapisu nie wymaga HTTPS ani funkcji `crypto.randomUUID` / `crypto.subtle`. Testy przeglądarkowe obejmują osobny kontekst HTTP, ponieważ `localhost` udostępnia te funkcje i sam nie odtwarza warunków połączenia z NAS-em.
+
+W „Razem / Przegląd” inwestycje są sumowane między osobami i rachunkami (np. złoto
+w IKE i IKZE tworzy jeden wiersz). Szczegóły pokazują wspólny wkład i zakres dat wycen.
+Brak danych o wpłatach części inwestycji pozostawia jej wspólny wynik nieznany.
+Zmiana wartości i uzupełnianie wpłat są dostępne po wybraniu konkretnej osoby.
+Specyfikacja zmiany: [wspólny przegląd (SDD)](docs/specs/household-overview.md).
+
+Podgląd importu: POST `/api/database/preview` z plikiem multipart `file`. Zwraca rozpoznany format, liczbę wycen/operacji, osoby i obecność wspólnego planu, po pełnej walidacji bez zapisu. Dzień biznesowy formularzy i domeny: Europe/Warsaw.
+
+### Rebalans obecnego portfela
+
+W zakładce „Co dokupić?” wybierz „Rebalans obecnego portfela”. Widok pokazuje obecne odchylenia w PLN i punktach procentowych oraz co sprzedać i kupić bez dopłaty według zapisanego wspólnego planu, dla aktualnie wybranej osoby lub razem. Sprzedaż finansuje zakupy co do grosza. Gotówka oraz PPK/PPO pozostają poza proporcjami. Kwoty wynikają z zapisanych wycen, przed kosztami i podatkami; podgląd nie zapisuje transakcji.
