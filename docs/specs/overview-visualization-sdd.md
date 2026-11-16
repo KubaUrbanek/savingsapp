@@ -2,6 +2,8 @@
 
 Status: specyfikacja zapisana przed implementacją, 2026-11-15.
 
+Nowsze zasady układu, pustych stanów i pamiętania kontekstu opisuje [beginner-ux-sdd.md](beginner-ux-sdd.md). Zaakceptowana 16 listopada 2026 specyfikacja [jednego hierarchicznego Przeglądu](overview-investment-hierarchy-sdd.md) zastępuje opisane tutaj dwa sposoby grupowania i doprecyzowuje wykresy. W razie rozbieżności obowiązują nowsze dokumenty; implementacja hierarchicznego Przeglądu jest osobnym zadaniem.
+
 ## Cel i uzgodnienia
 
 Przegląd ma pokazywać czytelny rozkład obecnych oszczędności oraz zmianę ich wartości w czasie. Nowy wykres historii **zastępuje** dotychczasową rozwijaną Historię wartości. Osobna zakładka Historia operacji pozostaje niezależna. Specyfikacja jest wersjonowanym artefaktem repozytorium i częścią tego samego MR/PR co implementacja.
