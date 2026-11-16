@@ -5,6 +5,8 @@
 **Punkt odniesienia:** aplikacja Oszczędności po wdrożeniu wskazanym podczas rozmowy, sprawdzona w Brave.
 **Podstawa:** audyt interfejsu z 15 listopada 2026. Pełne wymagania i kryteria odbioru zawarto w tym dokumencie; prywatny audyt i dowody nie są wymagane do implementacji.
 
+**Zaakceptowane uzupełnienie z 16 listopada 2026:** [jeden hierarchiczny Przegląd inwestycji](overview-investment-hierarchy-sdd.md) zastępuje zasady dwóch grupowań z §5.2 i doprecyzowuje wykresy po PR #102. W razie rozbieżności obowiązuje uzupełnienie. Jego implementacja jest osobnym zadaniem.
+
 ## 1. Cel i granice
 
 Aplikacja ma pozwalać początkującej osobie szybko odpowiedzieć na trzy pytania: **ile mam, co się zmieniło i jak rozdzielić kolejne pieniądze, żeby zbliżyć inwestycje do mojego planu**. Typowa czynność nie powinna wymagać znajomości wewnętrznego modelu danych ani czytania długiej instrukcji.
