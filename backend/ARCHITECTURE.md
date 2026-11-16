@@ -72,7 +72,7 @@ The detecting layer owns failure vocabulary. Domain not-found/invariant exceptio
 
 ## Time, UUIDs, and external services
 
-Use application output ports `Clock` for current `Instant`/UTC date and `IdGenerator` for UUIDs. Production `Instant::now` and `UUID::randomUUID` implementations are selected in configuration; tests inject deterministic fakes. Direct time access is permitted only for transport/operational metadata, not domain decisions or use cases.
+Use application output ports `Clock` for current `Instant`/Europe/Warsaw business date and `IdGenerator` for UUIDs. Production `Instant::now` and `UUID::randomUUID` implementations are selected in configuration; tests inject deterministic fakes. Direct time access is permitted only for transport/operational metadata, not domain decisions or use cases.
 
 Every network, broker, market-data, mail, or other external integration needs an application-owned output port and outbound adapter. Vendor types remain in that adapter and are mapped to domain values before business decisions.
 
@@ -121,7 +121,7 @@ Initialization creates an empty database. Old JSON files and the previous `app.d
 
 Performance reads both collections from one unit-of-work snapshot. Per-asset purchases are negative investment cash flows and sales positive; internal pairs cancel in an unfiltered owner portfolio. Unknown acquisition history and missing monthly opening valuations produce nullable results. Actual balances already include costs, so fees/taxes are reported separately without deducting them from nominal profit again.
 
-`PortfolioPlanUseCase` persists an independently validated two-level plan for each owner or household. Backup v2 includes plans and operation groups; the adapter migrates v1 and legacy arrays. JSON backup records remain adapter-owned, and all imported plans/groups pass domain and collection validation.
+`PortfolioPlanUseCase` persists one exact-decimal, four-weight household plan shared by all calculation scopes. Missing plans return absence, never a persisted default. Backup v2 includes plans and operation groups; the adapter migrates v1 and legacy arrays. JSON backup records remain adapter-owned, and all imported plans/groups pass domain and collection validation.
 
 
 ### Atomic event corrections
@@ -130,11 +130,14 @@ Performance reads both collections from one unit-of-work snapshot. Per-asset pur
 
 Inside one locked unit of work, correction removes the old event, inserts its replacement with the original identifiers and creation order, then replays generated balances once. There is no intermediate replay of a deleted initial balance. Explicit valuations remain anchors; negative dependent balances reject the entire write. Independent legacy operations retain fees, taxes, notes and their separate valuations. Repeating a correction replaces the same event rather than inserting another.
 
-`PortfolioPlan` validates bonds + stocks/ETFs = 100 and gold + developed + emerging = 100. Gold defaults to half of the stock/ETF bucket. `PortfolioPlanJsonRecord` versions the allocation independently of backup format 2: missing/version 1 records are validated and migrated through the domain factory, preserving bonds and relative market weights while adopting the requested 50% gold target. Version 2 round trips unchanged; unknown versions fail. HTTP GET returns allocationVersion 2 and PUT requires it to prevent old clients silently changing weight semantics.
+`PortfolioPlan` validates four BigDecimal weights summing exactly to 100; weights have at most 50 significant fractional places, matching NUMERIC(100,50) persistence without silent rounding. API/backup allocation v3 uses decimal strings. The codec reads v1/v2, validates all legacy plans, selects household, and converts effective subweights exactly. Personal-only backups require explicit selection in the preview workflow. `PreviewBackupService` depends on an application-owned inspection port implemented by the JSON codec. Preview performs full validation without writes.
+
 ## Schema migrations
 
 `db/changelog/db.changelog-master.xml` lists ordered Liquibase changesets. The initial H2 schema is `001-portfolio.sql`. For a schema change, add a new numbered SQL file and a new changeset with a unique ID; never edit an already deployed changeset. Liquibase stores execution history and checksums in `DATABASECHANGELOG` and coordinates migration execution through `DATABASECHANGELOGLOCK`. Validation or migration failure stops application startup. JSON import is an explicit user action through the backup API, never part of startup.
 
 H2 DDL may auto-commit: a failed multi-statement schema migration is not guaranteed to roll back. Keep changes small, back up the database before deployment, and resolve failed migrations explicitly. Prefer forward corrective changesets to destructive schema rollback.
 
-Existing H2 plans adopt the same allocation through Liquibase changeset `002-equity-gold`, executed once before domain records are loaded.
+Changeset `002-equity-gold` retains its deployed behavior. New changeset `003-shared-flat-plan` archives old personal plans, converts only household to four effective weights, and removes personal plans from the active table. Both migrations are one-time; portfolio records remain unchanged.
+
+Legacy plan selection is performed by PreviewBackupService after validating every plan. The codec serializes the canonical file with exact monetary decimals; the preview response carries preparedDocument as Base64. Infrastructure decodes bytes into the confirmed file without JSON.stringify of financial values. No preview writes to storage.

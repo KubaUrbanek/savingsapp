@@ -1,11 +1,13 @@
 import React from 'react';
 import type { OverviewGrouping } from '../../domain/portfolio/overviewVisualization.js';
 import { overviewGroupLabel, overviewGroupStyle } from '../viewModels/overviewVisualization.js';
+import { formatMoney } from '../viewModels/formatters.js';
 import { Button } from './Button.js';
 
 type OverviewFiltersProps = {
   grouping: OverviewGrouping;
   groups: string[];
+  values?: Record<string, number>;
   excludedGroups: string[];
   onGroupingChange: (grouping: OverviewGrouping) => void;
   onExcludedGroupsChange: (excludedGroups: string[]) => void;
@@ -14,6 +16,7 @@ type OverviewFiltersProps = {
 export function OverviewFilters({
   grouping,
   groups,
+  values = {},
   excludedGroups,
   onGroupingChange,
   onExcludedGroupsChange
@@ -24,16 +27,17 @@ export function OverviewFilters({
     <div className="overviewSelection">
       <div className="overviewGrouping" role="group" aria-label="Podział oszczędności">
         <Button variant="quiet" aria-pressed={grouping === 'accounts'} onClick={() => onGroupingChange('accounts')}>
-          Konta / produkty
+          Według kont i produktów
         </Button>
         <Button
           variant="quiet"
           aria-pressed={grouping === 'assetClasses'}
           onClick={() => onGroupingChange('assetClasses')}
         >
-          Rodzaje aktywów
+          Według rodzaju inwestycji
         </Button>
       </div>
+      <p>{grouping === 'accounts' ? 'Gdzie trzymasz pieniądze' : 'W co są zainwestowane'}</p>
       <fieldset className="overviewGroupOptions" aria-describedby={descriptionId}>
         <legend>{grouping === 'accounts' ? 'Wybierz konta i produkty' : 'Wybierz rodzaje aktywów'}</legend>
         <div className="overviewCheckboxes">
@@ -53,14 +57,14 @@ export function OverviewFilters({
                 style={{ background: overviewGroupStyle(key).color }}
                 aria-hidden="true"
               />
-              {overviewGroupLabel(key, grouping)}
+              {overviewGroupLabel(key, grouping)} {values[key] != null && <small>{formatMoney(values[key])}</small>}
             </label>
           ))}
         </div>
       </fieldset>
       <div className="overviewSelectionActions">
         <Button variant="quiet" disabled={selectedCount === groups.length} onClick={() => onExcludedGroupsChange([])}>
-          Zaznacz wszystkie
+          Pokaż wszystkie
         </Button>
         <Button variant="quiet" disabled={selectedCount === 0} onClick={() => onExcludedGroupsChange([...groups])}>
           Odznacz wszystkie

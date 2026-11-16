@@ -13,7 +13,12 @@ export type OverviewEntry = {
   id?: string | number;
 };
 type Classification = Pick<OverviewEntry, 'type' | 'subcategory'>;
-export type OverviewHistoryPoint = { date: string; total: number; groups: Record<string, number> };
+export type OverviewHistoryPoint = {
+  date: string;
+  total: number;
+  groups: Record<string, number>;
+  incomplete?: boolean;
+};
 
 const assetClassOrder = ['BONDS', 'STOCKS', 'GOLD', 'CASH', 'UNCLASSIFIED'];
 
@@ -42,8 +47,10 @@ function recordLatest(latest: Map<string, OverviewEntry>, entry: OverviewEntry) 
 }
 
 function groupValues(entries: Iterable<OverviewEntry>, grouping: OverviewGrouping, keys: string[]) {
-  const cents = new Map(keys.map((key) => [key, 0]));
-  for (const entry of entries) {
+  const values = [...entries];
+  const present = new Set(values.map((entry) => groupKey(entry, grouping)));
+  const cents = new Map<string, number>(keys.filter((key) => present.has(key)).map((key) => [key, 0]));
+  for (const entry of values) {
     const key = groupKey(entry, grouping);
     cents.set(key, (cents.get(key) || 0) + Math.round(Number(entry.valuePln) * 100));
   }
@@ -134,7 +141,12 @@ export function buildOverviewHistory(
     if (latest.size === 0) continue;
     const cents = groupValues(latest.values(), grouping, keys);
     const total = [...cents.values()].reduce((sum, value) => sum + value, 0) / 100;
-    points.push({ date, total, groups: Object.fromEntries([...cents].map(([key, value]) => [key, value / 100])) });
+    points.push({
+      date,
+      total,
+      incomplete: latest.size < new Set(entries.map(snapshotKey)).size,
+      groups: Object.fromEntries([...cents].map(([key, value]) => [key, value / 100]))
+    });
   }
   return points;
 }

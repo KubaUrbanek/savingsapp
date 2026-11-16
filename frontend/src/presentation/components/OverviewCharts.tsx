@@ -13,7 +13,13 @@ import { overviewDateLabel, overviewGroupLabel, overviewGroupStyle } from '../vi
 import { DataTable } from './DataTable.js';
 import { Field } from './Field.js';
 
-type OverviewChartsProps = { entries: OverviewEntry[]; grouping: OverviewGrouping; today: string };
+type OverviewChartsProps = {
+  entries: OverviewEntry[];
+  grouping: OverviewGrouping;
+  today: string;
+  view?: { range?: OverviewRange; breakdown?: boolean; customStart?: string; customEnd?: string };
+  onViewChange?: (view: NonNullable<OverviewChartsProps['view']>) => void;
+};
 type HistoryPoint = ReturnType<typeof buildOverviewHistory>[number];
 type ChartSeries = { key: string; label: string; color: string; dash: string };
 const totalSeries: ChartSeries = { key: 'total', label: 'Łączna wartość', color: 'var(--color-ink)', dash: '' };
@@ -38,12 +44,13 @@ function HistoryLines({
   const duration = time(end) - time(start);
   const x = (date: string) => (duration ? 88 + ((time(date) - time(start)) / duration) * 366 : 271);
   const y = (value: number) => 216 - (value / maximum) * 184;
-  const value = (point: HistoryPoint, key: string) => (key === 'total' ? point.total : (point.groups[key] ?? 0));
+  const value = (point: HistoryPoint, key: string) => (key === 'total' ? point.total : point.groups[key]);
   const path = (key: string) =>
     points
+      .filter((point) => value(point, key) != null)
       .map(
         (point, index) =>
-          `${index === 0 ? 'M' : 'H'} ${x(point.date)} ${index === 0 ? '' : 'V'} ${y(value(point, key))}`
+          `${index === 0 ? 'M' : 'H'} ${x(point.date)} ${index === 0 ? '' : 'V'} ${y(value(point, key)!)}`
       )
       .join(' ');
   return (
@@ -81,8 +88,8 @@ function HistoryLines({
                 strokeWidth={item.key === 'total' ? 3 : 2}
                 strokeDasharray={item.dash}
               />
-              {points.length === 1 && (
-                <circle cx={x(points[0]!.date)} cy={y(value(points[0]!, item.key))} r="4" fill={item.color} />
+              {points.length === 1 && value(points[0]!, item.key) != null && (
+                <circle cx={x(points[0]!.date)} cy={y(value(points[0]!, item.key)!)} r="4" fill={item.color} />
               )}
             </g>
           ))}
@@ -106,11 +113,25 @@ function HistoryLines({
   );
 }
 
-export function OverviewCharts({ entries, grouping, today }: OverviewChartsProps) {
-  const [range, setRange] = React.useState<OverviewRange>('1y');
-  const [breakdown, setBreakdown] = React.useState(false);
-  const [customStart, setCustomStart] = React.useState('');
-  const [customEnd, setCustomEnd] = React.useState('');
+export function OverviewCharts({ entries, grouping, today, view, onViewChange }: OverviewChartsProps) {
+  const [localRange, setLocalRange] = React.useState<OverviewRange>('1y');
+  const [localBreakdown, setLocalBreakdown] = React.useState(false);
+  const [localCustomStart, setLocalCustomStart] = React.useState('');
+  const [localCustomEnd, setLocalCustomEnd] = React.useState('');
+  const range = view?.range ?? localRange,
+    breakdown = view?.breakdown ?? localBreakdown;
+  const customStart = view?.customStart ?? localCustomStart,
+    customEnd = view?.customEnd ?? localCustomEnd;
+  const setRange = (value: OverviewRange) =>
+    onViewChange
+      ? onViewChange({ ...view, range: value, ...(value === 'custom' ? { customStart: start, customEnd: end } : {}) })
+      : setLocalRange(value);
+  const setBreakdown = (value: boolean) =>
+    onViewChange ? onViewChange({ ...view, breakdown: value }) : setLocalBreakdown(value);
+  const setCustomStart = (value: string) =>
+    onViewChange ? onViewChange({ ...view, customStart: value }) : setLocalCustomStart(value);
+  const setCustomEnd = (value: string) =>
+    onViewChange ? onViewChange({ ...view, customEnd: value }) : setLocalCustomEnd(value);
   const historyDescriptionId = React.useId();
   const rangeHintId = React.useId();
   const rangeErrorId = React.useId();
@@ -120,7 +141,8 @@ export function OverviewCharts({ entries, grouping, today }: OverviewChartsProps
   const total = distribution.reduce((sum, group) => sum + group.value, 0);
   const groups = availableGroups(entries, grouping);
   const { start, end, error } = resolveOverviewRange(entries, today, range, customStart, customEnd);
-  const points = error ? [] : buildOverviewHistory(entries, grouping, start, end);
+  const incompleteRange = range === 'custom' && (!customStart || !customEnd);
+  const points = error || incompleteRange ? [] : buildOverviewHistory(entries, grouping, start, end);
   const series = [
     totalSeries,
     ...(breakdown
@@ -167,7 +189,13 @@ export function OverviewCharts({ entries, grouping, today }: OverviewChartsProps
               <select
                 value={range}
                 aria-describedby={rangeHintId}
-                onChange={(event) => setRange(event.target.value as OverviewRange)}
+                onChange={(event) => {
+                  if (!onViewChange && event.target.value === 'custom') {
+                    setCustomStart(start);
+                    setCustomEnd(end);
+                  }
+                  setRange(event.target.value as OverviewRange);
+                }}
               >
                 <option value="1m">1 miesiąc</option>
                 <option value="3m">3 miesiące</option>
@@ -216,7 +244,9 @@ export function OverviewCharts({ entries, grouping, today }: OverviewChartsProps
         <p className="overviewHint" id={rangeHintId}>
           Zakres czasu dotyczy tylko historii. Podsumowanie i rozkład pokazują obecną wartość.
         </p>
-        {error ? (
+        {incompleteRange ? (
+          <p>Wybierz początek i koniec zakresu.</p>
+        ) : error ? (
           <p className="fieldError" id={rangeErrorId} role="alert">
             {error}
           </p>
@@ -249,7 +279,9 @@ export function OverviewCharts({ entries, grouping, today }: OverviewChartsProps
                       key: item.key,
                       header: item.label,
                       cell: (point: HistoryPoint) =>
-                        formatMoney(item.key === 'total' ? point.total : (point.groups[item.key] ?? 0))
+                        item.key !== 'total' && point.groups[item.key] == null
+                          ? 'Brak danych'
+                          : formatMoney(item.key === 'total' ? point.total : point.groups[item.key]!)
                     }))
                   ]}
                 />
@@ -257,13 +289,24 @@ export function OverviewCharts({ entries, grouping, today }: OverviewChartsProps
             </details>
           </>
         ) : (
-          <p>Brak danych do narysowania wykresu dla wybranego zakresu.</p>
+          <p>
+            Brak danych dla wybranego zakresu.{' '}
+            <button type="button" onClick={() => setRange('all')}>
+              Pokaż całą historię
+            </button>
+          </p>
         )}
-        <p className="overviewHint">Zmiana wartości obejmuje wpłaty i wypłaty. Nie jest zyskiem z inwestycji.</p>
-        <p className="overviewHint">
-          Pomiędzy wycenami pokazujemy ostatnią znaną wartość. Inwestycję uwzględniamy od jej pierwszej wyceny;
-          wcześniej jej wartość jest nieznana.
-        </p>
+        <p className="overviewHint">Zmiana wartości obejmuje wpłaty i wypłaty — nie jest wynikiem inwestycji.</p>
+        {points.some((point) => point.incomplete) && (
+          <p>Suma znanych wartości — niepełna historia części inwestycji.</p>
+        )}
+        <details>
+          <summary>Co to znaczy?</summary>
+          <p className="overviewHint">
+            Pomiędzy wycenami pokazujemy ostatnią znaną wartość. Inwestycję uwzględniamy od jej pierwszej wyceny;
+            wcześniej jej wartość jest nieznana.
+          </p>
+        </details>
       </section>
     </div>
   );

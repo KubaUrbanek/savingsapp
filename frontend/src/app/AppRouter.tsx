@@ -7,7 +7,7 @@ import { NotFound } from '../presentation/pages/NotFound.jsx';
 
 const ROUTE_TITLES = {
   '/': 'Portfele | Oszczędności',
-  '/about': 'Informacje | Oszczędności'
+  '/about': 'Jak korzystać | Oszczędności'
 };
 
 function RouteAnnouncement() {
@@ -18,7 +18,7 @@ function RouteAnnouncement() {
     document.title = ROUTE_TITLES[location.pathname] || 'Nie znaleziono strony | Oszczędności';
 
     if (previousPath.current !== location.pathname) {
-      document.querySelector('#main-content h1')?.focus();
+      [...document.querySelectorAll('#main-content h1')].find((element) => !element.closest('[hidden]'))?.focus();
     }
 
     previousPath.current = location.pathname;
@@ -27,6 +27,18 @@ function RouteAnnouncement() {
   return null;
 }
 
+function PersistentHome({ dependencies }) {
+  const location = useLocation();
+  const [visited, setVisited] = React.useState(location.pathname === '/');
+  React.useEffect(() => {
+    if (location.pathname === '/') setVisited(true);
+  }, [location.pathname]);
+  return visited || location.pathname === '/' ? (
+    <div hidden={location.pathname !== '/'}>
+      <Home dependencies={dependencies} />
+    </div>
+  ) : null;
+}
 export function AppRouter({ dependencies }) {
   return (
     <BrowserRouter>
@@ -35,7 +47,7 @@ export function AppRouter({ dependencies }) {
       </a>
       <header className="siteHeader">
         <div className="topbar">
-          <Link className="brand" to="/">
+          <Link className="brand" to="/" state={{ overview: true }}>
             <span className="brandMark" aria-hidden="true">
               O
             </span>
@@ -46,8 +58,9 @@ export function AppRouter({ dependencies }) {
         </div>
       </header>
       <RouteAnnouncement />
+      <PersistentHome dependencies={dependencies} />
       <Routes>
-        <Route path="/" element={<Home dependencies={dependencies} />} />
+        <Route path="/" element={null} />
         <Route path="/about" element={<About />} />
         <Route path="*" element={<NotFound />} />
       </Routes>

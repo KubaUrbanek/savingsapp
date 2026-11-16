@@ -1,24 +1,16 @@
 // @ts-nocheck
 import { buildCurrentSnapshot } from '../snapshot.js';
+import { percentageTotal, moneyInput } from '../decimal.js';
 import { globalAssetClass } from '../classification.js';
 export function validWeights(weights, keys = Object.keys(weights)) {
-  return (
-    keys.every(
-      (k) =>
-        weights[k] !== '' &&
-        weights[k] != null &&
-        Number.isFinite(Number(weights[k])) &&
-        Number(weights[k]) >= 0 &&
-        Number(weights[k]) <= 100
-    ) && Math.abs(keys.reduce((s, k) => s + Number(weights[k]), 0) - 100) < 0.000001
-  );
+  return percentageTotal(keys.map((key) => weights[key])) === '100';
 }
 /** Water filling minimizes underweight positions without sales; round down then distribute cents. */
 export function allocatePurchases(rows, budget) {
-  if (!Number.isFinite(budget) || budget < 0 || !Number.isSafeInteger(Math.round(budget * 100)))
-    throw new RangeError('Nieprawidłowy budżet');
+  if (moneyInput(budget) == null) throw new RangeError('Nieprawidłowy budżet');
   if (!validWeights(Object.fromEntries(rows.map((r) => [r.key, r.targetWeight]))))
     throw new RangeError('Wagi muszą sumować się do 100%');
+  rows = rows.map((row) => ({ ...row, targetWeight: Number(row.targetWeight) }));
   const cents = Math.round(budget * 100);
   let low = 0,
     high = rows.reduce((s, r) => s + r.currentValue, 0) + budget + 1;
@@ -34,6 +26,13 @@ export function allocatePurchases(rows, budget) {
   let remaining = cents - purchases.reduce((s, r) => s + r.cents, 0);
   const order = [...purchases].filter((r) => r.targetWeight > 0).sort((a, b) => b.raw - b.cents - (a.raw - a.cents));
   for (let i = 0; remaining > 0; i++, remaining--) order[i % order.length].cents++;
+  for (let i = 0; remaining < 0; i++) {
+    const row = order[i % order.length];
+    if (row.cents > 0) {
+      row.cents--;
+      remaining++;
+    }
+  }
   return purchases.map(({ raw, cents, ...r }) => ({
     ...r,
     purchaseAmount: cents / 100,
@@ -41,11 +40,18 @@ export function allocatePurchases(rows, budget) {
   }));
 }
 export function planPurchases(entries, global, equity, budget) {
-  if (
-    !validWeights(global, ['BONDS', 'STOCKS']) ||
-    !validWeights(equity, ['GOLD', 'RYNKI_ROZWINIETE', 'RYNKI_ROZWIJAJACE_SIE'])
-  )
-    throw new RangeError('Wagi muszą sumować się do 100%');
+  return planFlatPurchases(
+    entries,
+    {
+      BONDS: Number(global.BONDS),
+      GOLD: (Number(global.STOCKS) * Number(equity.GOLD)) / 100,
+      RYNKI_ROZWINIETE: (Number(global.STOCKS) * Number(equity.RYNKI_ROZWINIETE)) / 100,
+      RYNKI_ROZWIJAJACE_SIE: (Number(global.STOCKS) * Number(equity.RYNKI_ROZWIJAJACE_SIE)) / 100
+    },
+    budget
+  );
+}
+export function planFlatPurchases(entries, weights, budget) {
   const values = { BONDS: 0, GOLD: 0, RYNKI_ROZWINIETE: 0, RYNKI_ROZWIJAJACE_SIE: 0 };
   let cash = 0,
     unclassified = 0;
@@ -55,12 +61,6 @@ export function planPurchases(entries, global, equity, budget) {
     else if (c === 'UNCLASSIFIED') unclassified += Number(e.valuePln);
     else values[c === 'STOCKS' ? e.subcategory : c] += Number(e.valuePln);
   });
-  const weights = {
-    BONDS: Number(global.BONDS),
-    GOLD: (Number(global.STOCKS) * Number(equity.GOLD)) / 100,
-    RYNKI_ROZWINIETE: (Number(global.STOCKS) * Number(equity.RYNKI_ROZWINIETE)) / 100,
-    RYNKI_ROZWIJAJACE_SIE: (Number(global.STOCKS) * Number(equity.RYNKI_ROZWIJAJACE_SIE)) / 100
-  };
   const total = Object.values(values).reduce((s, v) => s + v, 0),
     afterTotal = total + budget;
   const rows = allocatePurchases(

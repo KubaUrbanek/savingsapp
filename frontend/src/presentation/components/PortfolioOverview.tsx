@@ -45,7 +45,7 @@ function HoldingDetails({ asset, loading, onCompleteBasis, onManage, household =
         {!loading && asset.performance?.nominalResultPln == null && onCompleteBasis && (
           <Button onClick={() => onCompleteBasis(asset)}>Podaj sumę dotychczasowych wpłat</Button>
         )}
-        {onManage && <Button onClick={() => onManage(asset)}>Edytuj / usuń</Button>}
+        {onManage && <Button onClick={() => onManage(asset)}>Historia tej inwestycji</Button>}
       </div>
     </details>
   );
@@ -55,6 +55,7 @@ function HoldingValue({ asset, loading }) {
   return (
     <div className="holdingAmount">
       <strong>{formatMoney(asset.valuePln)}</strong>
+      <small>Wartość z {asset.date}</small>
       {!loading && result != null && (
         <small className={result < 0 ? 'negativeText' : 'positiveText'}>Wynik: {formatSignedMoney(result)}</small>
       )}
@@ -71,6 +72,9 @@ export function PortfolioOverview({
     performance: Record<string, number | null> | null;
   }>,
   household = false,
+  filtered = false,
+  failed = false,
+  filters = undefined as React.ReactNode,
   loading = false,
   children = undefined as React.ReactNode,
   onUpdate = undefined as ((asset: object) => void) | undefined,
@@ -87,12 +91,12 @@ export function PortfolioOverview({
   const rows = household ? aggregateHouseholdHoldings(holdings) : holdings;
   const actions = (asset) => (
     <div className="holdingActions">
-      {!household && <Button onClick={() => onUpdate?.(asset)}>Zmień obecną wartość</Button>}
+      {!household && <Button onClick={() => onUpdate?.(asset)}>Aktualizuj wartość</Button>}
       <HoldingDetails
         asset={asset}
         loading={loading}
         household={household}
-        onCompleteBasis={household ? undefined : onCompleteBasis}
+        onCompleteBasis={household || failed ? undefined : onCompleteBasis}
         onManage={household ? undefined : onManage}
       />
     </div>
@@ -102,28 +106,36 @@ export function PortfolioOverview({
     newest = dates.at(-1);
   const known = performance?.nominalResultPln != null;
   const metric = (value) => (loading ? 'Wczytywanie…' : value == null ? '—' : formatMoney(value));
-  const missingBasis = !loading && rows.some((row) => row.performance?.nominalResultPln == null);
+  const missingBasis = !failed && !loading && rows.some((row) => row.performance?.nominalResultPln == null);
   return (
     <>
       <div className="savingsHeadline" aria-busy={loading}>
         <Metric
-          label="Wpłaciłem"
+          label="Wpłaty łącznie"
           value={metric(!known && performance?.depositsTotalPln === 0 ? null : performance?.depositsTotalPln)}
-          detail="Wpłaty i znany wkład początkowy"
+          detail={missingBasis ? 'Niepełne dane o wpłatach' : 'Wpłaty i znany wkład początkowy'}
         />
         <Metric
           className="summaryTotal"
-          label="Mam teraz"
+          label={filtered ? 'Wartość wybranych inwestycji' : 'Wartość oszczędności'}
           value={formatMoney(total)}
           detail={
-            !oldest ? 'Brak wycen' : oldest === newest ? `Wyceny z ${oldest}` : `Wyceny od ${oldest} do ${newest}`
+            !oldest
+              ? 'Brak wycen'
+              : `Według ostatnich zapisanych wartości · ${oldest === newest ? oldest : `${oldest} — ${newest}`}`
           }
         />
         <Metric
-          label={known ? (performance.nominalResultPln < 0 ? 'Straciłem' : 'Zarobiłem') : 'Zysk / strata'}
+          label="Wynik"
           value={loading ? 'Wczytywanie…' : known ? formatSignedMoney(performance.nominalResultPln) : '—'}
           tone={known ? (performance.nominalResultPln >= 0 ? 'positive' : 'negative') : 'neutral'}
-          detail={known ? 'Wynik od początku, po uwzględnieniu wypłat' : 'Wynik wymaga danych o wpłatach'}
+          detail={
+            known
+              ? 'Wynik od początku, po uwzględnieniu wypłat'
+              : failed
+                ? 'Nie udało się wczytać wyniku'
+                : 'Uzupełnij wpłaty'
+          }
         />
       </div>
       {performance?.withdrawalsTotalPln > 0 && (
@@ -132,6 +144,24 @@ export function PortfolioOverview({
           {metric(performance.contributedCapitalPln)}.
         </p>
       )}
+      {missingBasis && (
+        <div className="holdingsNotice">
+          <p>Niepełne dane o wpłatach. Uzupełnij wpłaty:</p>
+          <ul>
+            {holdings
+              .filter((a) => a.performance?.nominalResultPln == null)
+              .map((a) => (
+                <li key={a.id}>
+                  <Button onClick={() => onCompleteBasis?.(a)}>
+                    {displayName(a.owner)} — {TYPE_LABELS[a.type]}
+                    {a.subcategory ? ` · ${SUBCATEGORY_LABELS[a.subcategory]}` : ''}
+                  </Button>
+                </li>
+              ))}
+          </ul>
+        </div>
+      )}
+      {filters}
       {children}
       {rows.length === 0 && (
         <p role="status">Brak inwestycji w wybranym zakresie. Zaznacz grupę lub wybierz „Zaznacz wszystkie”.</p>
@@ -141,13 +171,6 @@ export function PortfolioOverview({
         <p className="holdingsNotice">Aby zmienić wartość lub uzupełnić wpłaty, wybierz widok konkretnej osoby.</p>
       )}
       <p className="holdingsNotice">Obecna wartość to saldo konta lub wartość inwestycji razem z zyskiem lub stratą.</p>
-      {missingBasis && (
-        <p className="holdingsNotice">
-          {household
-            ? 'Brak danych o wpłatach. Uzupełnij je w widoku konkretnej osoby, aby obliczyć wspólny wynik inwestycji.'
-            : 'Brak danych o wpłatach. W szczegółach podaj sumę pieniędzy, które wpłaciłeś — bez zysków i strat. Dzięki temu obliczymy wynik inwestycji.'}
-        </p>
-      )}
       <div className="tableScroller holdingsTable" role="region" aria-label="Wartości i wyniki inwestycji" tabIndex={0}>
         <DataTable
           caption="Wpłaty, wartość i wynik każdej inwestycji"

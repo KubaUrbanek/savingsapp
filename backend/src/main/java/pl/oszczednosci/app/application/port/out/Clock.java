@@ -4,5 +4,5 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 public interface Clock {
     Instant now();
-    default LocalDate today() { return LocalDate.ofInstant(now(), ZoneOffset.UTC); }
+    default LocalDate today() { return LocalDate.ofInstant(now(), java.time.ZoneId.of("Europe/Warsaw")); }
 }

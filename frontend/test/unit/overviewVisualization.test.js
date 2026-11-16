@@ -127,10 +127,10 @@ test('history carries opening valuations forward, combines owners, and resolves 
   ];
   const points = buildOverviewHistory([...entries].reverse(), 'accounts', '2026-02-01', '2026-02-10');
   assert.deepEqual(points, [
-    { date: '2026-02-01', total: 40, groups: { KONTO_BANKOWE: 0, PPK: 40 } },
-    { date: '2026-02-05', total: 55, groups: { KONTO_BANKOWE: 0, PPK: 55 } },
-    { date: '2026-02-07', total: 105, groups: { KONTO_BANKOWE: 50, PPK: 55 } },
-    { date: '2026-02-10', total: 105, groups: { KONTO_BANKOWE: 50, PPK: 55 } }
+    { date: '2026-02-01', total: 40, groups: { PPK: 40 }, incomplete: true },
+    { date: '2026-02-05', total: 55, groups: { PPK: 55 }, incomplete: true },
+    { date: '2026-02-07', total: 105, groups: { KONTO_BANKOWE: 50, PPK: 55 }, incomplete: false },
+    { date: '2026-02-10', total: 105, groups: { KONTO_BANKOWE: 50, PPK: 55 }, incomplete: false }
   ]);
   for (const point of points)
     assert.equal(
@@ -141,8 +141,8 @@ test('history carries opening valuations forward, combines owners, and resolves 
 
 test('history shows a constant known value when the selected range has no new valuations', () => {
   assert.deepEqual(buildOverviewHistory([entry('PPK', 10)], 'accounts', '2026-02-01', '2026-02-28'), [
-    { date: '2026-02-01', total: 10, groups: { PPK: 10 } },
-    { date: '2026-02-28', total: 10, groups: { PPK: 10 } }
+    { date: '2026-02-01', total: 10, groups: { PPK: 10 }, incomplete: false },
+    { date: '2026-02-28', total: 10, groups: { PPK: 10 }, incomplete: false }
   ]);
 });
 
@@ -150,10 +150,10 @@ test('history does not fabricate zero before first known value and handles one d
   const entries = [entry('PPK', 10, '2026-02-15')];
   assert.deepEqual(buildOverviewHistory(entries, 'accounts', '2026-01-01', '2026-02-01'), []);
   assert.deepEqual(buildOverviewHistory(entries, 'accounts', '2026-01-01', '2026-02-15'), [
-    { date: '2026-02-15', total: 10, groups: { PPK: 10 } }
+    { date: '2026-02-15', total: 10, groups: { PPK: 10 }, incomplete: false }
   ]);
   assert.deepEqual(buildOverviewHistory([entry('PPK', 0)], 'accounts', '2026-01-01', '2026-01-01'), [
-    { date: '2026-01-01', total: 0, groups: { PPK: 0 } }
+    { date: '2026-01-01', total: 0, groups: { PPK: 0 }, incomplete: false }
   ]);
   assert.deepEqual(buildOverviewHistory([], 'accounts', '2026-01-01', '2026-01-01'), []);
 });

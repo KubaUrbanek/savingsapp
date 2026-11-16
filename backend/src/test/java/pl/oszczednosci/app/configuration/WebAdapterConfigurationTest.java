@@ -42,6 +42,44 @@ class WebAdapterConfigurationTest {
     }
 
     @Test
+    void previewValidatesWithoutMutationAndSharedPlanIsAbsentUntilSaved() throws Exception {
+        mvc.perform(get("/api/portfolio-plans")).andExpect(status().isNoContent());
+        mvc.perform(post("/api/investments").contentType(MediaType.APPLICATION_JSON).content(ENTRY)).andExpect(status().isCreated());
+        var before = mvc.perform(get("/api/database/export")).andReturn().getResponse().getContentAsByteArray();
+        var valid = new MockMultipartFile("file", "copy.json", "application/json", "{\"formatVersion\":2,\"entries\":[],\"operations\":[],\"plans\":{\"household\":{\"allocationVersion\":2,\"bonds\":50,\"stocks\":50,\"gold\":50,\"developed\":35,\"emerging\":15}}}".getBytes());
+        mvc.perform(multipart("/api/database/preview").file(valid)).andExpect(status().isOk())
+            .andExpect(jsonPath("$.entries").value(0)).andExpect(jsonPath("$.sharedPlan").value(true));
+        assertThat(mvc.perform(get("/api/database/export")).andReturn().getResponse().getContentAsByteArray()).isEqualTo(before);
+        var personal = new MockMultipartFile("file", "personal.json", "application/json", "{\"formatVersion\":2,\"entries\":[],\"operations\":[],\"plans\":{\"zosia\":{\"allocationVersion\":2,\"bonds\":50,\"stocks\":50,\"gold\":50,\"developed\":35,\"emerging\":15}}}".getBytes());
+        mvc.perform(multipart("/api/database/preview").file(personal)).andExpect(status().isOk()).andExpect(jsonPath("$.sharedPlan").value(false));
+        mvc.perform(multipart("/api/database/import").file(personal)).andExpect(status().isBadRequest());
+        assertThat(mvc.perform(get("/api/database/export")).andReturn().getResponse().getContentAsByteArray()).isEqualTo(before);
+        for (String invalid : new String[]{"{\"formatVersion\":2,\"entries\":[],\"operations\":[],\"plans\":{\"jakub\":{\"allocationVersion\":999},\"zosia\":{\"allocationVersion\":2,\"bonds\":50,\"stocks\":50,\"gold\":50,\"developed\":35,\"emerging\":15}}}", "{", "{\"formatVersion\":99}", "{\"formatVersion\":2,\"entries\":[],\"operations\":[],\"plans\":{\"household\":{\"allocationVersion\":3,\"bonds\":99,\"gold\":0,\"developed\":0,\"emerging\":0}}}"}) {
+            var file = new MockMultipartFile("file", "bad.json", "application/json", invalid.getBytes());
+            mvc.perform(multipart("/api/database/preview").file(file)).andExpect(status().isBadRequest());
+            mvc.perform(multipart("/api/database/import").file(file)).andExpect(status().isBadRequest());
+            assertThat(mvc.perform(get("/api/database/export")).andReturn().getResponse().getContentAsByteArray()).isEqualTo(before);
+        }
+    }
+
+    @Test
+    void selectingLegacyPlanPreservesExactMonetaryDecimals() throws Exception {
+        String document = """
+          {"formatVersion":2,"entries":[{"id":"03b5154a-a840-42d8-b286-14321e40db87","type":"KONTO_BANKOWE","owner":"zosia","subcategory":null,"valuePln":12345678901234567890.12,"date":"2020-01-01","createdAt":"2020-01-01T00:00:00Z"}],"operations":[],"plans":{"zosia":{"allocationVersion":2,"bonds":50,"stocks":50,"gold":50,"developed":35,"emerging":15}}}
+          """;
+        var source = new MockMultipartFile("file", "exact.json", "application/json", document.getBytes());
+        var response = mvc.perform(multipart("/api/database/preview").file(source).param("selectedPlan","zosia"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.sharedPlan").value(true)).andReturn().getResponse();
+        String encoded = new JsonMapper().readTree(response.getContentAsByteArray()).path("preparedDocument").asString();
+        byte[] prepared = java.util.Base64.getDecoder().decode(encoded);
+        assertThat(new String(prepared, java.nio.charset.StandardCharsets.UTF_8)).contains("12345678901234567890.12");
+        assertThat(store.snapshot().entries()).isEmpty();
+        mvc.perform(multipart("/api/database/import").file(new MockMultipartFile("file","prepared.json","application/json",prepared))).andExpect(status().isNoContent());
+        assertThat(store.snapshot().entries().getFirst().getValuePln()).isEqualByComparingTo("12345678901234567890.12");
+        assertThat(store.snapshot().plans()).containsOnlyKeys("household");
+    }
+
+    @Test
     void appliesConfiguredCorsOriginAndRejectsAnUnconfiguredOrigin() throws Exception {
         mvc.perform(options("/api/investments")
                         .header("Origin", "https://portfolio.example.com")
@@ -119,14 +157,14 @@ class WebAdapterConfigurationTest {
         mvc.perform(get("/api/portfolio-performance").queryParam("owner","jakub"))
             .andExpect(jsonPath("$.nominalResultPln").value(100)).andExpect(jsonPath("$.depositsTotalPln").value(1000));
         mvc.perform(put("/api/portfolio-plans").queryParam("scope","jakub").contentType(MediaType.APPLICATION_JSON)
-            .content("{\"allocationVersion\":2,\"bonds\":60,\"stocks\":40,\"gold\":50,\"developed\":40,\"emerging\":10}"))
+            .content("{\"allocationVersion\":3,\"bonds\":60,\"gold\":20,\"developed\":16,\"emerging\":4}"))
             .andExpect(status().isOk());
         mvc.perform(put("/api/portfolio-plans").queryParam("scope","jakub").contentType(MediaType.APPLICATION_JSON)
             .content("{\"bonds\":80,\"stocks\":30,\"gold\":20,\"developed\":80,\"emerging\":20}"))
             .andExpect(status().isBadRequest());
         mvc.perform(put("/api/portfolio-plans").queryParam("scope","jakub").contentType(MediaType.APPLICATION_JSON).content("{}"))
             .andExpect(status().isBadRequest());
-        mvc.perform(get("/api/portfolio-plans").queryParam("scope","jakub")).andExpect(jsonPath("$.bonds").value(60)).andExpect(jsonPath("$.gold").value(50)).andExpect(jsonPath("$.allocationVersion").value(2));
+        mvc.perform(get("/api/portfolio-plans").queryParam("scope","jakub")).andExpect(jsonPath("$.bonds").value("60")).andExpect(jsonPath("$.gold").value("20")).andExpect(jsonPath("$.allocationVersion").value(3));
         for (String invalidPlan : new String[]{
             "{\"allocationVersion\":2,\"bonds\":50,\"stocks\":50,\"gold\":50,\"developed\":70,\"emerging\":30}",
             "{\"allocationVersion\":3,\"bonds\":50,\"stocks\":50,\"gold\":50,\"developed\":35,\"emerging\":15}"
@@ -134,7 +172,7 @@ class WebAdapterConfigurationTest {
         mvc.perform(delete("/api/portfolio-changes/ddc36cab-a704-4a38-b5ac-e39711ab5bb9")).andExpect(status().isNoContent());
         mvc.perform(get("/api/investments").queryParam("owner","jakub")).andExpect(jsonPath("$").isEmpty());
         mvc.perform(get("/api/investment-operations").queryParam("owner","jakub")).andExpect(jsonPath("$").isEmpty());
-        mvc.perform(get("/api/portfolio-plans").queryParam("scope","jakub")).andExpect(jsonPath("$.bonds").value(60)).andExpect(jsonPath("$.gold").value(50)).andExpect(jsonPath("$.allocationVersion").value(2));
+        mvc.perform(get("/api/portfolio-plans").queryParam("scope","jakub")).andExpect(jsonPath("$.bonds").value("60")).andExpect(jsonPath("$.gold").value("20")).andExpect(jsonPath("$.allocationVersion").value(3));
     }
 
     @Test

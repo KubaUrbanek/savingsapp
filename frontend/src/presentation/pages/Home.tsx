@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { subcategoriesFor, FALLBACK_USERS } from '../../domain/portfolio/constants.js';
 import { OwnerPortfolio, HouseholdPortfolio, PortfolioScopeKind } from '../../application/PortfolioScope.js';
 import { PortfolioChangeValidationFailure } from '../../application/portfolio/RecordPortfolioChange.js';
@@ -14,7 +14,9 @@ import {
 import { usePortfolioController } from '../portfolio/hooks/usePortfolioController.js';
 import { dataFrom } from '../portfolio/hooks/queryState.js';
 import { mapPortfolioChangeForm } from '../mappers/portfolioChangeFormMapper.js';
-import { portfolioHistory } from '../viewModels/portfolioHistory.js';
+import { overviewGroupLabel } from '../viewModels/overviewVisualization.js';
+import { buildOverviewDistribution } from '../../domain/portfolio/overviewVisualization.js';
+import { portfolioHistory, historyValues } from '../viewModels/portfolioHistory.js';
 import {
   displayName,
   TYPE_LABELS,
@@ -37,14 +39,14 @@ const tabs = [
   { id: 'allocation', label: 'Co dokupić?' },
   { id: 'history', label: 'Historia' }
 ];
-const blankForm = (kind = 'DEPOSIT') => ({
+const blankForm = (kind = '') => ({
   action: kind,
   operationType: kind,
   type: '',
   subcategory: '',
   amountPln: '',
   currentValuePln: '',
-  costKnown: true,
+  costKnown: false,
   cashType: 'KONTO_BANKOWE',
   date: today()
 });
@@ -53,11 +55,30 @@ export function Home({ dependencies }) {
   const { useCases, preferences } = dependencies;
   const [scope, setScope] = React.useState(() => OwnerPortfolio(preferences.selectedOwner()));
   const [activeTab, setActiveTab] = React.useState('summary');
-  const [historyAsset, setHistoryAsset] = React.useState(null);
+  const location = useLocation();
+  const [contexts, setContexts] = React.useState({});
+  const scopeId = scope.kind === PortfolioScopeKind.HOUSEHOLD ? 'household' : scope.ownerId;
+  const context = contexts[scopeId] ?? {};
+  const updateContext = (patch) =>
+    setContexts((previous) => ({ ...previous, [scopeId]: { ...previous[scopeId], ...patch } }));
+  const historyAsset = context.historyAsset ?? null;
+  const setHistoryAsset = (historyAsset) => updateContext({ historyAsset });
+  const historySearch = context.historySearch ?? '';
+  const historyKind = context.historyKind ?? '';
+  const historyStart = context.historyStart ?? '';
+  const historyEnd = context.historyEnd ?? '';
+  const [planRevision, setPlanRevision] = React.useState(0);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
-  const [overviewGrouping, setOverviewGrouping] = React.useState<OverviewGrouping>('accounts');
-  const [excludedGroups, setExcludedGroups] = React.useState<string[]>([]);
-  const [overviewReset, setOverviewReset] = React.useState(0);
+  React.useEffect(() => {
+    if (location.state?.overview) {
+      setActiveTab('summary');
+      setSettingsOpen(false);
+    }
+  }, [location.key, location.state]);
+  const overviewGrouping = context.grouping ?? 'accounts';
+  const excludedGroups = context.exclusions?.[overviewGrouping] ?? [];
+  const setExcludedGroups = (values) =>
+    updateContext({ exclusions: { ...context.exclusions, [overviewGrouping]: values } });
   const [formOpen, setFormOpen] = React.useState(false);
   const [completingBasis, setCompletingBasis] = React.useState(false);
   const [formOwner, setFormOwner] = React.useState(() => preferences.selectedOwner());
@@ -69,15 +90,23 @@ export function Home({ dependencies }) {
   const [formError, setFormError] = React.useState('');
   const [status, setStatus] = React.useState('');
   const [exporting, setExporting] = React.useState(false);
+  const [backupPreview, setBackupPreview] = React.useState(null);
+  const [backupFile, setBackupFile] = React.useState(null);
+  const [checkingBackup, setCheckingBackup] = React.useState(false);
   const [importing, setImporting] = React.useState(false);
   const [pendingDeletes, setPendingDeletes] = React.useState([]);
+  const [deleteUnconfirmed, setDeleteUnconfirmed] = React.useState(false);
   const tabsRef = React.useRef({});
   const retryCommand = React.useRef(null);
+  const suspendedPurchase = React.useRef(null);
+  const [addingSource, setAddingSource] = React.useState(false);
+  const [dialogRevision, setDialogRevision] = React.useState(0);
   const savingRef = React.useRef(false);
   const exportingRef = React.useRef(false);
   const importingRef = React.useRef(false);
   const pendingRef = React.useRef(new Set());
   const importInput = React.useRef(null);
+  const inspectionGeneration = React.useRef(0);
   const errorRef = React.useRef(null);
   React.useEffect(() => {
     if (error) errorRef.current?.focus();
@@ -108,7 +137,11 @@ export function Home({ dependencies }) {
     phase === 'refreshing'
       ? 'Zmiana zapisana. Odświeżamy oszczędności…'
       : phase === 'confirmed'
-        ? 'Zmiana zapisana. Podsumowanie jest aktualne.'
+        ? controller.projection.data?.command.name === 'importDatabaseBackup'
+          ? 'Przywrócono kopię danych.'
+          : controller.projection.data?.command.name.startsWith('delete')
+            ? 'Usunięto wpis. Podsumowanie jest aktualne.'
+            : 'Zmiana zapisana. Podsumowanie jest aktualne.'
         : phase === 'pending'
           ? 'Zmiana zapisana. Nie udało się jeszcze odświeżyć podsumowania.'
           : exporting
@@ -120,10 +153,17 @@ export function Home({ dependencies }) {
                 : status;
   const historyRows = portfolioHistory(entries, operations).filter(
     (row) =>
-      !historyAsset ||
-      (row.owner === historyAsset.owner &&
-        row.type === historyAsset.type &&
-        (row.subcategory || '') === (historyAsset.subcategory || ''))
+      (!historySearch ||
+        `${TYPE_LABELS[row.type]} ${SUBCATEGORY_LABELS[row.subcategory] || ''} ${OPERATION_LABELS[row.kind] || 'Aktualizacja wartości'} ${displayName(row.owner)} ${TYPE_LABELS[row.cashType] || ''} ${row.date} ${row.note || ''}`
+          .toLocaleLowerCase('pl')
+          .includes(historySearch.toLocaleLowerCase('pl'))) &&
+      (!historyKind || row.kind === historyKind) &&
+      (!historyStart || row.date >= historyStart) &&
+      (!historyEnd || row.date <= historyEnd) &&
+      (!historyAsset ||
+        (row.owner === historyAsset.owner &&
+          row.type === historyAsset.type &&
+          (row.subcategory || '') === (historyAsset.subcategory || '')))
   );
   const historyState =
     controller.entries.status === 'failure'
@@ -150,7 +190,6 @@ export function Home({ dependencies }) {
           scope.ownerIds.every((id) => resolvedScope.ownerIds.includes(id))
         : scope.ownerId === resolvedScope.ownerId;
     if (sameScope) return;
-    setHistoryAsset(null);
     setScope(resolvedScope);
   }, [controller.referenceData.status, controller.referenceData.data, scope]);
   React.useEffect(() => {
@@ -165,9 +204,7 @@ export function Home({ dependencies }) {
 
   function changeScope(next) {
     if (saving) return;
-    setHistoryAsset(null);
     setScope(next);
-    resetOverview();
     setFormOpen(false);
     setEditing(null);
     setForm(blankForm());
@@ -177,19 +214,10 @@ export function Home({ dependencies }) {
     setFormError('');
     setStatus('');
   }
-  function resetOverview() {
-    setOverviewGrouping('accounts');
-    setExcludedGroups([]);
-    setOverviewReset((value) => value + 1);
-  }
   function changeOverviewGrouping(grouping: OverviewGrouping) {
-    if (grouping === overviewGrouping) return;
-    setOverviewGrouping(grouping);
-    setExcludedGroups([]);
+    updateContext({ grouping });
   }
   function selectTab(id) {
-    if (activeTab === 'summary' && id !== activeTab) resetOverview();
-    setHistoryAsset(null);
     setActiveTab(id);
     setSettingsOpen(false);
   }
@@ -210,10 +238,10 @@ export function Home({ dependencies }) {
     selectTab(tabs[next].id);
     requestAnimationFrame(() => tabsRef.current[tabs[next].id]?.focus());
   }
-  function openForm(kind = 'DEPOSIT', asset = null) {
+  function openForm(kind = '', asset = null) {
     setCompletingBasis(kind === 'INITIAL' && asset != null);
-    const draftOwner = asset?.owner || owner || users[0];
-    const type = asset?.type || (types.includes('KONTO_BANKOWE') ? 'KONTO_BANKOWE' : types[0] || '');
+    const draftOwner = asset?.owner || owner || '';
+    const type = asset?.type || '';
     setFormOwner(draftOwner);
     setEditing(null);
     setForm({
@@ -237,6 +265,7 @@ export function Home({ dependencies }) {
       subcategory: row.subcategory || '',
       date: row.date,
       amountPln: row.amountPln != null ? String(row.amountPln) : '',
+      costKnown: row.kind === 'INITIAL',
       currentValuePln: row.valuePln != null ? String(row.valuePln) : '',
       cashType: row.cashType || 'KONTO_BANKOWE'
     });
@@ -254,10 +283,23 @@ export function Home({ dependencies }) {
         o.operationType === 'INITIAL'
     );
     if (initial) editRow(portfolioHistory(entries, operations).find((r) => r.id === initial.id));
-    else openForm('INITIAL', asset);
+    else {
+      const valuation = portfolioHistory(entries, operations).find(
+        (row) => row.record === 'entry' && row.id === asset.id
+      );
+      if (valuation) {
+        editRow({ ...valuation, kind: 'INITIAL' });
+        setCompletingBasis(true);
+        return;
+      }
+      openForm('INITIAL', asset);
+      setForm((previous) => ({ ...previous, date: asset.date, costKnown: true }));
+    }
   }
   function closeForm() {
     if (!saving) {
+      suspendedPurchase.current = null;
+      setAddingSource(false);
       setFormOpen(false);
       setEditing(null);
       retryCommand.current = null;
@@ -266,10 +308,16 @@ export function Home({ dependencies }) {
   function submit(event) {
     event.preventDefault();
     if (savingRef.current) return;
-    const mapped = {
-      ...mapPortfolioChangeForm(form, formOwner, allEntries),
-      ...(editing ? { editId: editing.id } : {})
-    };
+    let mapped;
+    try {
+      mapped = {
+        ...mapPortfolioChangeForm(form, formOwner, allEntries),
+        ...(editing ? { editId: editing.id } : {})
+      };
+    } catch (cause) {
+      setErrors({ [cause.field]: cause.message });
+      return;
+    }
     const command =
       retryCommand.current && JSON.stringify(retryCommand.current) === JSON.stringify(mapped)
         ? retryCommand.current
@@ -285,7 +333,13 @@ export function Home({ dependencies }) {
       .recordPortfolioChange(command)
       .then(() => {
         retryCommand.current = null;
-        setFormOpen(false);
+        if (suspendedPurchase.current) {
+          setForm(suspendedPurchase.current);
+          suspendedPurchase.current = null;
+          setAddingSource(false);
+          setDialogRevision((v) => v + 1);
+          setFormOpen(true);
+        } else setFormOpen(false);
         setEditing(null);
         setStatus(editing ? 'Poprawiono zmianę.' : 'Zapisano zmianę.');
       })
@@ -295,7 +349,7 @@ export function Home({ dependencies }) {
           setFormError(
             cause.status === 400
               ? cause.message
-              : 'Nie udało się zapisać zmiany. Spróbuj ponownie — ta sama próba nie zapisze jej dwukrotnie.'
+              : 'Nie potwierdzono zapisu. Sprawdź historię lub ponów tę samą próbę — nie zapisze jej dwukrotnie.'
           );
       })
       .finally(() => {
@@ -310,12 +364,13 @@ export function Home({ dependencies }) {
       .filter(Boolean)
       .join(' · ');
     const confirmed = window.confirm(
-      `Usunąć ten wpis?\n\n${OPERATION_LABELS[row.kind] || 'Aktualizacja wartości'} · ${displayName(row.owner)}\n${asset} · ${row.date}\n${formatMoney(row.amountPln ?? row.valuePln)}\n\nPowiązane salda i późniejsze zmiany zostaną przeliczone.`
+      `Usunąć ten wpis?\n\n${OPERATION_LABELS[row.kind] || 'Aktualizacja wartości'} · ${displayName(row.owner)}\n${asset} · ${row.date}\n${historyValues(row)}\n\nPowiązane salda i późniejsze zmiany zostaną przeliczone.`
     );
     trigger?.focus();
     if (!confirmed) return;
     pendingRef.current.add(key);
     setPendingDeletes([...pendingRef.current]);
+    setDeleteUnconfirmed(false);
     setError('');
     const command =
       row.record === 'operation'
@@ -323,9 +378,10 @@ export function Home({ dependencies }) {
         : controller.commands.deleteInvestmentEntry;
     command(row.id)
       .then(() => setStatus('Usunięto wpis.'))
-      .catch((cause) =>
-        setError(cause.status === 400 ? cause.message : 'Nie udało się usunąć wpisu. Spróbuj ponownie.')
-      )
+      .catch((cause) => {
+        setDeleteUnconfirmed(cause.status !== 400);
+        setError(cause.status === 400 ? cause.message : 'Nie potwierdzono usunięcia. Odśwież dane przed ponowieniem.');
+      })
       .finally(() => {
         pendingRef.current.delete(key);
         setPendingDeletes([...pendingRef.current]);
@@ -355,22 +411,44 @@ export function Home({ dependencies }) {
         setExporting(false);
       });
   }
+  async function inspectBackup(file, selectedPlan) {
+    const generation = ++inspectionGeneration.current;
+    setCheckingBackup(true);
+    setError('');
+    setBackupPreview(null);
+    try {
+      const preview = await useCases.importDatabaseBackup.preview(file, selectedPlan);
+      if (generation === inspectionGeneration.current) setBackupPreview(preview);
+    } catch (cause) {
+      if (generation === inspectionGeneration.current) setError(cause.message);
+    } finally {
+      if (generation === inspectionGeneration.current) setCheckingBackup(false);
+    }
+  }
   function importBackup(event) {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file || importingRef.current) return;
-    if (!window.confirm('Przywrócenie kopii zastąpi wszystkie obecne dane. Czy kontynuować?')) return;
+    setBackupFile(file);
+    inspectBackup(file);
+  }
+  async function confirmImport() {
+    if (!backupPreview?.file || importingRef.current) return;
     importingRef.current = true;
     setImporting(true);
     setError('');
-    controller.commands
-      .importDatabaseBackup(file)
-      .then(() => setStatus('Przywrócono kopię danych.'))
-      .catch(() => setError('Nie udało się przywrócić kopii. Sprawdź plik i spróbuj ponownie.'))
-      .finally(() => {
-        importingRef.current = false;
-        setImporting(false);
-      });
+    try {
+      await controller.commands.importDatabaseBackup(backupPreview.file);
+      setPlanRevision((v) => v + 1);
+      setBackupPreview(null);
+      setBackupFile(null);
+      setStatus('Przywrócono kopię danych.');
+    } catch {
+      setError('Nie potwierdzono przywrócenia kopii. Sprawdź połączenie i aktualne dane przed ponowieniem.');
+    } finally {
+      importingRef.current = false;
+      setImporting(false);
+    }
   }
 
   return (
@@ -386,7 +464,6 @@ export function Home({ dependencies }) {
             aria-expanded={settingsOpen}
             aria-controls="portfolio-settings"
             onClick={() => {
-              if (!settingsOpen) resetOverview();
               setSettingsOpen(!settingsOpen);
             }}
           >
@@ -425,7 +502,7 @@ export function Home({ dependencies }) {
             disabled={controller.referenceData.status !== 'success'}
             onClick={() => openForm()}
           >
-            Dodaj zmianę
+            Dodaj wpis
           </Button>
         </div>
         <div className="sectionNavigation savingsTabs" role="tablist" aria-label="Sekcje portfela">
@@ -438,7 +515,7 @@ export function Home({ dependencies }) {
               }}
               id={`portfolio-tab-${tab.id}`}
               role="tab"
-              aria-selected={activeTab === tab.id}
+              aria-selected={!settingsOpen && activeTab === tab.id}
               aria-controls={`portfolio-panel-${tab.id}`}
               tabIndex={activeTab === tab.id ? 0 : -1}
               onClick={() => selectTab(tab.id)}
@@ -466,6 +543,18 @@ export function Home({ dependencies }) {
           {error && (
             <InlineMessage ref={errorRef} variant="error">
               {error}
+              {deleteUnconfirmed && (
+                <Button
+                  onClick={() => {
+                    controller.retry.entries();
+                    controller.retry.snapshot();
+                    controller.retry.performance();
+                    setDeleteUnconfirmed(false);
+                  }}
+                >
+                  Odśwież dane
+                </Button>
+              )}
             </InlineMessage>
           )}
         </div>
@@ -478,14 +567,15 @@ export function Home({ dependencies }) {
         aria-labelledby="portfolio-tab-summary"
         hidden={settingsOpen || activeTab !== 'summary'}
       >
-        {snapshot.length > 0 && (
-          <OverviewFilters
-            grouping={overviewGrouping}
-            groups={overviewGroups}
-            excludedGroups={excludedGroups}
-            onGroupingChange={changeOverviewGrouping}
-            onExcludedGroupsChange={setExcludedGroups}
-          />
+        {excludedGroups.length > 0 && overview.length > 0 && (
+          <p className="activeOverviewScope">
+            Wybrane inwestycje:{' '}
+            {overviewGroups
+              .filter((key) => !excludedGroups.includes(key))
+              .map((key) => overviewGroupLabel(key, overviewGrouping))
+              .join(', ') || 'brak'}
+            . <Button onClick={() => setExcludedGroups([])}>Pokaż cały portfel</Button>
+          </p>
         )}
         <QueryBoundary
           state={controller.snapshot}
@@ -500,29 +590,77 @@ export function Home({ dependencies }) {
             </Button>
           }
         >
-          {() => (
-            <PortfolioOverview
-              household={household}
-              entries={overview}
-              performance={overviewPerformance}
-              assets={controller.assets}
-              loading={controller.performance.status === 'loading'}
-              onUpdate={(asset) => openForm('VALUATION', asset)}
-              onCompleteBasis={completeBasis}
-              onManage={(asset) => {
-                selectTab('history');
-                setHistoryAsset(asset);
-                requestAnimationFrame(() => tabsRef.current.history?.focus());
-              }}
-            >
-              <OverviewCharts
-                key={overviewReset}
-                entries={overviewEntries}
-                grouping={overviewGrouping}
-                today={currentDate}
-              />
-            </PortfolioOverview>
-          )}
+          {() =>
+            overview.length === 0 ? (
+              <div className="queryState">
+                <p>Nie wybrano inwestycji</p>
+                <Button onClick={() => setExcludedGroups([])}>Pokaż cały portfel</Button>
+              </div>
+            ) : (
+              <PortfolioOverview
+                household={household}
+                filtered={excludedGroups.length > 0}
+                failed={controller.performance.status === 'failure'}
+                filters={
+                  <details
+                    className="overviewFilterDisclosure"
+                    open={context.filtersOpen ?? false}
+                    onToggle={(e) => {
+                      if (e.currentTarget.open !== !!context.filtersOpen)
+                        updateContext({ filtersOpen: e.currentTarget.open });
+                    }}
+                  >
+                    <summary>Filtruj inwestycje</summary>
+                    <OverviewFilters
+                      grouping={overviewGrouping}
+                      groups={overviewGroups}
+                      excludedGroups={excludedGroups}
+                      values={Object.fromEntries(
+                        buildOverviewDistribution(allEntries, overviewGrouping).map((g) => [g.key, g.value])
+                      )}
+                      onGroupingChange={changeOverviewGrouping}
+                      onExcludedGroupsChange={setExcludedGroups}
+                    />
+                  </details>
+                }
+                entries={overview}
+                performance={overviewPerformance}
+                assets={controller.assets}
+                loading={controller.performance.status === 'loading'}
+                onUpdate={(asset) => openForm('VALUATION', asset)}
+                onCompleteBasis={(asset) => {
+                  if (household) setScope(OwnerPortfolio(asset.owner));
+                  completeBasis(asset);
+                }}
+                onManage={(asset) => {
+                  selectTab('history');
+                  setHistoryAsset(asset);
+                  requestAnimationFrame(() => tabsRef.current.history?.focus());
+                }}
+              >
+                <details
+                  className="chartsDisclosure"
+                  open={context.chartsOpen ?? window.matchMedia?.('(min-width: 768px)').matches ?? true}
+                  onToggle={(e) => {
+                    if (
+                      e.currentTarget.open !==
+                      (context.chartsOpen ?? window.matchMedia?.('(min-width: 768px)').matches ?? true)
+                    )
+                      updateContext({ chartsOpen: e.currentTarget.open });
+                  }}
+                >
+                  <summary>Rozkład i historia wartości</summary>
+                  <OverviewCharts
+                    view={context.chart ?? {}}
+                    onViewChange={(chart) => updateContext({ chart })}
+                    entries={overviewEntries}
+                    grouping={overviewGrouping}
+                    today={currentDate}
+                  />
+                </details>
+              </PortfolioOverview>
+            )
+          }
         </QueryBoundary>
         {controller.performance.status === 'failure' && (
           <InlineMessage variant="warning">
@@ -537,20 +675,13 @@ export function Home({ dependencies }) {
         aria-labelledby="portfolio-tab-allocation"
         hidden={settingsOpen || activeTab !== 'allocation'}
       >
-        <QueryBoundary
-          state={controller.snapshot}
-          skeletonShape="section"
-          onRetry={controller.retry.snapshot}
-          emptyTitle="Najpierw dodaj stan konta lub inwestycji"
-          emptyDescription="Na ich podstawie podpowiemy, co dokupić według Twoich proporcji."
-          emptyAction={
-            <Button variant="primary" onClick={() => openForm('INITIAL')}>
-              Dodaj aktualny stan konta lub inwestycji
-            </Button>
-          }
-        >
-          {() => <PurchasePlanPanel entries={allEntries} scope={household ? 'household' : owner} useCases={useCases} />}
-        </QueryBoundary>
+        <PurchasePlanPanel
+          entries={allEntries}
+          scope={household ? 'household' : owner}
+          useCases={useCases}
+          revision={planRevision}
+          assetsReady={controller.snapshot.status === 'success'}
+        />
       </section>
       <section
         id="portfolio-panel-history"
@@ -560,11 +691,47 @@ export function Home({ dependencies }) {
         className="ledgerSection"
       >
         <h2>Historia zmian</h2>
+        <label className="field">
+          Znajdź wpis
+          <input
+            type="search"
+            value={historySearch}
+            onChange={(e) => updateContext({ historySearch: e.target.value })}
+          />
+        </label>
+        <details>
+          <summary>Filtr okresu i działania</summary>
+          <div className="overviewHistoryControls">
+            <label className="field">
+              Od
+              <input
+                type="date"
+                value={historyStart}
+                onChange={(e) => updateContext({ historyStart: e.target.value })}
+              />
+            </label>
+            <label className="field">
+              Do
+              <input type="date" value={historyEnd} onChange={(e) => updateContext({ historyEnd: e.target.value })} />
+            </label>
+            <label className="field">
+              Działanie
+              <select value={historyKind} onChange={(e) => updateContext({ historyKind: e.target.value })}>
+                <option value="">Wszystkie działania</option>
+                {Object.entries({ ...OPERATION_LABELS, VALUATION: 'Aktualizacja wartości' }).map(([key, label]) => (
+                  <option value={key} key={key}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </details>
         <p>Edytuj lub usuń wybrany wpis. Po usunięciu powiązane salda zostaną przeliczone.</p>
         {historyAsset && (
           <div className="historyFilter">
             <span>
-              {displayName(historyAsset.owner)} · {TYPE_LABELS[historyAsset.type]}
+              Historia: {displayName(historyAsset.owner)} · {TYPE_LABELS[historyAsset.type]}
               {historyAsset.subcategory ? ` · ${SUBCATEGORY_LABELS[historyAsset.subcategory]}` : ''}
             </span>
             <Button onClick={() => setHistoryAsset(null)}>Pokaż całą historię</Button>
@@ -572,6 +739,7 @@ export function Home({ dependencies }) {
         )}
         <QueryBoundary
           state={historyState}
+          isEmpty={() => portfolioHistory(entries, operations).length === 0}
           skeletonShape="list"
           onRetry={() => {
             controller.retry.entries();
@@ -583,43 +751,77 @@ export function Home({ dependencies }) {
         >
           {() => (
             <div className="entryList">
-              {historyRows.map((row) => {
+              {historyRows.length === 0 && (
+                <div>
+                  <p>Brak wpisów spełniających wybrane warunki.</p>
+                  <Button
+                    onClick={() =>
+                      updateContext({
+                        historyAsset: null,
+                        historySearch: '',
+                        historyKind: '',
+                        historyStart: '',
+                        historyEnd: ''
+                      })
+                    }
+                  >
+                    Wyczyść filtry historii
+                  </Button>
+                </div>
+              )}
+              {historyRows.map((row, index) => {
                 const pending = pendingDeletes.includes(`${row.record}:${row.id}`);
                 return (
-                  <article className="entryRow" key={`${row.record}:${row.id}`} aria-busy={pending}>
-                    <div>
-                      <strong>{OPERATION_LABELS[row.kind] || 'Aktualizacja wartości'}</strong>
-                      <span>
-                        {TYPE_LABELS[row.type]}
-                        {row.subcategory ? ` · ${SUBCATEGORY_LABELS[row.subcategory]}` : ''}
-                      </span>
-                      <small>
-                        {row.date} · {displayName(row.owner)}
-                      </small>
-                      {row.kind === 'INITIAL' && (
+                  <React.Fragment key={`${row.record}:${row.id}`}>
+                    {(index === 0 || historyRows[index - 1].date !== row.date) && (
+                      <h3 className="historyDate">
+                        {new Intl.DateTimeFormat('pl-PL', { dateStyle: 'long' }).format(
+                          new Date(`${row.date}T12:00:00`)
+                        )}
+                      </h3>
+                    )}
+                    <article className="entryRow" aria-busy={pending}>
+                      <div>
+                        <strong>{OPERATION_LABELS[row.kind] || 'Aktualizacja wartości'}</strong>
+                        <span>
+                          {TYPE_LABELS[row.type]}
+                          {row.subcategory ? ` · ${SUBCATEGORY_LABELS[row.subcategory]}` : ''}
+                        </span>
                         <small>
-                          Wpłaciłem: {formatMoney(row.amountPln)} · Mam: {formatMoney(row.valuePln)}
+                          {row.date} · {displayName(row.owner)}
                         </small>
-                      )}
-                      {row.note && <small>{row.note}</small>}
-                    </div>
-                    <strong className="entryValue">
-                      {formatMoney(row.kind === 'INITIAL' || row.kind === 'VALUATION' ? row.valuePln : row.amountPln)}
-                    </strong>
-                    <div className="entryActions">
-                      <Button type="button" disabled={pending} onClick={() => editRow(row)}>
-                        Edytuj
-                      </Button>
-                      <Button
-                        variant="danger"
-                        type="button"
-                        disabled={pending}
-                        onClick={(event) => undo(row, event.currentTarget)}
-                      >
-                        {pending ? 'Usuwanie…' : 'Usuń wpis'}
-                      </Button>
-                    </div>
-                  </article>
+                        {row.cashType && (
+                          <small>
+                            {row.kind === 'BUY'
+                              ? `Z konta ${TYPE_LABELS[row.cashType]} → ${TYPE_LABELS[row.type]}`
+                              : `${TYPE_LABELS[row.type]} → konto ${TYPE_LABELS[row.cashType]}`}
+                          </small>
+                        )}
+                        {row.note && <small>{row.note}</small>}
+                      </div>
+                      <strong className="entryValue">{historyValues(row)}</strong>
+                      <div className="entryActions">
+                        <Button
+                          type="button"
+                          aria-label={`Edytuj: ${OPERATION_LABELS[row.kind] || 'Aktualizacja wartości'} · ${TYPE_LABELS[row.type]} · ${displayName(row.owner)} · ${row.date}`}
+                          disabled={pending}
+                          onClick={() => editRow(row)}
+                        >
+                          Edytuj
+                        </Button>
+                        <Button
+                          variant="quiet"
+                          className="deleteAction"
+                          aria-label={`${pending ? 'Usuwanie…' : 'Usuń wpis'}: ${TYPE_LABELS[row.type]} · ${displayName(row.owner)} · ${row.date}`}
+                          type="button"
+                          disabled={pending}
+                          onClick={(event) => undo(row, event.currentTarget)}
+                        >
+                          {pending ? 'Usuwanie…' : 'Usuń wpis'}
+                        </Button>
+                      </div>
+                    </article>
+                  </React.Fragment>
                 );
               })}
             </div>
@@ -632,14 +834,18 @@ export function Home({ dependencies }) {
         className="ledgerSection databasePanel"
         aria-labelledby="settings-heading"
       >
-        <h2 id="settings-heading">Ustawienia i kopia danych</h2>
+        <h2 id="settings-heading">Ustawienia i kopie danych</h2>
+        <Button onClick={() => setSettingsOpen(false)}>Wróć do: {tabs.find((t) => t.id === activeTab)?.label}</Button>
         <p>
           Pobierz kopię swoich oszczędności. Przywrócenie kopii zastępuje wszystkie obecne dane, także zapisane plany.
         </p>
+        <h3>Pobierz kopię</h3>
+        <p>Kopia obejmuje Jakuba, Zosię i jeden wspólny plan, niezależnie od wybranej osoby.</p>
         <div className="databaseActions">
           <Button onClick={exportBackup} busy={exporting} busyLabel="Pobieranie…">
             Pobierz kopię danych
           </Button>
+          <h3>Przywróć kopię</h3>
           <Button onClick={() => importInput.current?.click()} busy={importing} busyLabel="Przywracanie…">
             Przywróć z kopii
           </Button>
@@ -653,17 +859,78 @@ export function Home({ dependencies }) {
             onChange={importBackup}
           />
         </div>
-        <Link to="/about">Informacje o aplikacji</Link>
+        {checkingBackup && <p role="status">Sprawdzanie kopii…</p>}
+        {backupFile && !backupPreview && !checkingBackup && (
+          <Button onClick={() => inspectBackup(backupFile)}>Sprawdź kopię ponownie</Button>
+        )}
+        {backupPreview?.needsPlan && (
+          <label className="field">
+            Kopia nie ma planu Razem. Wybierz plan, który stanie się wspólny.
+            <select
+              defaultValue=""
+              onChange={(e) => {
+                if (e.target.value) inspectBackup(backupFile, e.target.value);
+              }}
+            >
+              <option value="">Wybierz plan z kopii</option>
+              {backupPreview.choices.map((key) => (
+                <option key={key} value={key}>
+                  {displayName(key)}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {backupPreview?.file && (
+          <div className="backupPreview">
+            <h3>Podgląd kopii</h3>
+            <p>
+              Format: {backupPreview.format}. Osoby: {backupPreview.owners.map(displayName).join(', ') || 'Brak wpisów'}
+              . Wyceny: {backupPreview.entries}. Operacje: {backupPreview.operations}. Wspólny plan:{' '}
+              {backupPreview.sharedPlan ? 'tak' : 'brak'}.
+            </p>
+            <p>Ta kopia zastąpi wszystkie obecne dane Jakuba, Zosi i wspólne plany.</p>
+            <Button
+              onClick={() => {
+                setBackupPreview(null);
+                setBackupFile(null);
+              }}
+              disabled={importing}
+            >
+              Anuluj przywracanie
+            </Button>
+            <Button variant="primary" onClick={confirmImport} busy={importing}>
+              Potwierdź zastąpienie danych
+            </Button>
+          </div>
+        )}
+        <Link to="/about">Jak korzystać</Link>
       </section>
       {formOpen && (
         <PortfolioChangeDialog
+          key={dialogRevision}
+          onReturnToPurchase={
+            addingSource
+              ? () => {
+                  setForm(suspendedPurchase.current);
+                  suspendedPurchase.current = null;
+                  setAddingSource(false);
+                  setDialogRevision((v) => v + 1);
+                }
+              : undefined
+          }
+          onAddSource={() => {
+            suspendedPurchase.current = form;
+            setAddingSource(true);
+            setForm({ ...blankForm('INITIAL'), type: form.cashType, date: form.date });
+            setDialogRevision((v) => v + 1);
+          }}
           form={form}
           setForm={setForm}
           owner={formOwner}
           owners={household ? users : [formOwner]}
           onOwnerChange={(next) => {
             setFormOwner(next);
-            setForm(blankForm(form.action));
             retryCommand.current = null;
             setErrors({});
             setFormError('');

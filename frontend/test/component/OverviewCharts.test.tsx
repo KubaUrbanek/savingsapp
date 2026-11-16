@@ -70,8 +70,9 @@ describe('overview visualization', () => {
   it('changes the historical range without changing current distribution and rejects invalid custom dates', () => {
     render(<OverviewCharts entries={entries} grouping="accounts" today="2026-11-15" />);
     fireEvent.change(screen.getByLabelText('Zakres czasu'), { target: { value: 'custom' } });
-    expect(screen.getByRole('alert')).toBeVisible();
-    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Od')).toHaveValue('2025-11-15');
+    expect(screen.getByLabelText('Do')).toHaveValue('2026-11-15');
     fireEvent.change(screen.getByLabelText('Od'), { target: { value: '2025-10-01' } });
     fireEvent.change(screen.getByLabelText('Do'), { target: { value: '2025-10-01' } });
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -92,7 +93,7 @@ describe('overview visualization', () => {
     fireEvent.change(screen.getByLabelText('Zakres czasu'), { target: { value: 'custom' } });
     fireEvent.change(screen.getByLabelText('Od'), { target: { value: '2024-10-01' } });
     fireEvent.change(screen.getByLabelText('Do'), { target: { value: '2024-11-01' } });
-    expect(screen.getByText('Brak danych do narysowania wykresu dla wybranego zakresu.')).toBeVisible();
+    expect(screen.getByText(/Brak danych dla wybranego zakresu/)).toBeVisible();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
   });
 
@@ -121,11 +122,11 @@ describe('overview visualization', () => {
     );
     expect(screen.getByLabelText('PPK')).not.toBeChecked();
     expect(screen.getByLabelText('PPO')).toBeChecked();
-    fireEvent.click(screen.getByRole('button', { name: 'Zaznacz wszystkie' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pokaż wszystkie' }));
     expect(onExcludedGroupsChange).toHaveBeenLastCalledWith([]);
     fireEvent.click(screen.getByRole('button', { name: 'Odznacz wszystkie' }));
     expect(onExcludedGroupsChange).toHaveBeenLastCalledWith(['PPK', 'PPO']);
-    fireEvent.click(screen.getByRole('button', { name: 'Rodzaje aktywów' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Według rodzaju inwestycji' }));
     expect(onGroupingChange).toHaveBeenLastCalledWith('assetClasses');
   });
 
