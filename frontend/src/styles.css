@@ -2283,3 +2283,45 @@ body {
 .planningModes { display: flex; flex-wrap: wrap; gap: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-control); padding: var(--space-3); }
 .planningModes label { display: flex; align-items: center; gap: var(--space-2); cursor: pointer; }
 .purchasePlanPanel .planningModes input { width: auto; }
+
+/* Allocation: shared 0–100% tracks keep current and target values directly comparable. */
+.allocationVisual { min-width: 0; padding: var(--space-5); background: var(--color-surface); border: 1px solid var(--color-ledger); border-radius: var(--radius-panel); }
+.allocationVisualHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); flex-wrap: wrap; }
+.allocationVisualHeader h3 { margin: var(--space-2) 0 0; }
+.allocationEyebrow { margin: 0; color: var(--color-muted); font-size: var(--font-size-label); }
+.allocationVisualTotal { display: grid; gap: var(--space-2); }
+.allocationVisualTotal span, .allocationVisualIntro { color: var(--color-muted); }
+.allocationVisualTotal strong { font-size: clamp(1.5rem, 3vw, 2rem); color: var(--color-portfolio-strong); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.allocationVisualLegend { display: flex; gap: var(--space-4); align-items: center; flex-wrap: wrap; margin-block: var(--space-5) var(--space-3); }
+.allocationVisualLegend span { display: inline-flex; align-items: center; gap: var(--space-2); }
+.allocationVisualLegend i { width: 24px; height: 10px; border-radius: 3px; background: var(--color-portfolio-strong); }
+.allocationVisualLegend .allocationTargetSwatch, .allocationTargetFill { background: repeating-linear-gradient(135deg, var(--color-portfolio-strong) 0 2px, var(--color-surface-muted) 2px 6px); }
+.allocationVisualLegend small { margin-left: auto; color: var(--color-muted); }
+.allocationVisualRows { list-style: none; margin: 0; padding: 0; }
+.allocationVisualRow { display: grid; grid-template-columns: minmax(130px, 1fr) minmax(170px, 2fr) minmax(140px, 1fr); align-items: center; gap: var(--space-4); padding-block: var(--space-5); border-top: 1px solid var(--color-ledger); }
+.allocationVisualIdentity, .allocationDelta { display: grid; gap: var(--space-2); min-width: 0; }
+.allocationVisualIdentity > span, .allocationDelta small { color: var(--color-muted); }
+.allocationBars { display: grid; gap: var(--space-3); min-width: 0; }
+.allocationBarLine { display: grid; grid-template-columns: 38px minmax(0, 1fr) 58px; gap: var(--space-2); align-items: center; font-size: var(--font-size-label); }
+.allocationBarLine > strong { text-align: right; font-variant-numeric: tabular-nums; }
+.allocationTrack { height: 12px; border-radius: 3px; background: var(--color-surface-muted); overflow: hidden; }
+.allocationCurrentFill, .allocationTargetFill { height: 100%; border-radius: inherit; }
+.allocationCurrentFill { background: var(--color-portfolio-strong); }
+.allocationDelta { text-align: right; justify-items: end; font-variant-numeric: tabular-nums; }
+.allocationDeltaBadge { padding: 3px 8px; border-radius: var(--radius-control); background: var(--color-surface-muted); font-weight: var(--font-weight-label); }
+.rebalanceSelection { min-width: 0; margin-block: var(--space-4); border: 1px solid var(--color-ledger); border-radius: var(--radius-panel); padding: var(--space-4); }
+.rebalanceSelectionOptions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.rebalanceSelectionOptions label { display: flex; align-items: center; gap: var(--space-3); min-height: 60px; padding: var(--space-3); border: 1px solid var(--color-control-border); border-radius: var(--radius-control); cursor: pointer; }
+.purchasePlanPanel .rebalanceSelection input { width: 20px; height: 20px; padding: 0; flex-shrink: 0; accent-color: var(--color-portfolio-strong); }
+.rebalanceSelectionOptions label > span { display: grid; gap: var(--space-2); }
+.rebalanceSelectionOptions small { color: var(--color-muted); }
+.rebalanceScope { display: flex; flex-wrap: wrap; gap: var(--space-4); padding: var(--space-4); background: var(--color-surface-muted); border-radius: var(--radius-control); }
+.rebalancePartialNotice { border-left: 3px solid var(--color-portfolio-strong); padding-left: var(--space-4); }
+@media (max-width: 767px) {
+  .allocationVisual { padding: var(--space-4); }
+  .allocationVisualRow { grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
+  .allocationVisualIdentity { display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+  .allocationDelta { display: flex; flex-wrap: wrap; align-items: center; text-align: left; gap: var(--space-2) var(--space-3); }
+  .allocationDelta small { flex-basis: 100%; }
+  .rebalanceSelectionOptions { grid-template-columns: minmax(0, 1fr); }
+}

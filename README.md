@@ -149,3 +149,5 @@ Podgląd importu: POST `/api/database/preview` z plikiem multipart `file`. Zwrac
 ### Rebalans obecnego portfela
 
 W zakładce „Co dokupić?” wybierz „Rebalans obecnego portfela”. Widok pokazuje obecne odchylenia w PLN i punktach procentowych oraz co sprzedać i kupić bez dopłaty według zapisanego wspólnego planu, dla aktualnie wybranej osoby lub razem. Sprzedaż finansuje zakupy co do grosza. Gotówka oraz PPK/PPO pozostają poza proporcjami. Kwoty wynikają z zapisanych wycen, przed kosztami i podatkami; podgląd nie zapisuje transakcji.
+
+Widok odchyleń porównuje obecne udziały z celami na poziomych słupkach z wartościami w PLN i pp. W rebalansie można odznaczyć dowolną kategorię (np. obligacje lub złoto). Odznaczone aktywa zachowują wartość; wybrane aktywa są rebalansowane według ich wzajemnych proporcji w zapisanym planie. Rebalans częściowy nie musi przywrócić proporcji całego portfela.

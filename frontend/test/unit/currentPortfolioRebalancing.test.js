@@ -122,3 +122,65 @@ test('persisted decimal weights are apportioned exactly even below floating poin
     [0, 0.01, 0, 0]
   );
 });
+
+const flat = { BONDS: 50, GOLD: 25, RYNKI_ROZWINIETE: 17.5, RYNKI_ROZWIJAJACE_SIE: 7.5 };
+test('freezing bonds redistributes only the selected capital while global deviations stay unchanged', () => {
+  const result = planRebalancing(holdings, flat, undefined, ['GOLD', 'RYNKI_ROZWINIETE', 'RYNKI_ROZWIJAJACE_SIE']);
+  assert.deepEqual(
+    result.rows.map((r) => r.afterValue),
+    [7000, 1500, 1050, 450]
+  );
+  assert.deepEqual(
+    result.rows.map((r) => r.tradeAmount),
+    [0, 500, -450, -50]
+  );
+  assert.deepEqual(
+    result.rows.map((r) => r.deviationAmount),
+    [2000, -1500, -250, -250]
+  );
+  assert.equal(result.selectedTotal, 3000);
+  assert.equal(result.excludedTotal, 7000);
+  assert.equal(result.tradeTotal, 500);
+  assert.equal(result.partial, true);
+});
+test('freezing gold never trades it and every subset conserves both selected and total cents', () => {
+  const keys = Object.keys(flat);
+  for (let mask = 0; mask < 16; mask++) {
+    const selected = keys.filter((_, i) => mask & (1 << i));
+    for (const cents of [1, 7, 103, 1000000]) {
+      const data = holdings.map((entry, i) => ({ ...entry, valuePln: (cents + i) / 100 }));
+      const result = planRebalancing(data, flat, undefined, selected);
+      assert.equal(
+        result.rows.reduce((sum, r) => sum + Math.round(r.tradeAmount * 100), 0),
+        0
+      );
+      assert.equal(
+        result.rows.reduce((sum, r) => sum + Math.round(r.afterValue * 100), 0),
+        data.reduce((sum, e) => sum + Math.round(e.valuePln * 100), 0)
+      );
+      result.rows
+        .filter((r) => !selected.includes(r.key))
+        .forEach((r) => {
+          assert.equal(r.tradeAmount, 0);
+          assert.equal(r.afterValue, r.currentValue);
+        });
+    }
+  }
+});
+test('empty selection, one category, zero target weights and no selected capital have explicit statuses', () => {
+  assert.equal(planRebalancing(holdings, flat, undefined, []).selectionStatus, 'empty');
+  assert.equal(planRebalancing(holdings, flat, undefined, ['BONDS']).selectionStatus, 'single');
+  const zero = planRebalancing(
+    holdings,
+    { BONDS: 100, GOLD: 0, RYNKI_ROZWINIETE: 0, RYNKI_ROZWIJAJACE_SIE: 0 },
+    undefined,
+    ['GOLD', 'RYNKI_ROZWINIETE']
+  );
+  assert.equal(zero.selectionStatus, 'zero-target');
+  assert.ok(zero.rows.every((r) => r.tradeAmount === 0));
+  assert.equal(
+    planRebalancing([holdings[0]], flat, undefined, ['GOLD', 'RYNKI_ROZWINIETE']).selectionStatus,
+    'no-funds'
+  );
+  assert.throws(() => planRebalancing(holdings, flat, undefined, ['UNKNOWN']));
+});
