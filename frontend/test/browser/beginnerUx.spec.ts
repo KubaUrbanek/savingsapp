@@ -48,8 +48,8 @@ test('E02 E13 shared draft and per-owner budget survive tabs and scope', async (
   await seed(request, 'GIELDA', 100, 'zosia', 'ZLOTO');
   await request.put('/api/portfolio-plans', { data: flat });
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
-  const panel = page.getByRole('tabpanel', { name: 'Co dokupić?', exact: true });
+  await page.getByRole('tab', { name: 'Plan portfela', exact: true }).click();
+  const panel = page.getByRole('tabpanel', { name: 'Plan portfela', exact: true });
   await expect(panel).toContainText('7500,00');
   await expect(panel).toContainText('Gotówka 0,00');
   await expect(panel).toContainText(/PPK \/ PPO: 900\s000,00/);
@@ -65,7 +65,7 @@ test('E02 E13 shared draft and per-owner budget survive tabs and scope', async (
   await expect(panel).toContainText('Razem: 99%');
   await page.getByRole('tab', { name: 'Historia', exact: true }).click();
   await page.getByRole('button', { name: 'Zosia', exact: true }).click();
-  await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
+  await page.getByRole('tab', { name: 'Plan portfela', exact: true }).click();
   await expect(page.getByLabel('Obligacje — %', { exact: true })).toHaveValue('49');
   await expect(page.getByLabel('Kwota na zakupy — zł')).toHaveValue('');
   await expect(panel).toContainText('100,00');
@@ -85,8 +85,8 @@ test('E02 H15 shared targets use only the selected owners investments', async ({
   await seed(request, 'GIELDA', 750, 'zosia', 'RYNKI_ROZWIJAJACE_SIE');
   expect((await request.put('/api/portfolio-plans', { data: flat })).ok()).toBeTruthy();
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
-  const panel = page.getByRole('tabpanel', { name: 'Co dokupić?', exact: true });
+  await page.getByRole('tab', { name: 'Plan portfela', exact: true }).click();
+  const panel = page.getByRole('tabpanel', { name: 'Plan portfela', exact: true });
   const budget = panel.getByLabel('Kwota na zakupy — zł');
   const cards = panel.getByRole('list', { name: 'Proponowane zakupy' }).getByRole('listitem');
   const savedPlan = panel.locator('.savedPlan');
@@ -122,7 +122,7 @@ test('E02 H15 shared targets use only the selected owners investments', async ({
         `Dokup za ${amount}`
       );
     }
-    await expect(savedPlan.getByRole('listitem')).toHaveText(originalWeights);
+    await expect(savedPlan.locator('li')).toHaveText(originalWeights);
   }
 
   await page.getByRole('button', { name: 'Zosia', exact: true }).click();
@@ -142,7 +142,7 @@ test('E07 E14 network errors are distinct from missing data and retry locally', 
   await expect(page.locator('.summaryTotal')).toContainText('1000,00');
   await expect(page.locator('.savingsHeadline')).toContainText('Nie udało się wczytać wyniku');
   await expect(page.getByText('Uzupełnij wpłaty', { exact: true })).toHaveCount(0);
-  await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
+  await page.getByRole('tab', { name: 'Plan portfela', exact: true }).click();
   await expect(page.getByRole('alert')).toContainText('Nie udało się wczytać planu');
   await expect(page.locator('.savedPlan')).toHaveCount(0);
   fail = false;
@@ -212,7 +212,7 @@ test('E29 explicit legacy selection, read-only preview and refreshed imported pl
   expect((await (await request.get('/api/investments?owner=jakub')).json()).length).toBe(1);
   await page.getByRole('button', { name: 'Potwierdź zastąpienie danych', exact: true }).click();
   await expect(page.getByText('Przywrócono kopię danych.', { exact: true })).toBeVisible();
-  await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
+  await page.getByRole('tab', { name: 'Plan portfela', exact: true }).click();
   await expect(page.locator('.savedPlan')).toContainText('Obligacje: 60%');
   await expect(page.locator('.savedPlan')).toContainText('Złoto: 20%');
   await page.getByRole('button', { name: 'Ustawienia', exact: true }).click();
@@ -257,7 +257,7 @@ for (const width of [320, 390, 768, 1440])
     await expect(page.getByRole('tab', { name: 'Historia', exact: true })).toBeFocused();
     await page.keyboard.press('Home');
     await expect(page.getByRole('tab', { name: 'Przegląd', exact: true })).toBeFocused();
-    await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
+    await page.getByRole('tab', { name: 'Plan portfela', exact: true }).click();
     await page.getByLabel('Kwota na zakupy — zł').fill('1000');
     await page.getByText('Porównaj z celem', { exact: true }).click();
     expect(

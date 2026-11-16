@@ -50,6 +50,7 @@ export function planRebalancing(entries, global, equity, selectedKeys) {
             ? 'no-funds'
             : 'ready';
   if (targets.some((value) => moneyInput(value / 100) == null)) throw new RangeError('Nieprawidłowa wartość portfela');
+  const selectedWeight = selected.reduce((sum, index) => sum + weights[index], 0n);
   const rows = snapshot.rows.map((row, index) => ({
     ...row,
     targetWeight: Number(row.targetWeight),
@@ -58,6 +59,13 @@ export function planRebalancing(entries, global, equity, selectedKeys) {
     deviation: totalCents ? (currentCents[index] / totalCents) * 100 - row.targetWeight : null,
     deviationAmount: (currentCents[index] - fullTargets[index]) / 100,
     selected: selected.includes(index),
+    selectedTargetWeight:
+      selected.includes(index) && selectedWeight > 0n
+        ? Number((weights[index] * 100000000n) / selectedWeight) / 1000000
+        : null,
+    selectedCurrentWeight:
+      selected.includes(index) && selectedCents ? (currentCents[index] / selectedCents) * 100 : null,
+    selectedAfterWeight: selected.includes(index) && selectedCents ? (targets[index] / selectedCents) * 100 : null,
     tradeAmount: (targets[index] - currentCents[index]) / 100,
     afterValue: targets[index] / 100,
     afterWeight: totalCents ? (targets[index] / totalCents) * 100 : null

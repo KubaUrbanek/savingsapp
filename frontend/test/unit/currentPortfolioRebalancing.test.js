@@ -184,3 +184,43 @@ test('empty selection, one category, zero target weights and no selected capital
   );
   assert.throws(() => planRebalancing(holdings, flat, undefined, ['UNKNOWN']));
 });
+
+test('selected targets and actual shares use the selected capital while global deviations remain unchanged', () => {
+  const values = [
+    entry(150222.85, 'TRZYLETNIE', 'OBLIGACJE'),
+    entry(9590.54, 'ZLOTO'),
+    entry(7192.91, 'RYNKI_ROZWINIETE'),
+    entry(7192.91, 'RYNKI_ROZWIJAJACE_SIE')
+  ];
+  const weights = { BONDS: 50, GOLD: 15, RYNKI_ROZWINIETE: 30, RYNKI_ROZWIJAJACE_SIE: 5, BITCOIN: 0 };
+  const full = planRebalancing(values, weights);
+  const partial = planRebalancing(values, weights, undefined, ['GOLD', 'RYNKI_ROZWINIETE', 'RYNKI_ROZWIJAJACE_SIE']);
+  assert.equal(partial.selectedTotal, 23976.36);
+  const selected = partial.rows.filter((r) => r.selected);
+  assert.deepEqual(
+    selected.map((r) => r.selectedTargetWeight),
+    [30, 60, 10]
+  );
+  assert.deepEqual(
+    selected.map((r) => r.afterValue),
+    [7192.91, 14385.82, 2397.63]
+  );
+  assert.deepEqual(
+    selected.map((r) => Math.round(r.selectedAfterWeight * 100) / 100),
+    [30, 60, 10]
+  );
+  assert.deepEqual(
+    partial.rows.map((r) => r.deviation),
+    full.rows.map((r) => r.deviation)
+  );
+  assert.ok(
+    partial.rows
+      .filter((r) => !r.selected)
+      .every((r) => r.selectedTargetWeight === null && r.selectedAfterWeight === null)
+  );
+  const empty = planRebalancing(values, weights, undefined, []);
+  assert.ok(empty.rows.every((r) => r.selectedTargetWeight === null));
+  const zero = planRebalancing(values, weights, undefined, ['BITCOIN']);
+  assert.equal(zero.selectionStatus, 'zero-target');
+  assert.ok(zero.rows.every((r) => r.selectedTargetWeight === null));
+});

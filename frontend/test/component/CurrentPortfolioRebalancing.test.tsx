@@ -5,7 +5,7 @@ import { afterEach, it, expect, vi } from 'vitest';
 import { PurchasePlanPanel } from '../../src/presentation/components/PurchasePlanPanel.js';
 import { expectNoAccessibilityViolations } from './accessibility.js';
 afterEach(cleanup);
-const plan = { bonds: 50, gold: 25, developed: 17.5, emerging: 7.5 };
+const plan = { bonds: 50, gold: 25, developed: 17.5, emerging: 7.5, bitcoin: 0 };
 const entries = [
   {
     owner: 'jakub',
@@ -29,6 +29,7 @@ it('shows deviations without budget, balances trades and keeps rebalancing indep
   expect(screen.queryByLabelText('Kwota na zakupy — zł')).not.toBeInTheDocument();
   expect(screen.getByRole('list', { name: 'Co sprzedać' })).toHaveTextContent(/5\s?000,00/);
   expect(within(screen.getByRole('list', { name: 'Co kupić' })).getAllByRole('listitem')).toHaveLength(3);
+  fireEvent.click(screen.getByText('Szczegóły wyliczeń'));
   expect(screen.getByRole('list', { name: 'Po rebalansie' })).toHaveTextContent('25%');
   expect(useCases.savePortfolioPlan.execute).not.toHaveBeenCalled();
   await expectNoAccessibilityViolations(container);
@@ -92,7 +93,7 @@ it('freezes selected exclusions, keeps the chart unchanged, and preserves select
   fireEvent.click(bonds);
   expect(chart.textContent).toBe(chartText);
   expect(screen.getByText('Wybrane aktywa nie mają środków do rebalansu.')).toBeVisible();
-  expect(screen.getByRole('list', { name: 'Po rebalansie' })).toHaveTextContent('Bez zmian — poza rebalansem');
+  expect(screen.queryByRole('list', { name: 'Po rebalansie' })).not.toBeInTheDocument();
   expect(screen.queryByRole('list', { name: 'Co sprzedać' })).not.toBeInTheDocument();
   await expectNoAccessibilityViolations(container);
   fireEvent.click(screen.getByLabelText('Dokupowanie'));
@@ -107,5 +108,39 @@ it('freezes selected exclusions, keeps the chart unchanged, and preserves select
   await waitFor(() => expect(screen.getByLabelText('Dokupowanie')).toBeChecked());
   fireEvent.click(screen.getByLabelText('Rebalans obecnego portfela'));
   expect(screen.getAllByRole('checkbox').every((input) => (input as HTMLInputElement).checked)).toBe(true);
+  expect(useCases.savePortfolioPlan.execute).not.toHaveBeenCalled();
+});
+
+it('places controls after the global chart and compares selected shares with normalized targets', async () => {
+  const useCases = deps();
+  useCases.loadPortfolioPlan.execute.mockResolvedValue({ bonds: 50, gold: 15, developed: 30, emerging: 5, bitcoin: 0 });
+  render(
+    <PurchasePlanPanel
+      entries={[
+        { ...entries[0], valuePln: 150222.85 },
+        { ...entries[0], type: 'GIELDA', subcategory: 'ZLOTO', valuePln: 9590.54 },
+        { ...entries[0], type: 'GIELDA', subcategory: 'RYNKI_ROZWINIETE', valuePln: 7192.91 },
+        { ...entries[0], type: 'GIELDA', subcategory: 'RYNKI_ROZWIJAJACE_SIE', valuePln: 7192.91 }
+      ]}
+      scope="jakub"
+      useCases={useCases}
+    />
+  );
+  const chart = await screen.findByRole('region', { name: 'Obecne odchylenia od planu' });
+  const modes = screen.getByRole('group', { name: 'Sposób planowania' });
+  expect(chart.compareDocumentPosition(modes) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  const original = chart.textContent;
+  fireEvent.click(screen.getByLabelText('Rebalans obecnego portfela'));
+  fireEvent.click(screen.getByRole('checkbox', { name: /Obligacje/ }));
+  fireEvent.click(screen.getByRole('checkbox', { name: /Bitcoin/ }));
+  expect(screen.getByRole('checkbox', { name: /Złoto/ }).closest('label')).toHaveTextContent(
+    'Cel wybranej części: 30%'
+  );
+  fireEvent.click(screen.getByText('Szczegóły wyliczeń'));
+  expect(screen.getByRole('list', { name: 'Po rebalansie' })).toHaveTextContent(
+    'Udział w wybranej części: 60% · Cel wybranej części: 60%'
+  );
+  expect(screen.getByRole('region', { name: 'Poza rebalansem — bez zmian' })).toHaveTextContent(/150\s222,85/);
+  expect(chart.textContent).toBe(original);
   expect(useCases.savePortfolioPlan.execute).not.toHaveBeenCalled();
 });
