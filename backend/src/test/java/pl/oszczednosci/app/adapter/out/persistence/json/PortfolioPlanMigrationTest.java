@@ -30,6 +30,9 @@ class PortfolioPlanMigrationTest {
         assertThatThrownBy(() -> store.importBackup("{\"formatVersion\":2,\"entries\":[],\"operations\":[],\"plans\":{\"jakub\":{\"allocationVersion\":2,\"bonds\":50,\"stocks\":50,\"gold\":50,\"developed\":35,\"emerging\":15}}}".getBytes(StandardCharsets.UTF_8))).isInstanceOf(pl.oszczednosci.app.application.exception.MalformedImportException.class);
         assertThat(store.snapshot().plans()).isEmpty();
     }
+    @Test void flatVersionThreeMigratesWithZeroBitcoin() {
+        assertThat(new PortfolioPlanJsonRecord("50",null,"25","17.5","7.5",3,null).toDomain()).isEqualTo(PortfolioPlan.defaults());
+    }
     @Test void invalidAndUnknownPlansAreRejected() {
         assertThatThrownBy(() -> new PortfolioPlanJsonRecord("50","50","50","35","15",5,null).toDomain()).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> new PortfolioPlanJsonRecord("50","50",null,"70","30",null,null).toDomain()).isInstanceOf(IllegalArgumentException.class);

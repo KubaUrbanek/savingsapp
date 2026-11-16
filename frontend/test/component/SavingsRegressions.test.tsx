@@ -77,7 +77,7 @@ describe('savings regressions', () => {
     await waitFor(() =>
       expect(save).toHaveBeenCalledWith({
         scope: 'household',
-        plan: { bonds: '50', gold: '25', developed: '20', emerging: '5' }
+        plan: { bitcoin: '0', bonds: '50', gold: '25', developed: '20', emerging: '5' }
       })
     );
     await screen.findByText('Zapisano wspólny plan.');
