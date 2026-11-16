@@ -284,3 +284,28 @@ test('household draft owner is explicit, modal keeps background controls inactiv
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(trigger).toBeFocused();
 });
+
+test('rebalances the full current portfolio without deposit or writes on desktop and mobile', async ({
+  page,
+  request
+}) => {
+  await initial(request, 'OBLIGACJE', 7000, 'TRZYLETNIE');
+  await initial(request, 'GIELDA', 1000, 'ZLOTO');
+  await initial(request, 'GIELDA', 1500, 'RYNKI_ROZWINIETE');
+  await initial(request, 'GIELDA', 500, 'RYNKI_ROZWIJAJACE_SIE');
+  const before = await (await request.get('/api/investment-operations?owner=jakub')).json();
+  await page.goto('/');
+  await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
+  const deviations = page.getByRole('region', { name: 'Obecne odchylenia od planu' });
+  await expect(deviations).toContainText('+20 pp');
+  await page.getByLabel('Rebalans obecnego portfela', { exact: true }).check();
+  await expect(page.getByRole('list', { name: 'Co sprzedać' })).toContainText(/2000,00/);
+  await expect(page.getByRole('list', { name: 'Co kupić' })).toContainText(/1500,00/);
+  await expect(page.getByRole('list', { name: 'Co kupić' }).getByRole('listitem')).toHaveCount(3);
+  await expect(page.getByRole('list', { name: 'Po rebalansie' })).toContainText('17,5%');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+  await page.getByLabel('Dokupowanie', { exact: true }).check();
+  await expect(page.getByLabel('Mam do zainwestowania — zł')).toHaveValue('');
+  const after = await (await request.get('/api/investment-operations?owner=jakub')).json();
+  expect(after).toEqual(before);
+});

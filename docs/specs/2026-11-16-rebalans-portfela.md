@@ -1,6 +1,6 @@
 # SDD: rebalans obecnego portfela w „Co dokupić?”
 
-Status: **specyfikacja do akceptacji — implementacja wstrzymana**.
+Status: **zaakceptowana 2026-11-16; implementacja i weryfikacja w toku**.
 
 Data: 2026-11-16. SDD oznacza tutaj pracę od specyfikacji zachowania i kryteriów akceptacji do implementacji oraz weryfikacji. Zgodnie z prośbą użytkownika implementacja rozpocznie się dopiero po akceptacji tej specyfikacji.
 
@@ -152,7 +152,7 @@ Po implementacji: testy domenowe i komponentowe, lint, TypeScript, formatowanie 
 
 ## 8. Kolejność realizacji po akceptacji
 
-- [ ] Akceptacja tej specyfikacji przez użytkownika.
+- [x] Akceptacja tej specyfikacji przez użytkownika (polecenie implementacji i scalenia).
 - [ ] Wyliczenia domenowe oraz testy kryteriów liczbowych i zaokrągleń.
 - [ ] Przełącznik trybów, widok odchyleń, listy sprzedaży / zakupów i porównanie po rebalansie.
 - [ ] Obsługa stanów edycji, błędów i zmian zakresu oraz testy komponentowe.

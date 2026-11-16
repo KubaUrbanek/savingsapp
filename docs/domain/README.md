@@ -78,3 +78,10 @@ The UI presents one chronological event row per tracked change, regardless of ho
 GET/PUT `/api/portfolio-plans` używa `allocationVersion: 2`. Przykład: `{"allocationVersion":2,"bonds":50,"stocks":50,"gold":50,"developed":35,"emerging":15}`. `bonds + stocks = 100`, natomiast `gold + developed + emerging = 100`. Złoto jest zatem celem 25% całego planu w tym przykładzie. PUT wymaga wersji 2, aby nie pomylić znaczeń wag ze starszym klientem. Wszystkie wagi muszą być skończone i mieścić się w zakresie 0–100.
 
 Plany w bazie i kopiach danych mają własne `allocationVersion` (format całej kopii pozostaje 2). Starszy plan bez wersji lub z wersją 1 przechodzi na nowy układ: udział obligacji pozostaje bez zmian, dawne globalne akcje i złoto tworzą wspólną część, a jej cele to 50% złota i połowa każdej dotychczasowej wagi rynku. Odczyt nie zapisuje danych; kolejny zapis lub eksport zawiera wersję 2. Wersja 2 zachowuje zapisane wagi bez ponownego przeliczania. Nieznane wersje i niepoprawne wagi są odrzucane.
+
+
+## Rebalans obecnego portfela
+
+Plan rebalansu używa tych samych czterech efektywnych celów co dokupowanie: obligacji, złota, rynków rozwiniętych i wschodzących. Działa na ostatnich zapisanych wycenach pełnego zakresu osoby albo gospodarstwa; gotówka i PPK/PPO pozostają osobno. Odchylenie to udział obecny minus docelowy (pp) oraz wartość obecna minus docelowa (PLN).
+
+Docelowe kwoty w groszach rozdzielane są metodą największych reszt; remis rozstrzyga kolejność obligacje, złoto, rozwinięte, wschodzące. Zakup to dodatnia różnica między kwotą docelową i obecną, sprzedaż to ujemna różnica. Suma zakupów równa się sumie sprzedaży, bez dopłaty. Po zmianach pokazujemy rzeczywiste udziały zaokrąglonych kwot. Pusty portfel nie ma określonych udziałów ani transakcji. Podgląd nie zapisuje operacji; nie uwzględnia prowizji, podatków ani ograniczeń rachunków.
