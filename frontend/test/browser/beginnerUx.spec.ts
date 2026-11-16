@@ -93,6 +93,7 @@ test('E02 H15 shared targets use only the selected owners investments', async ({
   await expect(savedPlan).toContainText('Zapisany wspólny plan');
   const originalWeights = [
     'Obligacje: 50%',
+    'Bitcoin (BTC): 0%',
     'Złoto: 25%',
     'Akcje — rynki rozwinięte: 17,5%',
     'Akcje — rynki wschodzące: 7,5%'
@@ -268,7 +269,7 @@ for (const width of [320, 390, 768, 1440])
     const trackWidths = await page
       .locator('.allocationTrack')
       .evaluateAll((elements) => elements.map((element) => Math.round(element.getBoundingClientRect().width)));
-    expect(trackWidths).toHaveLength(8);
+    expect(trackWidths).toHaveLength(10);
     expect(new Set(trackWidths).size).toBe(1);
     await page.evaluate(() => {
       for (const size of [12, 14, 16, 20, 26, 36, 48])
