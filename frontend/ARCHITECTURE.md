@@ -283,3 +283,8 @@ On mobile, holdings and purchase recommendations use cards. The budget precedes 
 Holdings use three desktop columns (investment, value with known result, actions) and compact mobile cards. A single notice explains missing contribution data; unknown headline results use a dash. Native details disclosures contain contribution totals, valuation dates, and separate contribution-completion and history-management buttons. Value updates remain directly visible. Management opens history filtered by owner, asset type and subcategory; changing scope or selecting a tab clears the filter. Editing and deleting apply to a selected history event, preserving deletion confirmation and linked-balance replay. The saved purchase plan displays gold/developed/emerging equity subweights alongside their effective whole-plan weights; the editor previews the same conversion before saving.
 
 HTTP persistence regressions run in both browser projects under an insecure HTTP origin forwarded to the isolated local backend. They explicitly verify unavailable secure-context crypto APIs, then exercise initial values, unknown contributions, deposits, withdrawals, buys/sells, valuations, corrections/deletion, plan saving, and retries across reload without duplicates. Tests must not mark that origin as secure.
+
+
+## Bitcoin allocation
+
+Bitcoin is a market-account subcategory and a distinct global asset class. Portfolio plan API allocationVersion 3 requires a bitcoin weight; gold + developed + emerging + bitcoin = 100. Existing version 2 backups migrate with bitcoin=0; version 1 retains its previous gold migration. Liquibase 003 adds a zero-default bitcoin column. Preference schema 3 migrates existing allocations with BITCOIN=0. See [SPEC](../docs/specs/bitcoin.md).

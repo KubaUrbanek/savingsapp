@@ -90,7 +90,7 @@ describe('accessible financial charts', () => {
     expect(screen.getByText('Brak danych do narysowania wykresu dla wybranego zakresu.')).toBeVisible();
     fireEvent.change(type, { target: { value: 'GIELDA' } });
     expect(screen.getByLabelText('Podinwestycja')).toHaveValue('ALL');
-    expect(within(screen.getByLabelText('Podinwestycja')).getAllByRole('option')).toHaveLength(4);
+    expect(within(screen.getByLabelText('Podinwestycja')).getAllByRole('option')).toHaveLength(5);
     fireEvent.change(screen.getByLabelText('Podinwestycja'), { target: { value: 'ZLOTO' } });
     fireEvent.change(type, { target: { value: 'KONTO_BANKOWE' } });
     expect(screen.queryByLabelText('Podinwestycja')).not.toBeInTheDocument();

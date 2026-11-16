@@ -18,16 +18,16 @@ class PortfolioPlanMigrationTest {
             """.getBytes(StandardCharsets.UTF_8));
         var service = new PortfolioPlanService(store);
         assertThat(service.load("jakub")).isEqualTo(new PortfolioPlan(30, 70, 50, 40, 10));
-        var updated = new PortfolioPlan(30, 70, 40, 45, 15);
+        var updated = new PortfolioPlan(30, 70, 30, 45, 15, 10);
         service.save("jakub", updated);
         var clone = new JsonInvestmentStore(new JsonMapper(), temp.resolve("clone.json"));
         clone.importBackup(store.exportBackup());
         assertThat(new PortfolioPlanService(clone).load("jakub")).isEqualTo(updated);
-        assertThat(new JsonMapper().readTree(clone.exportBackup()).path("plans").path("jakub").path("allocationVersion").asInt()).isEqualTo(2);
+        assertThat(new JsonMapper().readTree(clone.exportBackup()).path("plans").path("jakub").path("allocationVersion").asInt()).isEqualTo(3);
     }
     @Test void invalidAndUnknownPlansAreRejected() {
-        assertThatThrownBy(() -> new PortfolioPlanJsonRecord(50.,50.,50.,35.,15.,3).toDomain()).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new PortfolioPlanJsonRecord(50.,50.,null,70.,30.,null).toDomain()).isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new PortfolioPlanJsonRecord(50.,50.,50.,35.,15.,null).toDomain()).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new PortfolioPlanJsonRecord(50.,50.,50.,35.,15.,3,null).toDomain()).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new PortfolioPlanJsonRecord(50.,50.,null,70.,30.,null,null).toDomain()).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new PortfolioPlanJsonRecord(50.,50.,50.,35.,15.,null,null).toDomain()).isInstanceOf(IllegalArgumentException.class);
     }
 }

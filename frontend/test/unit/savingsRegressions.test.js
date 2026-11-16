@@ -90,7 +90,8 @@ test('two-level equity targets include gold and keep cash and unknown pension co
       ['BONDS', 50],
       ['GOLD', 25],
       ['RYNKI_ROZWINIETE', 17.5],
-      ['RYNKI_ROZWIJAJACE_SIE', 7.5]
+      ['RYNKI_ROZWIJAJACE_SIE', 7.5],
+      ['BITCOIN', 0]
     ]
   );
   assert.equal(plan.cash, 400);

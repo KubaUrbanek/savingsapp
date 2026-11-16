@@ -37,7 +37,8 @@ test('allocation validation replaces invalid boundaries with documented defaults
   assert.deepEqual(normalizeGlobalAllocations({ BONDS: -1, STOCKS: 40, GOLD: Number.NaN }), {
     BONDS: 50,
     STOCKS: 40,
-    GOLD: 20
+    GOLD: 20,
+    BITCOIN: 0
   });
 });
 

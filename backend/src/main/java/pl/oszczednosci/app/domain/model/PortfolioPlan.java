@@ -1,11 +1,15 @@
 package pl.oszczednosci.app.domain.model;
 
 /** Two levels: bonds and stocks/ETFs; gold belongs to the latter planning bucket. */
-public record PortfolioPlan(double bonds, double stocks, double gold, double developed, double emerging) {
+public record PortfolioPlan(double bonds, double stocks, double gold, double developed, double emerging, double bitcoin) {
+    public PortfolioPlan(double bonds, double stocks, double gold, double developed, double emerging) {
+        this(bonds, stocks, gold, developed, emerging, 0);
+    }
+
     public PortfolioPlan {
-        validateRange(bonds, stocks, gold, developed, emerging);
+        validateRange(bonds, stocks, gold, developed, emerging, bitcoin);
         if (Math.abs(bonds + stocks - 100) > 0.000001
-                || Math.abs(gold + developed + emerging - 100) > 0.000001) {
+                || Math.abs(gold + developed + emerging + bitcoin - 100) > 0.000001) {
             throw new IllegalArgumentException("Wagi na każdym poziomie muszą sumować się do 100%.");
         }
     }

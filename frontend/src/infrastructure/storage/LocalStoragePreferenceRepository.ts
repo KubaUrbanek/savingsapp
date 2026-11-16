@@ -10,7 +10,7 @@ import {
 import { AllocationWeight, Money, OwnerId } from '../../domain/portfolio/values.js';
 
 export const PREFERENCE_STORAGE_KEY = 'oszczednosci.preferences';
-export const PREFERENCE_SCHEMA_VERSION = 2;
+export const PREFERENCE_SCHEMA_VERSION = 3;
 
 export class PreferenceStorageError extends Error {
   constructor(message, cause) {
@@ -53,7 +53,9 @@ const defaults = () => ({
 
 function allocation(value, keys, field) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new TypeError(`${field} must be an object`);
-  const weights = Object.fromEntries(keys.map((key) => [key, AllocationWeight.parse(value[key])]));
+  const weights = Object.fromEntries(
+    keys.map((key) => [key, AllocationWeight.parse(key === 'BITCOIN' && value[key] === undefined ? 0 : value[key])])
+  );
   if (Math.abs(Object.values(weights).reduce((s, w) => s + w, 0) - 100) > 0.000001)
     throw new TypeError('Allocation must total 100%');
   return weights;
@@ -111,7 +113,7 @@ export class LocalStoragePreferenceRepository {
               selectedOwner: document.preferences?.selectedUser ?? document.preferences?.selectedOwner
             }
           : document?.preferences;
-      if (![1, PREFERENCE_SCHEMA_VERSION].includes(document?.version))
+      if (![1, 2, PREFERENCE_SCHEMA_VERSION].includes(document?.version))
         throw new TypeError('Unsupported preference schema version');
       const preferences = validated({ ...defaults(), ...migrated });
       if (document.version !== PREFERENCE_SCHEMA_VERSION) this.#write(preferences);

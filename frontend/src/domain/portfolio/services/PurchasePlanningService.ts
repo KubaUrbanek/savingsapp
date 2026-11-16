@@ -41,12 +41,13 @@ export function allocatePurchases(rows, budget) {
   }));
 }
 export function planPurchases(entries, global, equity, budget) {
+  equity = { BITCOIN: 0, ...equity };
   if (
     !validWeights(global, ['BONDS', 'STOCKS']) ||
-    !validWeights(equity, ['GOLD', 'RYNKI_ROZWINIETE', 'RYNKI_ROZWIJAJACE_SIE'])
+    !validWeights(equity, ['GOLD', 'RYNKI_ROZWINIETE', 'RYNKI_ROZWIJAJACE_SIE', 'BITCOIN'])
   )
     throw new RangeError('Wagi muszą sumować się do 100%');
-  const values = { BONDS: 0, GOLD: 0, RYNKI_ROZWINIETE: 0, RYNKI_ROZWIJAJACE_SIE: 0 };
+  const values = { BONDS: 0, GOLD: 0, RYNKI_ROZWINIETE: 0, RYNKI_ROZWIJAJACE_SIE: 0, BITCOIN: 0 };
   let cash = 0,
     unclassified = 0;
   buildCurrentSnapshot(entries).forEach((e) => {
@@ -57,6 +58,7 @@ export function planPurchases(entries, global, equity, budget) {
   });
   const weights = {
     BONDS: Number(global.BONDS),
+    BITCOIN: (Number(global.STOCKS) * Number(equity.BITCOIN)) / 100,
     GOLD: (Number(global.STOCKS) * Number(equity.GOLD)) / 100,
     RYNKI_ROZWINIETE: (Number(global.STOCKS) * Number(equity.RYNKI_ROZWINIETE)) / 100,
     RYNKI_ROZWIJAJACE_SIE: (Number(global.STOCKS) * Number(equity.RYNKI_ROZWIJAJACE_SIE)) / 100

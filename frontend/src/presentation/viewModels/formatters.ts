@@ -10,6 +10,7 @@ export const TYPE_LABELS = {
   PPO: 'PPO'
 };
 export const SUBCATEGORY_LABELS = {
+  BITCOIN: 'Bitcoin (BTC)',
   ZLOTO: 'Złoto',
   RYNKI_ROZWINIETE: 'Rynki rozwinięte',
   RYNKI_ROZWIJAJACE_SIE: 'Rynki rozwijające się',
@@ -17,7 +18,7 @@ export const SUBCATEGORY_LABELS = {
   DZIESIECIOLETNIE: '10-letnie',
   DWUNASTOLETNIE: '12-letnie'
 };
-export const GLOBAL_ASSET_LABELS = { BONDS: 'Obligacje', STOCKS: 'Akcje', GOLD: 'Złoto' };
+export const GLOBAL_ASSET_LABELS = { BONDS: 'Obligacje', STOCKS: 'Akcje', GOLD: 'Złoto', BITCOIN: 'Bitcoin (BTC)' };
 export const OPERATION_LABELS = {
   INITIAL: 'Stan początkowy',
   DEPOSIT: 'Wpłata',

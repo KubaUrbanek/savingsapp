@@ -5,9 +5,10 @@ import { Button } from './Button.js';
 import { InlineMessage } from './InlineMessage.js';
 import { planPurchases, validWeights } from '../../domain/portfolio/services/PurchasePlanningService.js';
 import { displayName, formatMoney, formatUnsignedPercent } from '../viewModels/formatters.js';
-const defaults = { bonds: 50, stocks: 50, gold: 50, developed: 35, emerging: 15 };
+const defaults = { bonds: 50, stocks: 50, gold: 50, developed: 35, emerging: 15, bitcoin: 0 };
 const labels = {
   BONDS: 'Obligacje',
+  BITCOIN: 'Bitcoin (BTC)',
   GOLD: 'Złoto (ETF)',
   RYNKI_ROZWINIETE: 'Rynki rozwinięte',
   RYNKI_ROZWIJAJACE_SIE: 'Rynki wschodzące'
@@ -28,8 +29,8 @@ export function PurchasePlanPanel({ entries, scope, useCases }) {
     Promise.resolve(useCases.loadPortfolioPlan?.execute({ scope, signal: abort.signal }) || defaults).then(
       (p) => {
         if (!abort.signal.aborted) {
-          setSaved(p);
-          setDraft(p);
+          setSaved({ bitcoin: 0, ...p });
+          setDraft({ bitcoin: 0, ...p });
           setState('ready');
         }
       },
@@ -43,7 +44,12 @@ export function PurchasePlanPanel({ entries, scope, useCases }) {
     return () => abort.abort();
   }, [scope, useCases]);
   const global = { BONDS: draft.bonds, STOCKS: draft.stocks },
-    equity = { GOLD: draft.gold, RYNKI_ROZWINIETE: draft.developed, RYNKI_ROZWIJAJACE_SIE: draft.emerging };
+    equity = {
+      BITCOIN: draft.bitcoin,
+      GOLD: draft.gold,
+      RYNKI_ROZWINIETE: draft.developed,
+      RYNKI_ROZWIJAJACE_SIE: draft.emerging
+    };
   const valid = validWeights(global) && validWeights(equity),
     amount = Number(budget || 0),
     budgetValid = Number.isFinite(amount) && amount >= 0 && Number.isSafeInteger(Math.round(amount * 100));
@@ -56,8 +62,8 @@ export function PurchasePlanPanel({ entries, scope, useCases }) {
     setMessage('');
     try {
       const p = await (useCases.savePortfolioPlan?.execute({ scope, plan: draft }) || Promise.resolve(draft));
-      setSaved(p);
-      setDraft(p);
+      setSaved({ bitcoin: 0, ...p });
+      setDraft({ bitcoin: 0, ...p });
       setMessage('Zapisano Twój plan.');
       setState('ready');
       if (editor.current) editor.current.open = false;
@@ -156,9 +162,14 @@ export function PurchasePlanPanel({ entries, scope, useCases }) {
       <div className="savedPlan">
         <strong>Twój zapisany plan</strong>
         <span>
-          Obligacje {formatUnsignedPercent(saved.bonds)} · Akcje i ETF-y {formatUnsignedPercent(saved.stocks)}
+          Obligacje {formatUnsignedPercent(saved.bonds)} · Akcje, ETF-y i Bitcoin {formatUnsignedPercent(saved.stocks)}
         </span>
         <ul className="equityBreakdown" aria-label="Podział akcji w zapisanym planie">
+          <li>
+            <strong>Bitcoin (BTC)</strong>
+            <span>{formatUnsignedPercent(saved.bitcoin)} części rynkowej</span>
+            <small>{formatUnsignedPercent((saved.stocks * saved.bitcoin) / 100)} całego planu</small>
+          </li>
           <li>
             <strong>Złoto (ETF)</strong>
             <span>{formatUnsignedPercent(saved.gold)} części akcyjnej</span>
@@ -182,7 +193,7 @@ export function PurchasePlanPanel({ entries, scope, useCases }) {
         <div className="allocationInputs">
           {[
             ['bonds', 'Obligacje'],
-            ['stocks', 'Akcje i ETF-y']
+            ['stocks', 'Akcje, ETF-y i Bitcoin']
           ].map(([key, label]) => (
             <Field
               key={key}
@@ -203,11 +214,12 @@ export function PurchasePlanPanel({ entries, scope, useCases }) {
         </div>
         <h3>Podział części akcyjnej</h3>
         <p>
-          W tym planie część akcyjna obejmuje również złoty ETF. Podziel ją między złoto, rynki rozwinięte i wschodzące.
-          Ich udziały muszą sumować się do 100% części akcyjnej.
+          W tym planie część akcyjna obejmuje również złoty ETF i Bitcoin. Podziel ją między Bitcoin, złoto, rynki
+          rozwinięte i wschodzące. Ich udziały muszą sumować się do 100% części akcyjnej.
         </p>
         <div className="allocationInputs">
           {[
+            ['bitcoin', 'Bitcoin (BTC)'],
             ['gold', 'Złoto (ETF)'],
             ['developed', 'Rynki rozwinięte'],
             ['emerging', 'Rynki wschodzące']
@@ -231,7 +243,8 @@ export function PurchasePlanPanel({ entries, scope, useCases }) {
         </div>
         {valid && (
           <p className="equityPreview" role="status">
-            W całym planie: złoto {formatUnsignedPercent((draft.stocks * draft.gold) / 100)}
+            W całym planie: Bitcoin {formatUnsignedPercent((draft.stocks * draft.bitcoin) / 100)} · złoto{' '}
+            {formatUnsignedPercent((draft.stocks * draft.gold) / 100)}
             {' · '}rynki rozwinięte {formatUnsignedPercent((draft.stocks * draft.developed) / 100)}
             {' · '}rynki wschodzące {formatUnsignedPercent((draft.stocks * draft.emerging) / 100)}.
           </p>

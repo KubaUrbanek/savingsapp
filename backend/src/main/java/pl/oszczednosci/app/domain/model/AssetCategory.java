@@ -5,7 +5,7 @@ import java.util.Map;
 import java.util.Objects;
 
 public record AssetCategory(InvestmentType type, InvestmentSubcategory subcategory) {
-    private static final List<InvestmentSubcategory> MARKETS = List.of(InvestmentSubcategory.ZLOTO,
+    private static final List<InvestmentSubcategory> MARKETS = List.of(InvestmentSubcategory.ZLOTO, InvestmentSubcategory.BITCOIN,
             InvestmentSubcategory.RYNKI_ROZWINIETE, InvestmentSubcategory.RYNKI_ROZWIJAJACE_SIE);
     private static final Map<InvestmentType, List<InvestmentSubcategory>> ALLOWED = Map.of(
             InvestmentType.GIELDA, MARKETS, InvestmentType.IKE, List.of(InvestmentSubcategory.values()), InvestmentType.IKZE, List.of(InvestmentSubcategory.values()),

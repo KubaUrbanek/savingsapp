@@ -76,17 +76,17 @@ describe('responsive allocation representations', () => {
 
     const desktop = screen.getByRole('table', { name: 'Globalna alokacja majątku' });
     expect(within(desktop).getAllByRole('columnheader')).toHaveLength(6);
-    expect(within(desktop).getAllByRole('rowheader')).toHaveLength(3);
+    expect(within(desktop).getAllByRole('rowheader')).toHaveLength(4);
     const scroller = screen.getByRole('region', { name: 'Przewijana globalna alokacja majątku' });
     expect(scroller).toHaveAttribute('tabindex', '0');
     expect(scroller).toHaveAccessibleDescription(/przewija się poziomo.*klawiszy strzałek/i);
     const mobile = screen.getByLabelText('Globalna alokacja majątku — widok mobilny');
-    for (const label of ['Obligacje', 'Akcje', 'Złoto']) {
+    for (const label of ['Obligacje', 'Akcje', 'Złoto', 'Bitcoin (BTC)']) {
       expect(within(desktop).getByText(label)).toBeInTheDocument();
       expect(within(mobile).getByRole('heading', { name: label })).toBeInTheDocument();
     }
     for (const field of ['Aktualnie', 'Cel', 'Odchylenie', 'Kup / sprzedaj', 'Tylko nowe wpłaty']) {
-      expect(within(mobile).getAllByText(field)).toHaveLength(3);
+      expect(within(mobile).getAllByText(field)).toHaveLength(4);
     }
     expect(within(mobile).getByText('60 000,00 zł')).toBeInTheDocument();
   });
@@ -105,17 +105,17 @@ describe('responsive allocation representations', () => {
 
     const desktop = screen.getByRole('table', { name: 'Docelowa alokacja ETF' });
     expect(within(desktop).getAllByRole('columnheader')).toHaveLength(6);
-    expect(within(desktop).getAllByRole('rowheader')).toHaveLength(3);
+    expect(within(desktop).getAllByRole('rowheader')).toHaveLength(4);
     const scroller = screen.getByRole('region', { name: 'Przewijana docelowa alokacja ETF' });
     expect(scroller).toHaveAttribute('tabindex', '0');
     expect(scroller).toHaveAccessibleDescription(/przewija się poziomo.*klawiszy strzałek/i);
     const mobile = screen.getByLabelText('Docelowa alokacja ETF — widok mobilny');
-    for (const label of ['Złoto', 'Rynki rozwinięte', 'Rynki rozwijające się']) {
+    for (const label of ['Złoto', 'Rynki rozwinięte', 'Rynki rozwijające się', 'Bitcoin (BTC)']) {
       expect(within(desktop).getByText(label)).toBeInTheDocument();
       expect(within(mobile).getByRole('heading', { name: label })).toBeInTheDocument();
     }
     for (const field of ['Obecnie', 'Powinno być', 'Różnica', 'Udział', 'Odchylenie']) {
-      expect(within(mobile).getAllByText(field)).toHaveLength(3);
+      expect(within(mobile).getAllByText(field)).toHaveLength(4);
     }
     expect(within(mobile).getByText('40 000,00 zł')).toBeInTheDocument();
     expect(within(mobile).getByText('66,67% / 40%')).toBeInTheDocument();

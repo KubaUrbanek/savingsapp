@@ -16,7 +16,7 @@ const entry = {
   date: '2026-09-01',
   createdAt: '2026-09-01T00:00:00Z'
 };
-const plan = { bonds: 50, stocks: 50, gold: 50, developed: 35, emerging: 15 };
+const plan = { bonds: 50, stocks: 50, gold: 50, developed: 35, emerging: 15, bitcoin: 0 };
 describe('savings regressions', () => {
   it('offers separate contribution and management actions in both holding layouts', () => {
     const complete = vi.fn(),

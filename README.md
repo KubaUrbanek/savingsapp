@@ -135,3 +135,6 @@ Testy przeglądarkowe uruchamiają osobny serwer na porcie 8082 z tymczasową ba
 W planie zakupów „Akcje i ETF-y” obejmują złoty ETF. Domyślny podział tej części to 50% złota, 35% rynków rozwiniętych i 15% wschodzących; przy udziale części akcyjnej 50% cel złota wynosi 25% całego planu. Starsze zapisane plany są dostosowywane do tego podziału z zachowaniem udziału obligacji oraz proporcji między rynkami. API planu wymaga `allocationVersion: 2`; szczegóły migracji opisuje `docs/domain/README.md`.
 
 Zapis zmian działa również przez HTTP w sieci lokalnej (np. QNAP w Tailscale). Generowanie identyfikatorów żądań i skrótów do ponawiania zapisu nie wymaga HTTPS ani funkcji `crypto.randomUUID` / `crypto.subtle`. Testy przeglądarkowe obejmują osobny kontekst HTTP, ponieważ `localhost` udostępnia te funkcje i sam nie odtwarza warunków połączenia z NAS-em.
+
+
+Bitcoin (BTC) można ewidencjonować jak złoto w Giełda/IKE/IKZE: stan początkowy, operacje i ręczne wyceny w PLN. Plan „Co dokupić?” zawiera opcjonalną wagę Bitcoina, domyślnie 0%. [Specyfikacja SDD](docs/specs/bitcoin.md).

@@ -4,6 +4,17 @@ import static org.assertj.core.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 class PortfolioPlanTest {
+    @Test void bitcoinIsValidatedAndSupportedByMarketAccounts() {
+        var plan = new PortfolioPlan(50, 50, 40, 35, 15, 10);
+        assertThat(plan.bitcoin() * plan.stocks() / 100).isEqualTo(5);
+        assertThat(PortfolioPlan.defaults().bitcoin()).isZero();
+        for (var type : java.util.List.of(InvestmentType.GIELDA, InvestmentType.IKE, InvestmentType.IKZE))
+            assertThat(AssetCategory.of(type, InvestmentSubcategory.BITCOIN).subcategory()).isEqualTo(InvestmentSubcategory.BITCOIN);
+        assertThatThrownBy(() -> AssetCategory.of(InvestmentType.OBLIGACJE, InvestmentSubcategory.BITCOIN)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new PortfolioPlan(50,50,50,35,15,10)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new PortfolioPlan(50,50,40,35,15,Double.NaN)).isInstanceOf(IllegalArgumentException.class);
+    }
+
     @Test void goldIsHalfOfTheDefaultStockBucket() {
         var plan = PortfolioPlan.defaults();
         assertThat(plan.stocks() * plan.gold() / 100).isEqualTo(25);

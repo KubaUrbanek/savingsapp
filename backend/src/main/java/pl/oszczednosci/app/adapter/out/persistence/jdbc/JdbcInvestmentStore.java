@@ -92,7 +92,7 @@ public final class JdbcInvestmentStore implements InvestmentUnitOfWork, Investme
         var plans = new TreeMap<String, PortfolioPlan>();
         try (var statement = connection.createStatement(); var rows = statement.executeQuery("SELECT * FROM portfolio_plans ORDER BY scope")) {
             while (rows.next()) plans.put(rows.getString("scope"), new PortfolioPlan(rows.getDouble("bonds"), rows.getDouble("stocks"),
-                    rows.getDouble("gold"), rows.getDouble("developed"), rows.getDouble("emerging")));
+                    rows.getDouble("gold"), rows.getDouble("developed"), rows.getDouble("emerging"), rows.getDouble("bitcoin")));
         }
         try {
             var backup = new InvestmentBackup(InvestmentBackup.CURRENT_FORMAT_VERSION, entries, operations, plans);
@@ -137,10 +137,10 @@ public final class JdbcInvestmentStore implements InvestmentUnitOfWork, Investme
             }
             statement.executeBatch();
         }
-        try (var statement = connection.prepareStatement("MERGE INTO portfolio_plans (scope,bonds,stocks,gold,developed,emerging) KEY(scope) VALUES (?,?,?,?,?,?)")) {
+        try (var statement = connection.prepareStatement("MERGE INTO portfolio_plans (scope,bonds,stocks,gold,developed,emerging,bitcoin) KEY(scope) VALUES (?,?,?,?,?,?,?)")) {
             for (var entry : backup.plans().entrySet()) {
                 var plan = entry.getValue();
-                bind(statement, entry.getKey(), plan.bonds(), plan.stocks(), plan.gold(), plan.developed(), plan.emerging());
+                bind(statement, entry.getKey(), plan.bonds(), plan.stocks(), plan.gold(), plan.developed(), plan.emerging(), plan.bitcoin());
                 statement.addBatch();
             }
             statement.executeBatch();

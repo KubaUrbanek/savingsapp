@@ -138,3 +138,8 @@ Inside one locked unit of work, correction removes the old event, inserts its re
 H2 DDL may auto-commit: a failed multi-statement schema migration is not guaranteed to roll back. Keep changes small, back up the database before deployment, and resolve failed migrations explicitly. Prefer forward corrective changesets to destructive schema rollback.
 
 Existing H2 plans adopt the same allocation through Liquibase changeset `002-equity-gold`, executed once before domain records are loaded.
+
+
+## Bitcoin allocation
+
+Bitcoin is a market-account subcategory and a distinct global asset class. Portfolio plan API allocationVersion 3 requires a bitcoin weight; gold + developed + emerging + bitcoin = 100. Existing version 2 backups migrate with bitcoin=0; version 1 retains its previous gold migration. Liquibase 003 adds a zero-default bitcoin column. Preference schema 3 migrates existing allocations with BITCOIN=0. See [SPEC](../docs/specs/bitcoin.md).

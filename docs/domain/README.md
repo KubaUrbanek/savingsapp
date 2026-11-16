@@ -11,7 +11,7 @@ An asset category is a type plus a compatible subcategory:
 | Type                                                   | Subcategory rule                                                 |
 | ------------------------------------------------------ | ---------------------------------------------------------------- |
 | `OBLIGACJE`                                            | requires `TRZYLETNIE`, `DZIESIECIOLETNIE`, or `DWUNASTOLETNIE`   |
-| `GIELDA`, `IKE`, `IKZE`                                | requires `ZLOTO`, `RYNKI_ROZWINIETE`, or `RYNKI_ROZWIJAJACE_SIE` |
+| `GIELDA`, `IKE`, `IKZE`                                | requires `BITCOIN`, `ZLOTO`, `RYNKI_ROZWINIETE`, or `RYNKI_ROZWIJAJACE_SIE` |
 | `KONTO_OSZCZEDNOSCIOWE`, `KONTO_BANKOWE`, `PPK`, `PPO` | must not have a subcategory                                      |
 
 ## Entries, operations, and filters
@@ -78,3 +78,8 @@ The UI presents one chronological event row per tracked change, regardless of ho
 GET/PUT `/api/portfolio-plans` używa `allocationVersion: 2`. Przykład: `{"allocationVersion":2,"bonds":50,"stocks":50,"gold":50,"developed":35,"emerging":15}`. `bonds + stocks = 100`, natomiast `gold + developed + emerging = 100`. Złoto jest zatem celem 25% całego planu w tym przykładzie. PUT wymaga wersji 2, aby nie pomylić znaczeń wag ze starszym klientem. Wszystkie wagi muszą być skończone i mieścić się w zakresie 0–100.
 
 Plany w bazie i kopiach danych mają własne `allocationVersion` (format całej kopii pozostaje 2). Starszy plan bez wersji lub z wersją 1 przechodzi na nowy układ: udział obligacji pozostaje bez zmian, dawne globalne akcje i złoto tworzą wspólną część, a jej cele to 50% złota i połowa każdej dotychczasowej wagi rynku. Odczyt nie zapisuje danych; kolejny zapis lub eksport zawiera wersję 2. Wersja 2 zachowuje zapisane wagi bez ponownego przeliczania. Nieznane wersje i niepoprawne wagi są odrzucane.
+
+
+### Bitcoin
+
+Bitcoin (BTC) jest podkategorią rachunków GIELDA/IKE/IKZE i odrębną globalną klasą BITCOIN. Wartości podaje się ręcznie w PLN. Plan API używa allocationVersion 3 i wymaga bitcoin: gold + developed + emerging + bitcoin = 100. Domyślna waga wynosi 0%; udział w całym planie to stocks × bitcoin / 100. Kopie planów wersji 2 otrzymują bitcoin=0, wersja 1 zachowuje wcześniejszą migrację złota. Format kopii pozostaje 2. Szczegóły: [SPEC](../specs/bitcoin.md).

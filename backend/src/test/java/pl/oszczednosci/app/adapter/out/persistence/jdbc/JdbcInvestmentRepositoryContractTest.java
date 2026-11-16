@@ -104,6 +104,8 @@ final class JdbcInvestmentRepositoryContractTest extends InvestmentRepositoryCon
             assertThat(rows.getString("EXECTYPE")).isEqualTo("EXECUTED");
             assertThat(rows.next()).isTrue();
             assertThat(rows.getString("ID")).isEqualTo("002-equity-gold");
+            assertThat(rows.next()).isTrue();
+            assertThat(rows.getString("ID")).isEqualTo("003-bitcoin");
             assertThat(rows.next()).isFalse();
         }
         assertThat(store.snapshot().entries()).hasSize(1);

@@ -8,4 +8,7 @@
     <changeSet id="002-equity-gold" author="savingsapp" dbms="h2">
         <sqlFile path="002-equity-gold.sql" relativeToChangelogFile="true" splitStatements="true"/>
     </changeSet>
+    <changeSet id="003-bitcoin" author="savingsapp" dbms="h2">
+        <sqlFile path="003-bitcoin.sql" relativeToChangelogFile="true" splitStatements="true"/>
+    </changeSet>
 </databaseChangeLog>
