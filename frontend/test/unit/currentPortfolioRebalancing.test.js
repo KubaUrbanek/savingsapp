@@ -109,3 +109,16 @@ test('invalid weights, negative values and unsafe cents are rejected', () => {
     )
   );
 });
+
+test('persisted decimal weights are apportioned exactly even below floating point precision', () => {
+  const result = planRebalancing([entry(0.01, 'ZLOTO')], {
+    BONDS: '49.9999999999999999999999999',
+    GOLD: '50.0000000000000000000000001',
+    RYNKI_ROZWINIETE: '0',
+    RYNKI_ROZWIJAJACE_SIE: '0'
+  });
+  assert.deepEqual(
+    result.rows.map((row) => row.afterValue),
+    [0, 0.01, 0, 0]
+  );
+});

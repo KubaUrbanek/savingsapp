@@ -1,6 +1,6 @@
 # SDD: rebalans obecnego portfela w „Co dokupić?”
 
-Status: **zaakceptowana 2026-11-16; implementacja i weryfikacja w toku**.
+Status: **zaakceptowana 2026-11-16; zaimplementowana; oczekuje na pełne CI i scalenie**.
 
 Data: 2026-11-16. SDD oznacza tutaj pracę od specyfikacji zachowania i kryteriów akceptacji do implementacji oraz weryfikacji. Zgodnie z prośbą użytkownika implementacja rozpocznie się dopiero po akceptacji tej specyfikacji.
 
@@ -157,11 +157,11 @@ Po implementacji: testy domenowe i komponentowe, lint, TypeScript, formatowanie 
 ## 8. Kolejność realizacji po akceptacji
 
 - [x] Akceptacja tej specyfikacji przez użytkownika (polecenie implementacji i scalenia).
-- [ ] Wyliczenia domenowe oraz testy kryteriów liczbowych i zaokrągleń.
-- [ ] Przełącznik trybów, widok odchyleń, listy sprzedaży / zakupów i porównanie po rebalansie.
-- [ ] Obsługa stanów edycji, błędów i zmian zakresu oraz testy komponentowe.
+- [x] Wyliczenia domenowe oraz testy kryteriów liczbowych i zaokrągleń.
+- [x] Przełącznik trybów, widok odchyleń, listy sprzedaży / zakupów i porównanie po rebalansie.
+- [x] Obsługa stanów edycji, błędów i zmian zakresu oraz testy komponentowe.
 - [ ] Weryfikacja regresji dokupowania, dostępności i widoków przeglądarkowych.
-- [ ] Aktualizacja README i dokumentacji domenowej; przegląd zmian względem kryteriów akceptacji.
+- [x] Aktualizacja README i dokumentacji domenowej; przegląd zmian względem kryteriów akceptacji.
 
 ## 9. Poza zakresem tej wersji
 
