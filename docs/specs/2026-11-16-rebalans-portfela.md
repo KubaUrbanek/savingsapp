@@ -2,6 +2,8 @@
 
 Status: **zaakceptowana 2026-11-16; zaimplementowana; wyniki weryfikacji i stan scalenia w PR #105**.
 
+Nowsza propozycja [uporządkowania ekranu „Plan portfela”](2026-11-16-planning-screen-order.md) została zatwierdzona do scalenia jako dokumentacja. Zastępuje opis nazwy zakładki, kolejności sekcji i domyślnej widoczności szczegółów; zachowuje reguły liczbowe, aktualny wspólny plan (v4 po dodaniu BTC) i rozszerzenie rebalansu częściowego. Wymaganie widocznych bez rozwijania obecnych odchyleń pozostaje w mocy.
+
 Data: 2026-11-16. SDD oznacza tutaj pracę od specyfikacji zachowania i kryteriów akceptacji do implementacji oraz weryfikacji. Zgodnie z prośbą użytkownika implementacja rozpocznie się dopiero po akceptacji tej specyfikacji.
 
 ## Dostosowanie do aktualnej gałęzi głównej

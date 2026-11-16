@@ -154,3 +154,4 @@ Widok odchyleń porównuje obecne udziały z celami na poziomych słupkach z war
 
 
 Bitcoin integration: the shared flat household plan includes bitcoin as a direct percentage of the entire plan (default zero). Allocation API/version 4 requires exact decimal weights including bitcoin. Backup allocation versions 1–3 migrate with bitcoin=0; backup format remains 2. Liquibase 004-bitcoin adds NUMERIC(100,50) after the existing shared-plan migration. Bitcoin participates in purchases and selective rebalancing.
+Specyfikacja kolejnej zmiany (implementacja osobno): [SDD uporządkowania ekranu „Plan portfela”](docs/specs/2026-11-16-planning-screen-order.md).
