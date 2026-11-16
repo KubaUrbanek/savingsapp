@@ -1,6 +1,6 @@
 # SDD — jeden hierarchiczny Przegląd inwestycji
 
-**Wersja:** 1.0 · 16 listopada 2026
+**Wersja:** 1.1 · 16 listopada 2026
 
 **Status:** zaakceptowana przez użytkownika 16 listopada 2026, włącznie z zastępowaniem zbiorczego paska IKE/IKZE paskami jego składników po rozwinięciu. Ten etap obejmuje scalenie specyfikacji; implementacja aplikacji jest osobnym zadaniem.
 
@@ -96,7 +96,21 @@ Daty i tabela danych zachowują dotychczasowe reguły: zakres zmienia tylko hist
 
 Wartość, wpłaty, wynik i lista inwestycji korzystają z jednego wyboru liści. Nie sumujemy wyników rodzica dodatkowo do wyników jego dzieci. Nieznane dane o wpłatach zachowują istniejące znaczenie. Lista nadal umożliwia dotychczasowe działania i rozpoznanie rachunku/właściciela; nie znika dostęp do szczegółów lub historii wybranej podinwestycji.
 
-Kalkulator „Co dokupić?” nadal sumuje kwalifikujące się aktywa ze wszystkich rachunków, w tym IKE/IKZE, do czterech wspólnych kategorii planu. Nowa hierarchia Przeglądu oraz jego filtry nie zmieniają proporcji, podstawy ani metody wyznaczania zakupów. Historia operacji pozostaje niezależna od tych filtrów.
+### 6.1 Wspólne proporcje, obliczenia dla wybranego zakresu
+
+Wspólny plan oznacza jeden zestaw docelowych proporcji. Podstawa obliczeń, obecne udziały i propozycje zakupów zależą od osoby wybranej w nagłówku:
+
+| Wybrany zakres | Inwestycje uwzględniane po wpisaniu kwoty |
+|---|---|
+| Jakub | Wyłącznie inwestycje Jakuba. |
+| Zosia | Wyłącznie inwestycje Zosi. |
+| Razem | Inwestycje Jakuba i Zosi łącznie. |
+
+Kalkulator sumuje kwalifikujące się aktywa ze wszystkich rachunków **wybranego zakresu**, w tym IKE/IKZE, do czterech wspólnych kategorii planu. Przykładowo złoto Jakuba nie uzupełnia niedoboru złota Zosi w jej widoku. Ta sama wpisana kwota może dawać inne zakupy dla każdej osoby i dla Razem. W Razem kwotę dodajemy raz do wspólnego portfela; nie planujemy tej samej kwoty osobno dla każdej osoby i nie sumujemy dwóch budżetów.
+
+Zmiana zakresu zachowuje wspólne proporcje i przywraca kwotę wpisaną dla danego zakresu w sesji. Podpis „Obliczenia dla” oraz „Plan obejmuje” odpowiadają aktualnie wybranym inwestycjom. Podczas wczytywania danych nowej osoby nie pokazujemy propozycji obliczonych dla poprzedniej; opóźniona odpowiedź nie może nadpisać aktualnego zakresu. Brak inwestycji u jednej osoby jest pustym portfelem tej osoby, a nie powodem do użycia inwestycji drugiej osoby.
+
+Nowa hierarchia Przeglądu oraz jego filtry nie zmieniają proporcji, podstawy ani metody wyznaczania zakupów. Historia operacji pozostaje niezależna od tych filtrów. To doprecyzowanie istniejącej zasady z §2 pkt 2 i §7.1 `beginner-ux-sdd.md`, potwierdzone przez użytkownika po scaleniu PR #103.
 
 ## 7. Architektura i bezpieczeństwo danych
 
@@ -138,7 +152,10 @@ Przykład kontrolny: poza IKE/IKZE obligacje 3000 zł, złoto 500 zł, rynki roz
 | H12 | Błąd wyników, ponowienie i szybka zmiana osoby nie mieszają kwot ani wyboru; znane wartości pozostają widoczne. | Test integracji z kontrolowanymi błędami sieci. | E07, E28 |
 | H13 | Pełna obsługa klawiaturą, stan częściowego checkboxa, fokus i nazwy; brak przepełnienia na czterech szerokościach, z rozwiniętymi gałęziami/tabelą i długimi kwotami. | Komponent/axe, Playwright i oględziny. Realny czytnik/telefon tylko jeśli rzeczywiście użyte. | E10, E31–E32 |
 | H14 | Cztery kategorie i obliczenia planu pozostają identyczne; stare kopie nadal działają. | Regresja kalkulatora i istniejące testy kopii w CI. | E11–E18, E29 |
+| H15 | Wspólne proporcje, różne portfele i ta sama kwota: Jakub liczy tylko swoje inwestycje, Zosia tylko swoje, Razem oboje z jednym budżetem; powrót do osoby odtwarza jej wynik i kwotę. | Playwright `E02 H15 shared targets use only the selected owners investments` na izolowanej bazie. | E02, E13, E15–E17 |
 
-Punkty startowe testów: `frontend/test/unit/overviewVisualization.test.js`, `frontend/test/component/OverviewIntegration.test.tsx`, `frontend/test/component/OverviewCharts.test.tsx`, `frontend/test/browser/beginnerUx.spec.ts`. Po wdrożeniu raport wymaga powiązania H01–H14 z faktycznymi testami i wynikami, bez oznaczania planowanych testów jako wykonanych.
+Punkty startowe testów: `frontend/test/unit/overviewVisualization.test.js`, `frontend/test/component/OverviewIntegration.test.tsx`, `frontend/test/component/OverviewCharts.test.tsx`, `frontend/test/browser/beginnerUx.spec.ts`. Po wdrożeniu raport wymaga powiązania H01–H15 z faktycznymi testami i wynikami, bez oznaczania planowanych testów jako wykonanych.
+
+Przykład H15 przy wspólnych udziałach 50/25/17,5/7,5% i budżecie 1000 zł w każdym zakresie: Jakub ma obligacje 5000 zł oraz akcje rozwinięte 1750 zł i wschodzące 750 zł; Zosia ma złoto na IKE 2500 zł oraz akcje rozwinięte 1750 zł i wschodzące 750 zł. Podstawa Jakuba to 7500 zł, a zakup to złoto za 1000 zł. Podstawa Zosi to 5000 zł, a zakup to obligacje za 1000 zł. Podstawa Razem to 12 500 zł, a zakupy to obligacje za 666,67 zł i złoto za 333,33 zł. W każdym przypadku suma zakupów wynosi dokładnie 1000 zł.
 
 Kontrole implementacji: testy odpowiednie do zmian, lint, typecheck, format, build i `git diff --check`, następnie pełne CI dla aktualnego commita. Aktualizacji wymagają opisy Przeglądu w dotychczasowych specyfikacjach, architekturze frontendowej oraz raport pokrycia. Na etapie scalenia specyfikacji wykonujemy przegląd spójności i `git diff --check` oraz wymagamy zielonego CI aktualnego commita; aplikacja pozostaje bez zmian.
