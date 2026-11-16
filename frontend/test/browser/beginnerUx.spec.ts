@@ -51,7 +51,7 @@ test('E02 E13 shared draft and per-owner budget survive tabs and scope', async (
   await page.getByRole('tab', { name: 'Plan portfela', exact: true }).click();
   const panel = page.getByRole('tabpanel', { name: 'Plan portfela', exact: true });
   await expect(panel).toContainText('7500,00');
-  await expect(panel).toContainText('Gotówka 0,00');
+  await expect(panel).not.toContainText('Gotówka 0,00');
   await expect(panel).toContainText(/PPK \/ PPO: 900\s000,00/);
   await expect(panel).toContainText('nie uwzględniamy ich w tym planie');
   const deviations = panel.getByRole('region', { name: 'Obecne odchylenia od planu' });
