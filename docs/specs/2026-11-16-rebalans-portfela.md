@@ -171,3 +171,7 @@ Po implementacji: testy domenowe i komponentowe, lint, TypeScript, formatowanie 
 - Dobór konkretnych instrumentów, notowania na żywo i liczba jednostek.
 - Optymalizacja podatków, prowizji, kosztów wykupu, płynności oraz minimalnych wartości transakcji.
 - Nowe cele dla gotówki i PPK/PPO oraz osobne progi tolerancji odchyleń.
+
+## Rozszerzenie: wykres i wybór aktywów
+
+Zachowanie widoku i rebalansu częściowego rozszerza [SDD z 2026-11-16](2026-11-16-visual-selective-rebalance.md): poziome porównanie obecnych udziałów i celów oraz możliwość zamrożenia wybranych kategorii bez zmiany zapisanego planu.

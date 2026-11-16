@@ -1,56 +1,70 @@
 // @ts-nocheck
 import React from 'react';
 import { InlineMessage } from './InlineMessage.js';
-import {
-  formatMoney,
-  formatUnsignedPercent,
-  formatPercentagePoints,
-  formatSignedMoney
-} from '../viewModels/formatters.js';
-const labels = {
-  BONDS: 'Obligacje',
-  GOLD: 'Złoto (ETF)',
-  RYNKI_ROZWINIETE: 'Rynki rozwinięte',
-  RYNKI_ROZWIJAJACE_SIE: 'Rynki wschodzące'
-};
-export function RebalancePlan({ plan, showTrades }) {
+import { formatMoney, formatUnsignedPercent } from '../viewModels/formatters.js';
+import { AllocationDeviationChart, rebalanceLabels as labels } from './AllocationDeviationChart.js';
+export function RebalancePlan({ plan, showTrades, selectedKeys, onSelectionChange }) {
   return (
     <>
-      <section aria-label="Obecne odchylenia od planu">
-        <h3>Obecne odchylenia od planu</h3>
-        <p>
-          Część portfela objęta planem: <strong>{formatMoney(plan.total)}</strong>.
-        </p>
-        <ul className="allocationComparison">
-          {plan.rows.map((row) => (
-            <li key={row.key}>
-              <strong>{labels[row.key]}</strong>
-              <span>Mam: {formatMoney(row.currentValue)}</span>
-              <span>
-                Udział: {formatUnsignedPercent(row.currentWeight)} · Cel: {formatUnsignedPercent(row.targetWeight)}
-              </span>
-              <span>Odchylenie: {formatPercentagePoints(row.deviation)}</span>
-              <span>
-                {!plan.total
-                  ? 'Odchylenie kwotowe'
-                  : row.deviationAmount > 0
-                    ? 'Nadwyżka'
-                    : row.deviationAmount < 0
-                      ? 'Niedobór'
-                      : 'Zgodnie z planem kwotowym'}
-                : {plan.total ? formatSignedMoney(row.deviationAmount) : '—'}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
+      <AllocationDeviationChart rows={plan.rows} total={plan.total} />
       {showTrades && (
         <section aria-label="Rebalans obecnego portfela">
           <h3>Rebalans bez dopłaty</h3>
+          <fieldset className="rebalanceSelection">
+            <legend>Aktywa do rebalansu</legend>
+            <p>Odznacz aktywa, których wartości nie chcesz zmieniać.</p>
+            <div className="rebalanceSelectionOptions">
+              {plan.rows.map((row) => (
+                <label key={row.key}>
+                  <input
+                    type="checkbox"
+                    checked={selectedKeys.includes(row.key)}
+                    onChange={(event) =>
+                      onSelectionChange(
+                        event.target.checked
+                          ? [...selectedKeys, row.key]
+                          : selectedKeys.filter((key) => key !== row.key)
+                      )
+                    }
+                  />
+                  <span>
+                    <strong>{labels[row.key]}</strong>
+                    <small>{row.selected ? 'W rebalansie' : 'Bez zmian — poza rebalansem'}</small>
+                  </span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <div className="rebalanceScope" role="status">
+            <span>
+              Wybrane aktywa: <strong>{formatMoney(plan.selectedTotal)}</strong>
+            </span>
+            <span>
+              Bez zmian: <strong>{formatMoney(plan.excludedTotal)}</strong>
+            </span>
+          </div>
+          {plan.partial && (
+            <p className="rebalancePartialNotice">
+              Rebalans częściowy: zapisane wagi wybranych aktywów przeliczamy proporcjonalnie do ich łącznej wartości.
+              Pozostałe aktywa pozostają bez zmian. Cały portfel może nadal odbiegać od zapisanego planu.
+            </p>
+          )}
           {plan.total === 0 ? (
             <p>Brak inwestycji do rebalansu.</p>
+          ) : plan.selectionStatus === 'empty' ? (
+            <p>Wybierz aktywa do rebalansu.</p>
+          ) : plan.selectionStatus === 'zero-target' ? (
+            <p>Wybierz co najmniej jedną kategorię z dodatnim celem w planie.</p>
+          ) : plan.selectionStatus === 'single' ? (
+            <p>Wybrano jedno aktywo. Zaznacz co najmniej dwa, aby przesuwać środki między nimi.</p>
+          ) : plan.selectionStatus === 'no-funds' ? (
+            <p>Wybrane aktywa nie mają środków do rebalansu.</p>
           ) : plan.tradeTotal === 0 ? (
-            <p>Portfel jest zgodny z planem w dokładności do grosza.</p>
+            <p>
+              {plan.partial
+                ? 'Wybrana część portfela jest zgodna z proporcjami planu w dokładności do grosza.'
+                : 'Portfel jest zgodny z planem w dokładności do grosza.'}
+            </p>
           ) : (
             <>
               <p>Najpierw sprzedaj nadwyżki, następnie kup za uzyskane środki.</p>
@@ -80,16 +94,18 @@ export function RebalancePlan({ plan, showTrades }) {
               </p>
             </>
           )}
-          {plan.total > 0 && (
+          {plan.total > 0 && plan.selectionStatus !== 'empty' && plan.selectionStatus !== 'zero-target' && (
             <>
               <h4>Po rebalansie</h4>
               <ul className="allocationComparison" aria-label="Po rebalansie">
                 {plan.rows.map((row) => (
                   <li key={row.key}>
                     <strong>{labels[row.key]}</strong>
+                    {!row.selected && <small>Bez zmian — poza rebalansem</small>}
                     <span>{formatMoney(row.afterValue)}</span>
                     <span>
-                      Udział: {formatUnsignedPercent(row.afterWeight)} · Cel: {formatUnsignedPercent(row.targetWeight)}
+                      Udział: {formatUnsignedPercent(row.afterWeight)} · Zapisany cel:{' '}
+                      {formatUnsignedPercent(row.targetWeight)}
                     </span>
                   </li>
                 ))}

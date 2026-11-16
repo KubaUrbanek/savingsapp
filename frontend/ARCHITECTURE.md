@@ -305,3 +305,7 @@ owner views retain write actions. See `docs/specs/household-overview.md` for acc
 `PortfolioChangeDialog` starts with user intent and no default product or household owner. A missing cash source opens its initial-value form with a suspended purchase draft and an explicit return. Completion corrects an existing standalone valuation using its ID, date and value, preserving history rather than appending a later baseline. Dirty close offers return/discard; browser unload warning is best-effort. Forms normalize Polish decimal money without rounding; business dates use Europe/Warsaw in both layers.
 
 Legacy plan selection is performed by PreviewBackupService after validating every plan. The codec serializes the canonical file with exact monetary decimals; the preview response carries preparedDocument as Base64. Infrastructure decodes bytes into the confirmed file without JSON.stringify of financial values. No preview writes to storage.
+
+### Visual and selective rebalancing
+
+`CurrentPortfolioRebalancing` owns exact-cent apportionment within the selected categories, freezing every excluded value while preserving full-portfolio deviations. `PurchasePlanPanel` owns transient category selection (reset on scope/revision changes); purchase advice remains independent of it. `AllocationDeviationChart` renders text-equivalent current/target bars on a common 0–100% scale. The contract is documented in `docs/specs/2026-11-16-visual-selective-rebalance.md`.

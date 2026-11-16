@@ -18,7 +18,11 @@ export function PurchasePlanPanel({ entries, scope, useCases, revision = 0, asse
   const [saved, setSaved] = React.useState(null),
     [draft, setDraft] = React.useState(defaults);
   const [mode, setMode] = React.useState('purchase');
-  React.useEffect(() => setMode('purchase'), [scope]);
+  const [selectedKeys, setSelectedKeys] = React.useState(categories.map(([, code]) => code));
+  React.useEffect(() => {
+    setMode('purchase');
+    setSelectedKeys(categories.map(([, code]) => code));
+  }, [scope, revision]);
   const [budgets, setBudgets] = React.useState({});
   const [state, setState] = React.useState('loading'),
     [message, setMessage] = React.useState('');
@@ -67,7 +71,7 @@ export function PurchasePlanPanel({ entries, scope, useCases, revision = 0, asse
       0
     ).total;
     if (valid && !dirty && saved && assetsReady && state === 'ready') {
-      rebalance = planRebalancing(entries, weights);
+      rebalance = planRebalancing(entries, weights, undefined, mode === 'rebalance' ? selectedKeys : undefined);
       if (amount != null && mode === 'purchase') plan = planFlatPurchases(entries, weights, amount);
     }
   } catch {
@@ -203,7 +207,14 @@ export function PurchasePlanPanel({ entries, scope, useCases, revision = 0, asse
             </label>
           </fieldset>
           {calculationError && <p role="alert">Nie można bezpiecznie obliczyć planu dla podanych wartości.</p>}
-          {rebalance && <RebalancePlan plan={rebalance} showTrades={mode === 'rebalance'} />}
+          {rebalance && (
+            <RebalancePlan
+              plan={rebalance}
+              showTrades={mode === 'rebalance'}
+              selectedKeys={selectedKeys}
+              onSelectionChange={setSelectedKeys}
+            />
+          )}
           {mode === 'rebalance' && !rebalance && (
             <p>Zapisz poprawny plan i poczekaj na wczytanie inwestycji, aby zobaczyć rebalans.</p>
           )}

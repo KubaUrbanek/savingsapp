@@ -79,3 +79,33 @@ it('load errors suppress recommendations', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Nie udało się wczytać planu');
   expect(screen.queryByRole('region', { name: 'Obecne odchylenia od planu' })).not.toBeInTheDocument();
 });
+
+it('freezes selected exclusions, keeps the chart unchanged, and preserves selection across modes', async () => {
+  const useCases = deps();
+  const { container, rerender } = render(<PurchasePlanPanel entries={entries} scope="jakub" useCases={useCases} />);
+  const chart = await screen.findByRole('region', { name: 'Obecne odchylenia od planu' });
+  const chartText = chart.textContent;
+  expect(within(chart).getAllByText('Teraz').length).toBeGreaterThan(0);
+  expect(within(chart).getAllByText('Cel').length).toBeGreaterThan(0);
+  fireEvent.click(screen.getByLabelText('Rebalans obecnego portfela'));
+  const bonds = screen.getByRole('checkbox', { name: /Obligacje/ });
+  fireEvent.click(bonds);
+  expect(chart.textContent).toBe(chartText);
+  expect(screen.getByText('Wybrane aktywa nie mają środków do rebalansu.')).toBeVisible();
+  expect(screen.getByRole('list', { name: 'Po rebalansie' })).toHaveTextContent('Bez zmian — poza rebalansem');
+  expect(screen.queryByRole('list', { name: 'Co sprzedać' })).not.toBeInTheDocument();
+  await expectNoAccessibilityViolations(container);
+  fireEvent.click(screen.getByLabelText('Dokupowanie'));
+  fireEvent.click(screen.getByLabelText('Rebalans obecnego portfela'));
+  expect(screen.getByRole('checkbox', { name: /Obligacje/ })).not.toBeChecked();
+  for (const checkbox of screen.getAllByRole('checkbox'))
+    if ((checkbox as HTMLInputElement).checked) fireEvent.click(checkbox);
+  expect(screen.getByText('Wybierz aktywa do rebalansu.')).toBeVisible();
+  fireEvent.click(screen.getByRole('checkbox', { name: /Obligacje/ }));
+  expect(screen.getByText(/Wybrano jedno aktywo/)).toBeVisible();
+  rerender(<PurchasePlanPanel entries={entries} scope="zosia" useCases={useCases} />);
+  await waitFor(() => expect(screen.getByLabelText('Dokupowanie')).toBeChecked());
+  fireEvent.click(screen.getByLabelText('Rebalans obecnego portfela'));
+  expect(screen.getAllByRole('checkbox').every((input) => (input as HTMLInputElement).checked)).toBe(true);
+  expect(useCases.savePortfolioPlan.execute).not.toHaveBeenCalled();
+});
