@@ -145,3 +145,7 @@ Zmiana wartości i uzupełnianie wpłat są dostępne po wybraniu konkretnej oso
 Specyfikacja zmiany: [wspólny przegląd (SDD)](docs/specs/household-overview.md).
 
 Podgląd importu: POST `/api/database/preview` z plikiem multipart `file`. Zwraca rozpoznany format, liczbę wycen/operacji, osoby i obecność wspólnego planu, po pełnej walidacji bez zapisu. Dzień biznesowy formularzy i domeny: Europe/Warsaw.
+
+### Rebalans obecnego portfela
+
+W zakładce „Co dokupić?” wybierz „Rebalans obecnego portfela”. Widok pokazuje obecne odchylenia w PLN i punktach procentowych oraz co sprzedać i kupić bez dopłaty według zapisanego wspólnego planu, dla aktualnie wybranej osoby lub razem. Sprzedaż finansuje zakupy co do grosza. Gotówka oraz PPK/PPO pozostają poza proporcjami. Kwoty wynikają z zapisanych wycen, przed kosztami i podatkami; podgląd nie zapisuje transakcji.

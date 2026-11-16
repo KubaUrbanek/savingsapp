@@ -82,3 +82,9 @@ Backup formatVersion pozostaje 2. Alokacja v2 jest konwertowana dokładnym mnoż
 POST `/api/database/preview` (multipart file) prowadzi przez `PreviewBackupUseCase` i `BackupInspectionPort` do tego samego kodeka i walidacji co import. Nie uruchamia zapisu. Zwraca formatVersion, entries, operations, owners, sharedPlan. Sam import ponownie waliduje plik i atomowo zastępuje dane. UI po sukcesie odświeża również wspólny plan; symulacja nie zachowuje starego szkicu po świadomym zastąpieniu kopii.
 
 Wybór starszego planu wykonuje PreviewBackupService po walidacji wszystkich planów. Kodek serializuje kanoniczny plik z dokładnymi kwotami; odpowiedź podglądu przenosi preparedDocument jako Base64. Infrastruktura dekoduje bajty pliku do zatwierdzenia bez JSON.stringify wartości finansowych. Podgląd nie zapisuje danych.
+
+## Rebalans obecnego portfela
+
+Obliczenia używają wspólnego planu v3 i pełnego zakresu wybranej osoby lub gospodarstwa. Efektywne cele to obligacje, złoto oraz rynki rozwinięte i wschodzące. Gotówka i nieznany skład PPK/PPO pozostają osobno. Odchylenie to udział obecny minus cel (pp), a kwotowo wartość obecna minus docelowa (PLN).
+
+Docelowe wartości w groszach wyznacza metoda największych reszt; remis rozstrzyga kolejność obligacje, złoto, rozwinięte, wschodzące. Suma zakupów równa się sumie sprzedaży. Po rebalansie widoczne są rzeczywiste udziały zaokrąglonych kwot. Dla pustego portfela udziały są nieokreślone. Plan nie zapisuje operacji ani nie uwzględnia kosztów, podatków czy ograniczeń rachunków.

@@ -51,22 +51,45 @@ export function planPurchases(entries, global, equity, budget) {
     budget
   );
 }
-export function planFlatPurchases(entries, weights, budget) {
+export function planningSnapshot(entries, global, equity) {
+  const weights = equity
+    ? {
+        BONDS: Number(global.BONDS),
+        GOLD: (Number(global.STOCKS) * Number(equity.GOLD)) / 100,
+        RYNKI_ROZWINIETE: (Number(global.STOCKS) * Number(equity.RYNKI_ROZWINIETE)) / 100,
+        RYNKI_ROZWIJAJACE_SIE: (Number(global.STOCKS) * Number(equity.RYNKI_ROZWIJAJACE_SIE)) / 100
+      }
+    : global;
+  if (!validWeights(weights)) throw new RangeError('Nieprawidłowe udziały');
   const values = { BONDS: 0, GOLD: 0, RYNKI_ROZWINIETE: 0, RYNKI_ROZWIJAJACE_SIE: 0 };
   let cash = 0,
     unclassified = 0;
   buildCurrentSnapshot(entries).forEach((e) => {
+    if (
+      !Number.isFinite(Number(e.valuePln)) ||
+      Number(e.valuePln) < 0 ||
+      !Number.isSafeInteger(Math.round(Number(e.valuePln) * 100))
+    )
+      throw new RangeError('Nieprawidłowa wartość portfela');
     const c = globalAssetClass(e);
     if (c === 'CASH') cash += Number(e.valuePln);
     else if (c === 'UNCLASSIFIED') unclassified += Number(e.valuePln);
     else values[c === 'STOCKS' ? e.subcategory : c] += Number(e.valuePln);
   });
-  const total = Object.values(values).reduce((s, v) => s + v, 0),
-    afterTotal = total + budget;
-  const rows = allocatePurchases(
-    Object.keys(values).map((key) => ({ key, currentValue: values[key], targetWeight: weights[key] })),
-    budget
-  ).map((r) => ({
+  const total = Object.values(values).reduce((sum, value) => sum + value, 0);
+  if (!Number.isSafeInteger(Math.round(total * 100))) throw new RangeError('Nieprawidłowa wartość portfela');
+  return {
+    rows: Object.keys(values).map((key) => ({ key, currentValue: values[key], targetWeight: weights[key] })),
+    total,
+    cash,
+    unclassified
+  };
+}
+export function planFlatPurchases(entries, weights, budget) {
+  const { rows: positions, total, cash, unclassified } = planningSnapshot(entries, weights);
+  const afterTotal = total + budget;
+  if (!Number.isSafeInteger(Math.round(afterTotal * 100))) throw new RangeError('Nieprawidłowa wartość portfela');
+  const rows = allocatePurchases(positions, budget).map((r) => ({
     ...r,
     currentWeight: total ? (r.currentValue / total) * 100 : 0,
     missingAmount: Math.max(0, (total * r.targetWeight) / 100 - r.currentValue),

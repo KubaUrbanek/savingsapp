@@ -51,7 +51,12 @@ test('E02 E13 shared draft and per-owner budget survive tabs and scope', async (
   await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
   const panel = page.getByRole('tabpanel', { name: 'Co dokupić?', exact: true });
   await expect(panel).toContainText('7500,00');
-  await expect(panel).not.toContainText(/PPK|Gotówka|poza proporcjami|pominięt|wyłącz/);
+  await expect(panel).toContainText('Gotówka 0,00');
+  await expect(panel).toContainText(/PPK \/ PPO: 900\s000,00/);
+  await expect(panel).toContainText('nie uwzględniamy ich w tym planie');
+  const deviations = panel.getByRole('region', { name: 'Obecne odchylenia od planu' });
+  await expect(deviations.getByRole('listitem')).toHaveCount(4);
+  await expect(deviations).not.toContainText(/PPK|PPO|Gotówka/);
   await page.getByLabel('Kwota na zakupy — zł').fill('1000');
   await expect(page.locator('.purchaseCard')).toHaveCount(1);
   await expect(page.locator('.purchaseCard')).toContainText('Złoto');
