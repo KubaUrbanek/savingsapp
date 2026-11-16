@@ -1,6 +1,7 @@
 // @ts-nocheck
 import React from 'react';
 import { planRebalancing } from '../../domain/portfolio/services/CurrentPortfolioRebalancing.js';
+import { AllocationDeviationChart } from './AllocationDeviationChart.js';
 import { RebalancePlan } from './RebalancePlan.js';
 import { Field } from './Field.js';
 import { Button } from './Button.js';
@@ -91,7 +92,10 @@ export function PurchasePlanPanel({ entries, scope, useCases, revision = 0, asse
       setDraft({ bitcoin: 0, ...p });
       setState('ready');
       setMessage('Zapisano wspólny plan.');
-      if (editor.current) editor.current.open = false;
+      if (editor.current) {
+        editor.current.open = false;
+        editor.current.querySelector('summary')?.focus();
+      }
     } catch {
       setState('ready');
       setMessage('Nie udało się zapisać planu. Spróbuj ponownie.');
@@ -99,7 +103,7 @@ export function PurchasePlanPanel({ entries, scope, useCases, revision = 0, asse
   }
   return (
     <section className="ledgerSection purchasePlanPanel" aria-busy={state === 'loading' || state === 'saving'}>
-      <h2>Wspólny plan inwestycji</h2>
+      <h2>Plan portfela</h2>
       <p>
         Obliczenia dla: <strong>{scope === 'household' ? 'Razem' : displayName(scope)}</strong>
       </p>
@@ -111,17 +115,6 @@ export function PurchasePlanPanel({ entries, scope, useCases, revision = 0, asse
         </p>
       ) : (
         <>
-          <p>Proporcje docelowe inwestycji objętych planem</p>
-          <div className="savedPlan">
-            <strong>{saved ? 'Zapisany wspólny plan' : 'Propozycja planu — zapisz, aby rozpocząć'}</strong>
-            <ul>
-              {categories.map(([key, , label]) => (
-                <li key={key}>
-                  {label}: <strong>{String((saved ?? defaults)[key]).replace('.', ',')}%</strong>
-                </li>
-              ))}
-            </ul>
-          </div>
           {assetsReady ? (
             <p>
               Plan obejmuje <strong>{formatMoney(basis)}</strong> inwestycji.
@@ -131,6 +124,17 @@ export function PurchasePlanPanel({ entries, scope, useCases, revision = 0, asse
           )}
           <details ref={editor} className="planEditor">
             <summary>Zmień proporcje</summary>
+            <div className="savedPlan">
+              <strong>{saved ? 'Zapisany wspólny plan' : 'Propozycja planu — zapisz, aby rozpocząć'}</strong>
+              <ul>
+                {categories.map(([key, , label]) => (
+                  <li key={key}>
+                    {label}: <strong>{String((saved ?? defaults)[key]).replace('.', ',')}%</strong>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
             <fieldset className="allocationInputs">
               <legend>Jeden podział całego planu</legend>
               {categories.map(([key, , label]) => (
@@ -170,6 +174,7 @@ export function PurchasePlanPanel({ entries, scope, useCases, revision = 0, asse
                 onClick={() => {
                   setDraft(saved ?? defaults);
                   editor.current.open = false;
+                  editor.current.querySelector('summary')?.focus();
                 }}
                 disabled={state === 'saving'}
               >
@@ -186,6 +191,7 @@ export function PurchasePlanPanel({ entries, scope, useCases, revision = 0, asse
             </Button>
           )}
           {assetsReady && basis === 0 && <p>To plan pierwszych zakupów. Nie zapisano jeszcze inwestycji.</p>}
+          {rebalance && <AllocationDeviationChart rows={rebalance.rows} total={rebalance.total} />}
           <fieldset className="planningModes">
             <legend>Sposób planowania</legend>
             <label>
@@ -221,7 +227,6 @@ export function PurchasePlanPanel({ entries, scope, useCases, revision = 0, asse
           )}
           {mode === 'purchase' && (
             <>
-              <h3>Kwota na zakupy</h3>
               <Field
                 label="Kwota na zakupy — zł"
                 hint="Może to być nowa wpłata albo część posiadanej gotówki. Niczego tu nie zapisujesz."

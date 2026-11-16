@@ -91,7 +91,7 @@ describe('Savings workspace', () => {
   it('uses three tabs with one visible panel and keyboard navigation', async () => {
     render(<AppRouter dependencies={dependencies()} />);
     const summary = screen.getByRole('tab', { name: 'Przegląd' });
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Przegląd', 'Co dokupić?', 'Historia']);
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Przegląd', 'Plan portfela', 'Historia']);
     expect(summary).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tabpanel')).toHaveAttribute('aria-labelledby', summary.id);
     fireEvent.keyDown(summary, { key: 'End' });
@@ -106,11 +106,11 @@ describe('Savings workspace', () => {
     render(<AppRouter dependencies={dependencies()} />);
     fireEvent.click(await screen.findByRole('button', { name: 'Razem' }));
     expect(screen.getByRole('heading', { name: 'Nasze oszczędności' })).toBeVisible();
-    fireEvent.click(screen.getByRole('tab', { name: 'Co dokupić?' }));
-    expect(screen.getByRole('tabpanel', { name: 'Co dokupić?' })).toBeVisible();
+    fireEvent.click(screen.getByRole('tab', { name: 'Plan portfela' }));
+    expect(screen.getByRole('tabpanel', { name: 'Plan portfela' })).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Ustawienia' }));
     expect(screen.getByRole('heading', { name: 'Ustawienia i kopie danych' })).toBeVisible();
-    expect(screen.getByRole('tab', { name: 'Co dokupić?' })).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('tab', { name: 'Plan portfela' })).toHaveAttribute('tabindex', '0');
     fireEvent.click(screen.getByRole('tab', { name: 'Historia' }));
     expect(screen.getByRole('tabpanel', { name: 'Historia' })).toBeVisible();
   });
@@ -502,7 +502,7 @@ describe('Savings workspace', () => {
         })}
       />
     );
-    fireEvent.click(screen.getByRole('tab', { name: 'Co dokupić?' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Plan portfela' }));
     expect(await screen.findByLabelText('Kwota na zakupy — zł')).toBeVisible();
   });
   it('shows the new value history immediately without the previous disclosure', async () => {

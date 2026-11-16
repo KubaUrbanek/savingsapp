@@ -56,7 +56,7 @@ test('overview filters and chart context survive tabs and owner changes', async 
   await expect(total).toHaveCount(0);
   await page.getByRole('button', { name: 'Pokaż cały portfel', exact: true }).click();
   await expect(total).toContainText('2000,00');
-  for (const tab of ['Co dokupić?', 'Historia']) {
+  for (const tab of ['Plan portfela', 'Historia']) {
     await page.getByRole('tab', { name: tab, exact: true }).click();
     await expect(page.getByRole('tabpanel', { name: tab, exact: true })).toBeVisible();
   }
@@ -152,7 +152,7 @@ test('budget is conserved and invalid draft weights never persist or produce adv
   await initial(request, 'GIELDA', 1100, 'RYNKI_ROZWINIETE');
   await initial(request, 'GIELDA', 500, 'RYNKI_ROZWIJAJACE_SIE');
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
+  await page.getByRole('tab', { name: 'Plan portfela', exact: true }).click();
   await expect(page.getByLabel('Kwota na zakupy — zł')).toBeVisible();
   if (await page.getByRole('button', { name: 'Zapisz propozycję planu' }).count()) {
     await page.getByRole('button', { name: 'Zapisz propozycję planu' }).click();
@@ -175,7 +175,7 @@ test('budget is conserved and invalid draft weights never persist or produce adv
   await expect(purchases).toHaveCount(0);
   page.once('dialog', (dialog) => dialog.accept());
   await page.reload();
-  await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
+  await page.getByRole('tab', { name: 'Plan portfela', exact: true }).click();
   await expect(page.getByLabel('Kwota na zakupy — zł')).toBeVisible();
   if (await page.getByRole('button', { name: 'Zapisz propozycję planu' }).count()) {
     await page.getByRole('button', { name: 'Zapisz propozycję planu' }).click();
@@ -193,7 +193,7 @@ test('budget is conserved and invalid draft weights never persist or produce adv
   await expect(breakdown).toContainText('Akcje — rynki rozwinięte: 20%');
   await expect(breakdown).toContainText('Akcje — rynki wschodzące: 5%');
   await page.reload();
-  await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
+  await page.getByRole('tab', { name: 'Plan portfela', exact: true }).click();
   await expect(page.getByLabel('Kwota na zakupy — zł')).toBeVisible();
   if (await page.getByRole('button', { name: 'Zapisz propozycję planu' }).count()) {
     await page.getByRole('button', { name: 'Zapisz propozycję planu' }).click();
@@ -335,22 +335,23 @@ test('rebalances the full current portfolio without deposit or writes on desktop
   ).toBeTruthy();
   const before = await (await request.get('/api/investment-operations?owner=jakub')).json();
   await page.goto('/');
-  await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
+  await page.getByRole('tab', { name: 'Plan portfela', exact: true }).click();
   const deviations = page.getByRole('region', { name: 'Obecne odchylenia od planu' });
   await expect(deviations).toContainText('+20 pp');
   await page.getByLabel('Rebalans obecnego portfela', { exact: true }).check();
   await expect(page.getByRole('list', { name: 'Co sprzedać' })).toContainText(/2000,00/);
   await expect(page.getByRole('list', { name: 'Co kupić' })).toContainText(/1500,00/);
   await expect(page.getByRole('list', { name: 'Co kupić' }).getByRole('listitem')).toHaveCount(3);
+  await page.getByText('Szczegóły wyliczeń', { exact: true }).click();
   await expect(page.getByRole('list', { name: 'Po rebalansie' })).toContainText('17,5%');
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   const chartBefore = await deviations.textContent();
   await page.getByRole('checkbox', { name: /Obligacje/ }).uncheck();
   await expect(page.getByRole('list', { name: 'Co sprzedać' })).not.toContainText('Obligacje');
   await expect(page.getByRole('list', { name: 'Co kupić' })).toContainText('500,00');
-  await expect(page.getByRole('list', { name: 'Po rebalansie' })).toContainText('7000,00');
+  await expect(page.getByRole('region', { name: 'Poza rebalansem — bez zmian' })).toContainText('7000,00');
   await expect(page.getByRole('list', { name: 'Po rebalansie' })).toContainText('1050,00');
-  await expect(page.getByRole('list', { name: 'Po rebalansie' })).toContainText('Bez zmian — poza rebalansem');
+  await expect(page.getByRole('list', { name: 'Po rebalansie' })).toContainText('Cel wybranej części: 35%');
   expect(await deviations.textContent()).toEqual(chartBefore);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
   const gold = page.getByRole('checkbox', { name: /Złoto/ });

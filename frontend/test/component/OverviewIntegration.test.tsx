@@ -154,7 +154,7 @@ describe('shared overview selection', () => {
     expect(screen.getByRole('checkbox', { name: /PPO/ })).toBeChecked();
   });
 
-  it.each(['Historia', 'Co dokupić?', 'Ustawienia', 'Razem'])(
+  it.each(['Historia', 'Plan portfela', 'Ustawienia', 'Razem'])(
     'preserves the overview context after %s',
     async (destination) => {
       render(<AppRouter dependencies={dependencies()} />);
@@ -166,7 +166,7 @@ describe('shared overview selection', () => {
       fireEvent.click(screen.getByRole('tab', { name: 'Przegląd' }));
       expect(screen.getByRole('checkbox', { name: /Złoto/ })).not.toBeChecked();
       fireEvent.click(
-        screen.getByRole(destination === 'Historia' || destination === 'Co dokupić?' ? 'tab' : 'button', {
+        screen.getByRole(destination === 'Historia' || destination === 'Plan portfela' ? 'tab' : 'button', {
           name: destination
         })
       );

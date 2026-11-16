@@ -148,10 +148,12 @@ Podgląd importu: POST `/api/database/preview` z plikiem multipart `file`. Zwrac
 
 ### Rebalans obecnego portfela
 
-W zakładce „Co dokupić?” wybierz „Rebalans obecnego portfela”. Widok pokazuje obecne odchylenia w PLN i punktach procentowych oraz co sprzedać i kupić bez dopłaty według zapisanego wspólnego planu, dla aktualnie wybranej osoby lub razem. Sprzedaż finansuje zakupy co do grosza. Gotówka oraz PPK/PPO pozostają poza proporcjami. Kwoty wynikają z zapisanych wycen, przed kosztami i podatkami; podgląd nie zapisuje transakcji.
+W zakładce „Plan portfela” wybierz „Rebalans obecnego portfela”. Widok pokazuje obecne odchylenia w PLN i punktach procentowych oraz co sprzedać i kupić bez dopłaty według zapisanego wspólnego planu, dla aktualnie wybranej osoby lub razem. Sprzedaż finansuje zakupy co do grosza. Gotówka oraz PPK/PPO pozostają poza proporcjami. Kwoty wynikają z zapisanych wycen, przed kosztami i podatkami; podgląd nie zapisuje transakcji.
 
 Widok odchyleń porównuje obecne udziały z celami na poziomych słupkach z wartościami w PLN i pp. W rebalansie można odznaczyć dowolną kategorię (np. obligacje lub złoto). Odznaczone aktywa zachowują wartość; wybrane aktywa są rebalansowane według ich wzajemnych proporcji w zapisanym planie. Rebalans częściowy nie musi przywrócić proporcji całego portfela.
 
 
 Bitcoin integration: the shared flat household plan includes bitcoin as a direct percentage of the entire plan (default zero). Allocation API/version 4 requires exact decimal weights including bitcoin. Backup allocation versions 1–3 migrate with bitcoin=0; backup format remains 2. Liquibase 004-bitcoin adds NUMERIC(100,50) after the existing shared-plan migration. Bitcoin participates in purchases and selective rebalancing.
 Specyfikacja kolejnej zmiany (implementacja osobno): [SDD uporządkowania ekranu „Plan portfela”](docs/specs/2026-11-16-planning-screen-order.md).
+
+Rebalans pokazuje dopasowany cel i rzeczywisty udział w wybranej części portfela (np. 15/30/5% zapisanych wag daje 30/60/10%). Wykluczone kategorie pozostają osobno bez zmian. Wykres odchyleń całego portfela jest nad przełącznikiem sposobu planowania; szczegóły wyniku można rozwinąć.

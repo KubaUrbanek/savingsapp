@@ -26,17 +26,10 @@ export function AllocationDeviationChart({ rows, total }: { rows: DeviationRow[]
     <section className="allocationVisual" aria-label="Obecne odchylenia od planu">
       <header className="allocationVisualHeader">
         <div>
-          <p className="allocationEyebrow">Twój portfel · teraz i cel</p>
           <h3>Obecne odchylenia od planu</h3>
         </div>
-        <div className="allocationVisualTotal">
-          <span>Część portfela objęta planem</span>
-          <strong>{formatMoney(total)}</strong>
-        </div>
       </header>
-      <p className="allocationVisualIntro">
-        Porównaj długość słupków. Cel to zapisane proporcje całego portfela inwestycji.
-      </p>
+      <p className="allocationVisualIntro">Cały portfel objęty planem — zapisane cele</p>
       <div className="allocationVisualLegend" aria-hidden="true">
         <span>
           <i /> Teraz

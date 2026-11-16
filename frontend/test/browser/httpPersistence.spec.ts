@@ -196,7 +196,7 @@ test('HTTP can complete unknown contributions and save allocation weights', asyn
   await page.getByRole('button', { name: 'Zapisz poprawkę' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   expect((await (await request.get('/api/portfolio-performance?owner=jakub')).json()).nominalResultPln).toBe(100);
-  await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
+  await page.getByRole('tab', { name: 'Plan portfela', exact: true }).click();
   await expect(page.getByLabel('Kwota na zakupy — zł')).toBeVisible();
   if (await page.getByRole('button', { name: 'Zapisz propozycję planu' }).count()) {
     await page.getByRole('button', { name: 'Zapisz propozycję planu' }).click();
@@ -210,7 +210,7 @@ test('HTTP can complete unknown contributions and save allocation weights', asyn
   await page.getByRole('button', { name: 'Zapisz wspólny plan' }).click();
   await expect(page.getByText('Zapisano wspólny plan.')).toBeVisible();
   await page.reload();
-  await page.getByRole('tab', { name: 'Co dokupić?', exact: true }).click();
+  await page.getByRole('tab', { name: 'Plan portfela', exact: true }).click();
   await expect(page.getByLabel('Kwota na zakupy — zł')).toBeVisible();
   if (await page.getByRole('button', { name: 'Zapisz propozycję planu' }).count()) {
     await page.getByRole('button', { name: 'Zapisz propozycję planu' }).click();

@@ -1,12 +1,10 @@
 // @ts-nocheck
 import React from 'react';
-import { InlineMessage } from './InlineMessage.js';
 import { formatMoney, formatUnsignedPercent } from '../viewModels/formatters.js';
-import { AllocationDeviationChart, rebalanceLabels as labels } from './AllocationDeviationChart.js';
+import { rebalanceLabels as labels } from './AllocationDeviationChart.js';
 export function RebalancePlan({ plan, showTrades, selectedKeys, onSelectionChange }) {
   return (
     <>
-      <AllocationDeviationChart rows={plan.rows} total={plan.total} />
       {showTrades && (
         <section aria-label="Rebalans obecnego portfela">
           <h3>Rebalans bez dopłaty</h3>
@@ -29,7 +27,11 @@ export function RebalancePlan({ plan, showTrades, selectedKeys, onSelectionChang
                   />
                   <span>
                     <strong>{labels[row.key]}</strong>
-                    <small>{row.selected ? 'W rebalansie' : 'Bez zmian — poza rebalansem'}</small>
+                    <small>
+                      {row.selected
+                        ? `Cel wybranej części: ${formatUnsignedPercent(row.selectedTargetWeight)}`
+                        : 'Bez zmian — poza rebalansem'}
+                    </small>
                   </span>
                 </label>
               ))}
@@ -39,14 +41,16 @@ export function RebalancePlan({ plan, showTrades, selectedKeys, onSelectionChang
             <span>
               Wybrane aktywa: <strong>{formatMoney(plan.selectedTotal)}</strong>
             </span>
-            <span>
-              Bez zmian: <strong>{formatMoney(plan.excludedTotal)}</strong>
-            </span>
+            {plan.partial && (
+              <span>
+                Bez zmian: <strong>{formatMoney(plan.excludedTotal)}</strong>
+              </span>
+            )}
           </div>
           {plan.partial && (
             <p className="rebalancePartialNotice">
-              Rebalans częściowy: zapisane wagi wybranych aktywów przeliczamy proporcjonalnie do ich łącznej wartości.
-              Pozostałe aktywa pozostają bez zmian. Cały portfel może nadal odbiegać od zapisanego planu.
+              Rebalans obejmuje wybrane aktywa. Pozostałe pozostają bez zmian, więc cały portfel może nadal odbiegać od
+              planu.
             </p>
           )}
           {plan.total === 0 ? (
@@ -68,66 +72,94 @@ export function RebalancePlan({ plan, showTrades, selectedKeys, onSelectionChang
           ) : (
             <>
               <p>Najpierw sprzedaj nadwyżki, następnie kup za uzyskane środki.</p>
-              {[
-                ['Co sprzedać', -1, 'Sprzedaj'],
-                ['Co kupić', 1, 'Kup']
-              ].map(([title, sign, action]) => (
-                <section key={title} aria-label={title}>
-                  <h4>{title}</h4>
-                  <ul className="purchaseRecommendations" aria-label={title}>
-                    {plan.rows
-                      .filter((row) => row.tradeAmount * sign > 0)
-                      .map((row) => (
-                        <li className="purchaseCard" key={row.key}>
-                          <h5>{labels[row.key]}</h5>
-                          <p>
-                            {action} za <strong>{formatMoney(Math.abs(row.tradeAmount))}</strong>
-                          </p>
-                        </li>
-                      ))}
-                  </ul>
-                </section>
-              ))}
+              <div className="rebalanceTrades">
+                {[
+                  ['Co sprzedać', -1, 'Sprzedaj'],
+                  ['Co kupić', 1, 'Kup']
+                ].map(([title, sign, action]) => (
+                  <section className={sign < 0 ? 'rebalanceSell' : 'rebalanceBuy'} key={title} aria-label={title}>
+                    <h4>{sign < 0 ? '1. Sprzedaj' : '2. Kup'}</h4>
+                    <ul className="purchaseRecommendations" aria-label={title}>
+                      {plan.rows
+                        .filter((row) => row.tradeAmount * sign > 0)
+                        .map((row) => (
+                          <li className="purchaseCard" key={row.key}>
+                            <h5>{labels[row.key]}</h5>
+                            <p>
+                              {action} za <strong>{formatMoney(Math.abs(row.tradeAmount))}</strong>
+                            </p>
+                          </li>
+                        ))}
+                    </ul>
+                  </section>
+                ))}
+              </div>
               <p>
                 Łączna sprzedaż: <strong>{formatMoney(plan.tradeTotal)}</strong> · Łączne zakupy:{' '}
                 <strong>{formatMoney(plan.tradeTotal)}</strong>.
               </p>
             </>
           )}
-          {plan.total > 0 && plan.selectionStatus !== 'empty' && plan.selectionStatus !== 'zero-target' && (
-            <>
-              <h4>Po rebalansie</h4>
+          {plan.selectionStatus === 'ready' && (
+            <details className="purchaseDetails">
+              <summary>Szczegóły wyliczeń</summary>
+              <h4>Po rebalansie — wybrane aktywa</h4>
               <ul className="allocationComparison" aria-label="Po rebalansie">
-                {plan.rows.map((row) => (
-                  <li key={row.key}>
-                    <strong>{labels[row.key]}</strong>
-                    {!row.selected && <small>Bez zmian — poza rebalansem</small>}
-                    <span>{formatMoney(row.afterValue)}</span>
-                    <span>
-                      Udział: {formatUnsignedPercent(row.afterWeight)} · Zapisany cel:{' '}
-                      {formatUnsignedPercent(row.targetWeight)}
-                    </span>
-                  </li>
-                ))}
+                {plan.rows
+                  .filter((row) => row.selected)
+                  .map((row) => (
+                    <li key={row.key}>
+                      <strong>{labels[row.key]}</strong>
+                      <span>
+                        Teraz: {formatMoney(row.currentValue)} · {formatUnsignedPercent(row.selectedCurrentWeight)}
+                      </span>
+                      <span>Po rebalansie: {formatMoney(row.afterValue)}</span>
+                      <span>
+                        Udział w wybranej części: {formatUnsignedPercent(row.selectedAfterWeight)} · Cel wybranej
+                        części: {formatUnsignedPercent(row.selectedTargetWeight)}
+                      </span>
+                    </li>
+                  ))}
               </ul>
-              <p>Wartość po rebalansie: {formatMoney(plan.total)}. Udziały uwzględniają zaokrąglenie do groszy.</p>
-            </>
+              {plan.partial && (
+                <section aria-label="Poza rebalansem — bez zmian">
+                  <h4>Poza rebalansem — bez zmian</h4>
+                  <ul className="allocationComparison">
+                    {plan.rows
+                      .filter((row) => !row.selected)
+                      .map((row) => (
+                        <li key={row.key}>
+                          <strong>{labels[row.key]}</strong>
+                          <span>{formatMoney(row.afterValue)}</span>
+                        </li>
+                      ))}
+                  </ul>
+                </section>
+              )}
+              <p>Udziały uwzględniają zaokrąglenie kwot do groszy.</p>
+            </details>
           )}
           <p>Kwoty według zapisanych wycen, przed opłatami i podatkami. Plan nie zapisuje transakcji.</p>
-          <p>
-            Podział dotyczy kategorii inwestycji, bez wyboru rachunków i właścicieli. Nie uwzględnia liczby jednostek,
-            ograniczeń rachunków ani kosztów wcześniejszego wykupu obligacji.
-          </p>
+          <details>
+            <summary>Jak to liczymy</summary>
+            <p>
+              Podział dotyczy kategorii inwestycji, bez wyboru rachunków i właścicieli. Nie uwzględnia liczby jednostek,
+              ograniczeń rachunków ani kosztów wcześniejszego wykupu obligacji. Cele wybranej części to zapisane wagi
+              podzielone przez ich sumę.
+            </p>
+          </details>
         </section>
       )}
-      <p className="planCash">
-        Gotówka {formatMoney(plan.cash)} pozostaje poza proporcjami inwestycji i nie finansuje automatycznie rebalansu.
-        Wpisanie kwoty nie zapisuje wpłaty ani zakupu.
-      </p>
+      {plan.cash > 0 && (
+        <p className="planCash">
+          Gotówka {formatMoney(plan.cash)} pozostaje poza proporcjami inwestycji.
+          {showTrades ? ' Nie finansuje automatycznie rebalansu.' : ' Wpisanie kwoty nie zapisuje wpłaty ani zakupu.'}
+        </p>
+      )}
       {plan.unclassified > 0 && (
-        <InlineMessage variant="warning">
+        <p className="planCash">
           PPK / PPO: {formatMoney(plan.unclassified)}. Nie znamy ich składu, więc nie uwzględniamy ich w tym planie.
-        </InlineMessage>
+        </p>
       )}
     </>
   );

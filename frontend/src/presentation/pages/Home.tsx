@@ -36,7 +36,7 @@ import { PortfolioChangeDialog } from '../components/PortfolioChangeDialog.js';
 
 const tabs = [
   { id: 'summary', label: 'Przegląd' },
-  { id: 'allocation', label: 'Co dokupić?' },
+  { id: 'allocation', label: 'Plan portfela' },
   { id: 'history', label: 'Historia' }
 ];
 const blankForm = (kind = '') => ({

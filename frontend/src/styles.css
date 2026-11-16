@@ -2327,3 +2327,58 @@ body {
 }
 /* Text zoom and long valuations must not impose a minimum viewport width. */
 .allocationVisualHeader > *, .allocationVisualIdentity > *, .allocationDelta > * { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+
+/* Planning keeps the global diagnosis above controls and the actionable result compact. */
+.purchasePlanPanel .allocationVisualRow { padding-block: var(--space-3); }
+.purchasePlanPanel .allocationVisualLegend { margin-block: var(--space-3); }
+.purchasePlanPanel .allocationVisualIntro { margin-block: var(--space-2); }
+.planningModes label { min-height: 44px; }
+.rebalanceTrades { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
+.rebalanceTrades > section { min-width: 0; border-top: 3px solid var(--color-portfolio-strong); }
+.rebalanceTrades .rebalanceSell { border-top-style: dashed; }
+.rebalanceTrades .purchaseRecommendations { grid-template-columns: minmax(0, 1fr); }
+.rebalanceTrades .purchaseCard { padding: var(--space-3); gap: var(--space-2); }
+.rebalanceTrades .purchaseCard h5, .rebalanceTrades .purchaseCard p { margin: 0; }
+.rebalanceSelectionOptions label { min-height: 44px; padding: var(--space-2); }
+.rebalanceSelectionOptions label > span { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  .rebalanceTrades { grid-template-columns: minmax(0, 1fr); }
+  .purchasePlanPanel .allocationVisualRow { gap: var(--space-2); }
+  .purchasePlanPanel .allocationDelta small { flex-basis: auto; }
+}
+.purchasePlanPanel .allocationVisualRow { padding-block: var(--space-2); gap: var(--space-2); }
+.purchasePlanPanel .allocationBars { gap: var(--space-2); }
+.purchasePlanPanel .allocationDelta { gap: var(--space-1); }
+.purchasePlanPanel .allocationDeltaBadge { padding: 0 4px; }
+.purchasePlanPanel .rebalanceSelection { margin-block: var(--space-2); }
+.purchasePlanPanel .rebalanceSelection p { margin-block: var(--space-2); }
+.purchasePlanPanel .rebalanceScope { padding: var(--space-3); }
+@media (max-width: 640px) {
+  .purchasePlanPanel .allocationVisualRow { gap: 4px; padding-block: 8px; }
+  .purchasePlanPanel .allocationVisualIdentity, .purchasePlanPanel .allocationDelta { gap: 4px; }
+  .purchasePlanPanel .allocationDelta small { font-size: 14px; }
+  .purchasePlanPanel .rebalanceSelectionOptions { gap: var(--space-2); }
+  .purchasePlanPanel .rebalanceSelectionOptions label > span { gap: 4px; }
+}
+.purchasePlanPanel .allocationVisualRow { padding-block: 4px; }
+.purchasePlanPanel .allocationVisualIdentity, .purchasePlanPanel .allocationDelta { gap: 4px; }
+.purchasePlanPanel .allocationVisualLegend { margin-block: 8px; }
+.purchasePlanPanel .allocationVisualHeader h3 { margin: 0; }
+.rebalanceTrades h4 { margin-block: 12px; }
+.rebalanceTrades .purchaseRecommendations { margin-block: 8px; }
+.rebalanceTrades .purchaseCard p strong { font-size: var(--font-size-20); }
+.purchasePlanPanel .rebalancePartialNotice { margin-block: 8px; }
+@media (max-width: 640px) {
+  .purchasePlanPanel .allocationVisualRow { padding-block: 4px; }
+  .purchasePlanPanel .rebalanceSelection { padding: 12px; }
+  .purchasePlanPanel .rebalanceSelectionOptions label { padding: 4px 8px; }
+  .purchasePlanPanel .rebalanceSelectionOptions { gap: 4px; }
+}
+.purchasePlanPanel .allocationVisual { padding: 16px; }
+.purchasePlanPanel .allocationVisualIntro { margin-block: 6px; }
+.purchasePlanPanel section[aria-label="Rebalans obecnego portfela"] > h3 { margin-block: 12px; }
+.purchasePlanPanel .planCash { margin-block: 8px; }
+.purchasePlanPanel .allocationVisual { padding: 12px; }
+.purchasePlanPanel section[aria-label="Rebalans obecnego portfela"] > p { margin-block: 8px; }
+.purchasePlanPanel .rebalanceSelectionOptions small { font-size: 14px; line-height: 20px; }
+.purchasePlanPanel { gap: 4px; }
