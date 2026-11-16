@@ -45,7 +45,7 @@ W nagłówku nie powtarzamy pięcioelementowej listy celów: zapisane procenty s
 
 ### Rebalans
 
-- Pod przełącznikiem widoczne „Rebalans bez dopłaty” i wszystkie pięć checkboxów: Obligacje, Złoto (ETF), Rynki rozwinięte, Rynki wschodzące. Te nazwy obowiązują w całym panelu; kwota dokupowania jest ukryta.
+- Pod przełącznikiem widoczne „Rebalans bez dopłaty” i wszystkie pięć checkboxów: Obligacje, Bitcoin (BTC), Złoto (ETF), Rynki rozwinięte, Rynki wschodzące. Te nazwy obowiązują w całym panelu; kwota dokupowania jest ukryta.
 - Checkbox ma klikalną etykietę z dostatecznie dużym obszarem dotykowym. Pięć zwartych opcji zastępują rozbudowane karty wyboru. Wykluczony składnik ma tekst „Bez zmian”; nie polegamy na samym kolorze lub wyszarzeniu.
 - Pod wyborem pokazujemy wartość wybranych aktywów. Przy wykluczeniach także wartość i nazwy kategorii pozostawionych bez zmian; przy pełnym wyborze nie pokazujemy zbędnego „Bez zmian: 0,00 zł”.
 - Wynik ma grupy **„1. Sprzedaj”** i **„2. Kup”**, obok siebie na szerokim ekranie i kolejno na telefonie. Każdy wiersz zawiera nazwę kategorii i dodatnią kwotę. Tekst, numeracja i odrębny akcent wizualny rozróżniają działania; nie oznaczamy sprzedaży jako błędu ani nie używamy koloru jako jedynej informacji.
@@ -80,7 +80,7 @@ Brak zapisanego planu pokazuje wyraźnie oznaczoną propozycję i możliwość j
 
 ## 5. Reguły zachowane i stany danych
 
-- Jeden wspólny plan `allocationVersion: 4`: pięć udziałów całego planu sumujące się dokładnie do 100%. Dane inwestycji zależą od wybranego właściciela lub Razem, nie od filtrów Przeglądu.
+- Jeden wspólny plan `allocationVersion: 4`: pięć udziałów całego planu sumujących się dokładnie do 100%. Dane inwestycji zależą od wybranego właściciela lub Razem, nie od filtrów Przeglądu.
 - Dokupowanie pozostaje bez sprzedaży; rebalans bez dopłaty. Wybór kategorii nie zmienia celów ani algorytmu dokupowania. Wykluczone aktywa zachowują wartość i nie finansują zleceń.
 - Zachowujemy normalizację wag tylko wybranej części, dokładne grosze, deterministyczne zaokrąglenia, sumę sprzedaży równą zakupom i zachowanie kapitału. Przykłady liczbowe poprzednich SDD nadal obowiązują.
 - Budżety pozostają osobne dla każdego zakresu i są przywracane przy powrocie do niego w sesji. Przełączenie Dokupowanie / Rebalans zachowuje budżet i wybór kategorii. Zmiana zakresu lub rewizji po imporcie przywraca Dokupowanie i wszystkie kategorie. Zapis poprawionych proporcji w edytorze przelicza aktywną symulację; nie resetuje bieżącego wyboru kategorii.
