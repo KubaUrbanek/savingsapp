@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
-const flat = { allocationVersion: 4, bitcoin: 0, bonds: '50', gold: '25', developed: '17.5', emerging: '7.5' };
+const flat = { allocationVersion: 4, bitcoin: '0', bonds: '50', gold: '25', developed: '17.5', emerging: '7.5' };
 async function seed(
   request: APIRequestContext,
   type = 'KONTO_BANKOWE',
@@ -55,7 +55,7 @@ test('E02 E13 shared draft and per-owner budget survive tabs and scope', async (
   await expect(panel).toContainText(/PPK \/ PPO: 900\s000,00/);
   await expect(panel).toContainText('nie uwzględniamy ich w tym planie');
   const deviations = panel.getByRole('region', { name: 'Obecne odchylenia od planu' });
-  await expect(deviations.getByRole('listitem')).toHaveCount(4);
+  await expect(deviations.getByRole('listitem')).toHaveCount(5);
   await expect(deviations).not.toContainText(/PPK|PPO|Gotówka/);
   await page.getByLabel('Kwota na zakupy — zł').fill('1000');
   await expect(page.locator('.purchaseCard')).toHaveCount(1);
