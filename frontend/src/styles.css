@@ -2360,3 +2360,21 @@ body {
   .purchasePlanPanel .rebalanceSelectionOptions { gap: var(--space-2); }
   .purchasePlanPanel .rebalanceSelectionOptions label > span { gap: 4px; }
 }
+.purchasePlanPanel .allocationVisualRow { padding-block: 4px; }
+.purchasePlanPanel .allocationVisualIdentity, .purchasePlanPanel .allocationDelta { gap: 4px; }
+.purchasePlanPanel .allocationVisualLegend { margin-block: 8px; }
+.purchasePlanPanel .allocationVisualHeader h3 { margin: 0; }
+.rebalanceTrades h4 { margin-block: 12px; }
+.rebalanceTrades .purchaseRecommendations { margin-block: 8px; }
+.rebalanceTrades .purchaseCard p strong { font-size: var(--font-size-20); }
+.purchasePlanPanel .rebalancePartialNotice { margin-block: 8px; }
+@media (max-width: 640px) {
+  .purchasePlanPanel .allocationVisualRow { padding-block: 4px; }
+  .purchasePlanPanel .rebalanceSelection { padding: 12px; }
+  .purchasePlanPanel .rebalanceSelectionOptions label { padding: 4px 8px; }
+  .purchasePlanPanel .rebalanceSelectionOptions { gap: 4px; }
+}
+.purchasePlanPanel .allocationVisual { padding: 16px; }
+.purchasePlanPanel .allocationVisualIntro { margin-block: 6px; }
+.purchasePlanPanel section[aria-label="Rebalans obecnego portfela"] > h3 { margin-block: 12px; }
+.purchasePlanPanel .planCash { margin-block: 8px; }

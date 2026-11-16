@@ -161,4 +161,4 @@ Przy osobnej realizacji implementacji:
 4. Przeklikać oba tryby na desktopie i telefonie; porównać zrzuty całej strony z audytem, uwzględniając częściowy rebalans, edytor i powiększenie. Same zielone testy funkcjonalne nie zastępują tej oceny.
 5. Wykonać wymagane kontrole według `AGENTS.md`; ewentualne scalenie wymaga autoryzacji użytkownika dla tej zmiany i udanego pełnego CI dla aktualnego commita.
 
-Na obecnym etapie powstaje wyłącznie SDD. Status akceptacji i wykonania należy aktualizować zgodnie z faktyczną decyzją oraz wynikami prac.
+Implementacja autoryzowana poleceniem użytkownika „zaimplementuj i zmerguj zmiany do main”; weryfikacja i scalenie są śledzone w PR #109.
