@@ -63,6 +63,23 @@ class WebAdapterConfigurationTest {
     }
 
     @Test
+    void selectingLegacyPlanPreservesExactMonetaryDecimals() throws Exception {
+        String document = """
+          {"formatVersion":2,"entries":[{"id":"03b5154a-a840-42d8-b286-14321e40db87","type":"KONTO_BANKOWE","owner":"zosia","subcategory":null,"valuePln":12345678901234567890.12,"date":"2020-01-01","createdAt":"2020-01-01T00:00:00Z"}],"operations":[],"plans":{"zosia":{"allocationVersion":2,"bonds":50,"stocks":50,"gold":50,"developed":35,"emerging":15}}}
+          """;
+        var source = new MockMultipartFile("file", "exact.json", "application/json", document.getBytes());
+        var response = mvc.perform(multipart("/api/database/preview").file(source).param("selectedPlan","zosia"))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.sharedPlan").value(true)).andReturn().getResponse();
+        String encoded = new JsonMapper().readTree(response.getContentAsByteArray()).path("preparedDocument").asString();
+        byte[] prepared = java.util.Base64.getDecoder().decode(encoded);
+        assertThat(new String(prepared, java.nio.charset.StandardCharsets.UTF_8)).contains("12345678901234567890.12");
+        assertThat(store.snapshot().entries()).isEmpty();
+        mvc.perform(multipart("/api/database/import").file(new MockMultipartFile("file","prepared.json","application/json",prepared))).andExpect(status().isNoContent());
+        assertThat(store.snapshot().entries().getFirst().getValuePln()).isEqualByComparingTo("12345678901234567890.12");
+        assertThat(store.snapshot().plans()).containsOnlyKeys("household");
+    }
+
+    @Test
     void appliesConfiguredCorsOriginAndRejectsAnUnconfiguredOrigin() throws Exception {
         mvc.perform(options("/api/investments")
                         .header("Origin", "https://portfolio.example.com")

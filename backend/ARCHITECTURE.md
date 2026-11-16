@@ -139,3 +139,5 @@ Inside one locked unit of work, correction removes the old event, inserts its re
 H2 DDL may auto-commit: a failed multi-statement schema migration is not guaranteed to roll back. Keep changes small, back up the database before deployment, and resolve failed migrations explicitly. Prefer forward corrective changesets to destructive schema rollback.
 
 Changeset `002-equity-gold` retains its deployed behavior. New changeset `003-shared-flat-plan` archives old personal plans, converts only household to four effective weights, and removes personal plans from the active table. Both migrations are one-time; portfolio records remain unchanged.
+
+Legacy plan selection is performed by PreviewBackupService after validating every plan. The codec serializes the canonical file with exact monetary decimals; the preview response carries preparedDocument as Base64. Infrastructure decodes bytes into the confirmed file without JSON.stringify of financial values. No preview writes to storage.

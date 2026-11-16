@@ -14,28 +14,32 @@ export class FetchDatabaseBackupGateway {
       throw new Error('Nieobsługiwany format kopii.');
     const plans = Array.isArray(document) ? {} : (document.plans ?? {});
     const choices = Object.keys(plans);
-    if (choices.length && !plans.household) {
-      // Validate the entire source before allowing any legacy plan to be discarded.
-      await this.previewFile(file);
-      if (!selectedPlan) return { choices, needsPlan: true };
+    if (selectedPlan && !plans[selectedPlan]) throw new Error('Wybierz plan z kopii.');
+    const preview = await this.previewFile(file, selectedPlan);
+    if (choices.length && !plans.household && !selectedPlan) return { choices, needsPlan: true };
+    if (typeof preview.preparedDocument !== 'string')
+      throw new Error('Nie udało się przygotować kopii. Spróbuj ponownie.');
+    // The server encodes exact decimals; never round-trip financial JSON through JavaScript numbers.
+    let prepared;
+    try {
+      prepared = new File(
+        [Uint8Array.from(atob(preview.preparedDocument), (character) => character.charCodeAt(0))],
+        file.name,
+        { type: 'application/json' }
+      );
+    } catch {
+      throw new Error('Serwer zwrócił nieprawidłową kopię. Spróbuj ponownie.');
     }
-    if (selectedPlan) {
-      if (!plans[selectedPlan]) throw new Error('Wybierz plan z kopii.');
-      document = { ...document, plans: { household: plans[selectedPlan] } };
-    }
-    const prepared = selectedPlan
-      ? new File([JSON.stringify(document)], file.name, { type: 'application/json' })
-      : file;
-    const preview = await this.previewFile(prepared);
     return {
       ...preview,
       format: Array.isArray(document) ? 'Starsza lista wycen' : `Kopia v${document.formatVersion}`,
       file: prepared
     };
   }
-  async previewFile(file) {
+  async previewFile(file, selectedPlan) {
     const data = new FormData();
     data.append('file', file);
+    if (selectedPlan) data.append('selectedPlan', selectedPlan);
     try {
       const preview = await this.http.multipart('/database/preview', data);
       if (
