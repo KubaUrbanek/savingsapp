@@ -9,7 +9,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 /** JSON boundary shared by backups and one-time legacy migration. */
-public final class InvestmentBackupJsonCodec {
+public final class InvestmentBackupJsonCodec implements pl.oszczednosci.app.application.port.out.BackupInspectionPort {
+    public InvestmentBackup inspect(byte[] bytes) { return parse(bytes, true); }
     private static final TypeReference<List<InvestmentEntryJsonRecord>> LEGACY_ENTRIES = new TypeReference<>() {};
     private final ObjectMapper json;
     private final InvestmentEntryJsonMapper entryMapper = new InvestmentEntryJsonMapper();
@@ -33,7 +34,10 @@ public final class InvestmentBackupJsonCodec {
             var parsed=backup(document.entries(), document.operations());
             if(document.formatVersion()==2 && document.plans()==null) throw new IllegalArgumentException("Backup must contain plans");
             var plans=document.plans()==null ? java.util.Map.<String,pl.oszczednosci.app.domain.model.PortfolioPlan>of() : document.plans().entrySet().stream().collect(java.util.stream.Collectors.toMap(java.util.Map.Entry::getKey,e->e.getValue().toDomain()));
-            return new InvestmentBackup(InvestmentBackup.CURRENT_FORMAT_VERSION,parsed.entries(),parsed.operations(),plans);
+            if (!plans.isEmpty() && !plans.containsKey("household"))
+                throw new IllegalArgumentException("Wybierz wspólny plan w podglądzie kopii.");
+            return new InvestmentBackup(InvestmentBackup.CURRENT_FORMAT_VERSION,parsed.entries(),parsed.operations(),
+                    plans.containsKey("household") ? java.util.Map.of("household", plans.get("household")) : java.util.Map.of());
         } catch (RuntimeException exception) {
             if (imported) throw new MalformedImportException("Invalid investment backup document.", exception);
             throw new PersistenceException("Malformed investment document", exception);

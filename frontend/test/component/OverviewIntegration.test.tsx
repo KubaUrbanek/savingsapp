@@ -39,7 +39,10 @@ function dependencies(omitPerformanceFor?: string) {
   };
 }
 function metric(label: string) {
-  return screen.getByText(label, { selector: '.savingsHeadline .metricLabel' }).parentElement;
+  return (
+    screen.queryByText(label, { selector: '.savingsHeadline .metricLabel' }) ??
+    screen.getByText('Wartość wybranych inwestycji', { selector: '.savingsHeadline .metricLabel' })
+  ).parentElement;
 }
 function overview() {
   return screen.getByRole('tabpanel', { name: 'Przegląd' });
@@ -66,7 +69,7 @@ describe('shared overview selection', () => {
     const futureStocks = { ...assets[3]!, id: 'future-stocks', type: 'GIELDA', date: '2999-01-01', valuePln: 9999 };
     deps.useCases.loadPortfolio.execute.mockResolvedValue([...assets, futureBank, futureStocks]);
     render(<AppRouter dependencies={deps} />);
-    await waitFor(() => expect(metric('Mam teraz')).toHaveTextContent('375,00'));
+    await waitFor(() => expect(metric('Wartość oszczędności')).toHaveTextContent('375,00'));
     expect(screen.queryByRole('checkbox', { name: 'Giełda' })).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Rozkład oszczędności' })).not.toHaveTextContent('9999');
     fireEvent.click(screen.getByText('Pokaż dane wykresu'));
@@ -83,18 +86,19 @@ describe('shared overview selection', () => {
   it('filters the value, contributions, result and holdings locally without new queries', async () => {
     const deps = dependencies();
     render(<AppRouter dependencies={deps} />);
-    await waitFor(() => expect(metric('Mam teraz')).toHaveTextContent('375,00'));
-    expect(metric('Zysk / strata')).toHaveTextContent('—');
-    fireEvent.click(screen.getByRole('checkbox', { name: 'PPO' }));
-    expect(metric('Mam teraz')).toHaveTextContent('350,00');
-    await waitFor(() => expect(metric('Wpłaciłem')).toHaveTextContent('260,00'));
+    await waitFor(() => expect(metric('Wartość oszczędności')).toHaveTextContent('375,00'));
+    expect(metric('Wynik')).toHaveTextContent('—');
+    fireEvent.click(await screen.findByText('Filtruj inwestycje'));
+    fireEvent.click(screen.getByRole('checkbox', { name: /PPO/ }));
+    expect(metric('Wartość oszczędności')).toHaveTextContent('350,00');
+    await waitFor(() => expect(metric('Wpłaty łącznie')).toHaveTextContent('260,00'));
     const portfolioCalls = deps.useCases.loadPortfolio.execute.mock.calls.length;
     const performanceCalls = deps.useCases.loadPortfolioPerformance.execute.mock.calls.length;
-    expect(metric('Zarobiłem')).toHaveTextContent('+90,00');
-    fireEvent.click(screen.getByRole('checkbox', { name: 'PPK' }));
-    expect(metric('Mam teraz')).toHaveTextContent('150,00');
-    expect(metric('Wpłaciłem')).toHaveTextContent('110,00');
-    expect(metric('Zarobiłem')).toHaveTextContent('+40,00');
+    expect(metric('Wynik')).toHaveTextContent('+90,00');
+    fireEvent.click(screen.getByRole('checkbox', { name: /PPK/ }));
+    expect(metric('Wartość oszczędności')).toHaveTextContent('150,00');
+    expect(metric('Wpłaty łącznie')).toHaveTextContent('110,00');
+    expect(metric('Wynik')).toHaveTextContent('+40,00');
     expect(screen.getByRole('region', { name: 'Rozkład oszczędności' })).not.toHaveTextContent('PPK');
     fireEvent.click(screen.getByText('Pokaż dane wykresu'));
     expect(screen.getByRole('table', { name: 'Historia wartości zaznaczonych inwestycji' })).toHaveTextContent(
@@ -108,68 +112,77 @@ describe('shared overview selection', () => {
     expect(deps.useCases.loadPortfolio.execute).toHaveBeenCalledTimes(portfolioCalls);
     expect(deps.useCases.loadPortfolioPerformance.execute).toHaveBeenCalledTimes(performanceCalls);
 
-    fireEvent.click(screen.getByRole('checkbox', { name: 'PPK' }));
-    expect(metric('Mam teraz')).toHaveTextContent('350,00');
-    expect(metric('Zarobiłem')).toHaveTextContent('+90,00');
+    fireEvent.click(screen.getByRole('checkbox', { name: /PPK/ }));
+    expect(metric('Wartość oszczędności')).toHaveTextContent('350,00');
+    expect(metric('Wynik')).toHaveTextContent('+90,00');
   });
 
   it('keeps missing selected asset results unknown and supports an empty selection', async () => {
     render(<AppRouter dependencies={dependencies('gold')} />);
-    await screen.findByRole('checkbox', { name: 'PPO' });
-    fireEvent.click(screen.getByRole('checkbox', { name: 'PPO' }));
-    expect(metric('Mam teraz')).toHaveTextContent('350,00');
-    await waitFor(() => expect(metric('Zysk / strata')).toHaveTextContent('—'));
+    fireEvent.click(await screen.findByText('Filtruj inwestycje'));
+    await screen.findByRole('checkbox', { name: /PPO/ });
+    fireEvent.click(screen.getByRole('checkbox', { name: /PPO/ }));
+    expect(metric('Wartość oszczędności')).toHaveTextContent('350,00');
+    await waitFor(() => expect(metric('Wynik')).toHaveTextContent('—'));
     fireEvent.click(screen.getByRole('button', { name: 'Odznacz wszystkie' }));
-    expect(metric('Mam teraz')).toHaveTextContent('0,00');
-    expect(metric('Zysk / strata')).toHaveTextContent('—');
-    expect(screen.getByText(/Brak inwestycji w wybranym zakresie/)).toBeVisible();
+    expect(screen.queryByText('Wartość wybranych inwestycji')).not.toBeInTheDocument();
+    expect(screen.getByText('Nie wybrano inwestycji')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Dodaj aktualny stan konta lub inwestycji' })).not.toBeInTheDocument();
     expect(within(overview()).queryAllByRole('rowheader')).toHaveLength(0);
-    fireEvent.click(screen.getByRole('button', { name: 'Zaznacz wszystkie' }));
-    expect(metric('Mam teraz')).toHaveTextContent('375,00');
+    fireEvent.click(screen.getByRole('button', { name: 'Pokaż cały portfel' }));
+    expect(metric('Wartość oszczędności')).toHaveTextContent('375,00');
   });
 
-  it('resets selection on grouping changes but preserves it when clicking the active grouping', async () => {
+  it('restores each grouping selection on grouping changes but preserves it when clicking the active grouping', async () => {
     render(<AppRouter dependencies={dependencies()} />);
-    fireEvent.click(await screen.findByRole('checkbox', { name: 'PPK' }));
-    expect(metric('Mam teraz')).toHaveTextContent('175,00');
-    fireEvent.click(screen.getByRole('button', { name: 'Konta / produkty' }));
-    expect(screen.getByRole('checkbox', { name: 'PPK' })).not.toBeChecked();
+    fireEvent.click(await screen.findByText('Filtruj inwestycje'));
+    fireEvent.click(screen.getByRole('checkbox', { name: /PPK/ }));
+    expect(metric('Wartość oszczędności')).toHaveTextContent('175,00');
+    fireEvent.click(screen.getByRole('button', { name: 'Według kont i produktów' }));
+    expect(screen.getByRole('checkbox', { name: /PPK/ })).not.toBeChecked();
     fireEvent.change(screen.getByLabelText('Zakres czasu'), { target: { value: 'all' } });
     fireEvent.click(screen.getByRole('checkbox', { name: 'Pokaż rozbicie' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Rodzaje aktywów' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Według rodzaju inwestycji' }));
     expect(screen.getByLabelText('Zakres czasu')).toHaveValue('all');
     expect(screen.getByRole('checkbox', { name: 'Pokaż rozbicie' })).toBeChecked();
-    expect(metric('Mam teraz')).toHaveTextContent('375,00');
-    expect(screen.getByRole('checkbox', { name: 'Złoto' })).toBeChecked();
+    expect(metric('Wartość oszczędności')).toHaveTextContent('375,00');
+    expect(screen.getByRole('checkbox', { name: /Złoto/ })).toBeChecked();
     fireEvent.click(screen.getByRole('checkbox', { name: /Nieznany skład/ }));
-    expect(metric('Mam teraz')).toHaveTextContent('150,00');
-    fireEvent.click(screen.getByRole('button', { name: 'Konta / produkty' }));
-    expect(screen.getByRole('checkbox', { name: 'PPK' })).toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'PPO' })).toBeChecked();
+    expect(metric('Wartość oszczędności')).toHaveTextContent('150,00');
+    fireEvent.click(screen.getByRole('button', { name: 'Według kont i produktów' }));
+    expect(screen.getByRole('checkbox', { name: /PPK/ })).not.toBeChecked();
+    expect(screen.getByRole('checkbox', { name: /PPO/ })).toBeChecked();
   });
 
-  it.each(['Historia', 'Co dokupić?', 'Ustawienia', 'Razem'])('resets the overview after %s', async (destination) => {
-    render(<AppRouter dependencies={dependencies()} />);
-    fireEvent.click(await screen.findByRole('button', { name: 'Rodzaje aktywów' }));
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Złoto' }));
-    fireEvent.change(screen.getByLabelText('Zakres czasu'), { target: { value: 'all' } });
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Pokaż rozbicie' }));
-    fireEvent.click(screen.getByRole('tab', { name: 'Przegląd' }));
-    expect(screen.getByRole('checkbox', { name: 'Złoto' })).not.toBeChecked();
-    fireEvent.click(
-      screen.getByRole(destination === 'Historia' || destination === 'Co dokupić?' ? 'tab' : 'button', {
-        name: destination
-      })
-    );
-    if (destination === 'Historia') {
-      expect(await screen.findByRole('tabpanel', { name: 'Historia' })).toHaveTextContent('PPK');
+  it.each(['Historia', 'Co dokupić?', 'Ustawienia', 'Razem'])(
+    'preserves the overview context after %s',
+    async (destination) => {
+      render(<AppRouter dependencies={dependencies()} />);
+      fireEvent.click(await screen.findByText('Filtruj inwestycje'));
+      fireEvent.click(screen.getByRole('button', { name: 'Według rodzaju inwestycji' }));
+      fireEvent.click(screen.getByRole('checkbox', { name: /Złoto/ }));
+      fireEvent.change(screen.getByLabelText('Zakres czasu'), { target: { value: 'all' } });
+      fireEvent.click(screen.getByRole('checkbox', { name: 'Pokaż rozbicie' }));
+      fireEvent.click(screen.getByRole('tab', { name: 'Przegląd' }));
+      expect(screen.getByRole('checkbox', { name: /Złoto/ })).not.toBeChecked();
+      fireEvent.click(
+        screen.getByRole(destination === 'Historia' || destination === 'Co dokupić?' ? 'tab' : 'button', {
+          name: destination
+        })
+      );
+      if (destination === 'Historia') {
+        expect(await screen.findByRole('tabpanel', { name: 'Historia' })).toHaveTextContent('PPK');
+      }
+      fireEvent.click(screen.getByRole('tab', { name: 'Przegląd' }));
+      if (destination === 'Razem') {
+        fireEvent.click(await screen.findByText('Filtruj inwestycje'));
+        expect(screen.getByRole('checkbox', { name: /PPK/ })).toBeChecked();
+        fireEvent.click(screen.getByRole('button', { name: 'Jakub' }));
+      }
+      await waitFor(() => expect(screen.getByRole('checkbox', { name: /Złoto/ })).not.toBeChecked());
+      expect(screen.getByLabelText('Zakres czasu')).toHaveValue('all');
+      expect(screen.getByRole('checkbox', { name: 'Pokaż rozbicie' })).toBeChecked();
+      expect(metric('Wartość oszczędności')).toHaveTextContent('325,00');
     }
-    fireEvent.click(screen.getByRole('tab', { name: 'Przegląd' }));
-    expect(await screen.findByRole('checkbox', { name: 'PPK' })).toBeChecked();
-    expect(screen.getByRole('checkbox', { name: 'IKE' })).toBeChecked();
-    expect(screen.getByLabelText('Zakres czasu')).toHaveValue('1y');
-    expect(screen.getByRole('checkbox', { name: 'Pokaż rozbicie' })).not.toBeChecked();
-    expect(metric('Mam teraz')).toHaveTextContent('375,00');
-  });
+  );
 });

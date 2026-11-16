@@ -13,6 +13,7 @@ public class ApplicationConfiguration {
  @Bean JdbcInvestmentStore investmentStore(ObjectMapper mapper, @Value("${app.database.path:./backend/data/portfolio}") Path path) { return new JdbcInvestmentStore(mapper,path); }
  @Bean UnitOfWorkInvestmentEntryRepository entryRepository(JdbcInvestmentStore store) { return new UnitOfWorkInvestmentEntryRepository(store); }
  @Bean UnitOfWorkInvestmentOperationRepository operationRepository(JdbcInvestmentStore store) { return new UnitOfWorkInvestmentOperationRepository(store); }
+ @Bean pl.oszczednosci.app.application.port.in.PreviewBackupUseCase previewBackup(tools.jackson.databind.ObjectMapper json){return new pl.oszczednosci.app.application.usecase.PreviewBackupService(new pl.oszczednosci.app.adapter.out.persistence.json.InvestmentBackupJsonCodec(json));}
  @Bean Clock clock(){ return Instant::now; }
  @Bean IdGenerator idGenerator(){ return UUID::randomUUID; }
  @Bean InvestmentEntryUseCase investmentEntryUseCase(InvestmentEntryRepository repository, InvestmentBackupPort backup, Clock clock, IdGenerator ids){ return new InvestmentEntryUseCase(repository,backup,clock,ids); }

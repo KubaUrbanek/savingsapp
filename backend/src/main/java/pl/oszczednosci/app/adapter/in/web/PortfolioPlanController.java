@@ -6,9 +6,9 @@ import pl.oszczednosci.app.domain.model.PortfolioPlan;
 public final class PortfolioPlanController {
  private final PortfolioPlanUseCase plans;
  public PortfolioPlanController(PortfolioPlanUseCase plans){this.plans=plans;}
- public record PlanResponse(@jakarta.validation.constraints.NotNull Double bonds,@jakarta.validation.constraints.NotNull Double stocks,@jakarta.validation.constraints.NotNull Double gold,@jakarta.validation.constraints.NotNull Double developed,@jakarta.validation.constraints.NotNull Double emerging,@jakarta.validation.constraints.NotNull Integer allocationVersion) {
-  static PlanResponse from(PortfolioPlan p){return new PlanResponse(p.bonds(),p.stocks(),p.gold(),p.developed(),p.emerging(),2);}
+ public record PlanResponse(@jakarta.validation.constraints.NotNull String bonds,@jakarta.validation.constraints.NotNull String gold,@jakarta.validation.constraints.NotNull String developed,@jakarta.validation.constraints.NotNull String emerging,@jakarta.validation.constraints.NotNull Integer allocationVersion) {
+  static PlanResponse from(PortfolioPlan p){return p == null ? null : new PlanResponse(p.bonds().toPlainString(),p.gold().toPlainString(),p.developed().toPlainString(),p.emerging().toPlainString(),3);}
  }
- @GetMapping public PlanResponse load(@RequestParam String scope){return PlanResponse.from(plans.load(scope));}
- @PutMapping public PlanResponse save(@RequestParam String scope,@jakarta.validation.Valid @RequestBody PlanResponse p){if(p.allocationVersion()!=2) throw new IllegalArgumentException("Nieobsługiwana wersja planu portfela.");var plan=new PortfolioPlan(p.bonds(),p.stocks(),p.gold(),p.developed(),p.emerging());plans.save(scope,plan);return PlanResponse.from(plan);}
+ @GetMapping public org.springframework.http.ResponseEntity<PlanResponse> load(@RequestParam(defaultValue="household") String scope){var plan=plans.load(scope);return plan == null ? org.springframework.http.ResponseEntity.noContent().build() : org.springframework.http.ResponseEntity.ok(PlanResponse.from(plan));}
+ @PutMapping public PlanResponse save(@RequestParam(defaultValue="household") String scope,@jakarta.validation.Valid @RequestBody PlanResponse p){if(p.allocationVersion()!=3) throw new IllegalArgumentException("Nieobsługiwana wersja planu portfela.");var plan=new PortfolioPlan(new java.math.BigDecimal(p.bonds()),new java.math.BigDecimal(p.gold()),new java.math.BigDecimal(p.developed()),new java.math.BigDecimal(p.emerging()));plans.save(scope,plan);return PlanResponse.from(plan);}
 }

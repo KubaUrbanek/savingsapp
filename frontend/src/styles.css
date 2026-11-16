@@ -2241,3 +2241,38 @@ body {
   .summaryGrid, .summaryResults { grid-template-columns: 1fr; }
   .summaryTotal .metricValue { font-size: clamp(var(--font-size-26), 11vw, var(--font-size-48)); }
 }
+
+/* Beginner UX: bounded grid children, readable amounts and reachable dialog actions. */
+.savingsWorkspace, .summaryPanel, .queryBoundaryContent, .chartsDisclosure, .chartDataDisclosure, .overviewHistoryTable, .purchasePlanPanel, .overviewChartPanel, .backupPreview { min-width: 0; max-width: 100%; }
+.overviewHistoryTable, .tableScroller { overflow-x: auto; }
+.savingsHeadline .summaryTotal { order: -1; }
+.savingsHeadline .metricValue, .holdingAmount strong, .entryValue { overflow-wrap: anywhere; white-space: normal; font-variant-numeric: tabular-nums; }
+.overviewFilterDisclosure, .chartsDisclosure { margin-block: 16px; }
+.overviewFilterDisclosure > summary, .chartsDisclosure > summary, .planEditor > summary { padding-block: 12px; cursor: pointer; }
+.overviewCheckbox { min-height: 44px; accent-color: var(--color-portfolio-strong); }
+.overviewCheckbox small { margin-inline-start: auto; }
+.activeOverviewScope { padding: 12px; background: var(--color-surface-muted); }
+.purchaseBudget { max-width: 24rem; }
+.purchaseDetails table { min-width: 760px; }
+.purchaseDetails th, .purchaseDetails td { padding: 12px; text-align: left; }
+.purchaseDetails small, .holdingAmount small { display: block; }
+.deleteAction { color: var(--color-danger-text); margin-inline-start: 16px; }
+.helpPage { max-width: 65ch; }
+.helpPage li { margin-block: 16px; line-height: 1.6; }
+.changeDialog input, .changeDialog select { scroll-margin-block: 80px; }
+.changeDialog .dialogActions { position: sticky; bottom: -1px; background: var(--color-surface); padding-block: 12px; flex-wrap: wrap; }
+.changeDialog { max-height: calc(100dvh - 16px); }
+.databaseActions { align-items: start; }
+@media (max-width: 767px) {
+ .summaryTotal .metricValue { font-size: clamp(24px, 8vw, 42px); }
+ .entryRow { min-width: 0; }
+ .entryValue { max-width: 100%; }
+ .workspaceHeading h1 { font-size: 1.4rem; }
+ .savingsWorkspace { padding-inline: 12px; }
+}
+.purchaseDetails[open], .planEditor[open] { grid-template-columns: minmax(0, 1fr); }
+.savingsWorkspace .workspaceHeader { grid-template-columns: minmax(0, 1fr); }
+.workspaceHeading, .workspaceControls, .workspaceHeading > div, .userSwitcher { min-width: 0; max-width: 100%; }
+.workspaceHeading, .workspaceControls .userSwitcher { flex-wrap: wrap; }
+.savingsTabs .button { overflow-wrap: anywhere; }
+.workspaceHeading h1 { overflow-wrap: anywhere; white-space: normal; }
