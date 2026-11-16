@@ -50,7 +50,11 @@ class WebAdapterConfigurationTest {
         mvc.perform(multipart("/api/database/preview").file(valid)).andExpect(status().isOk())
             .andExpect(jsonPath("$.entries").value(0)).andExpect(jsonPath("$.sharedPlan").value(true));
         assertThat(mvc.perform(get("/api/database/export")).andReturn().getResponse().getContentAsByteArray()).isEqualTo(before);
-        for (String invalid : new String[]{"{", "{\"formatVersion\":99}", "{\"formatVersion\":2,\"entries\":[],\"operations\":[],\"plans\":{\"household\":{\"allocationVersion\":3,\"bonds\":99,\"gold\":0,\"developed\":0,\"emerging\":0}}}"}) {
+        var personal = new MockMultipartFile("file", "personal.json", "application/json", "{\"formatVersion\":2,\"entries\":[],\"operations\":[],\"plans\":{\"zosia\":{\"allocationVersion\":2,\"bonds\":50,\"stocks\":50,\"gold\":50,\"developed\":35,\"emerging\":15}}}".getBytes());
+        mvc.perform(multipart("/api/database/preview").file(personal)).andExpect(status().isOk()).andExpect(jsonPath("$.sharedPlan").value(false));
+        mvc.perform(multipart("/api/database/import").file(personal)).andExpect(status().isBadRequest());
+        assertThat(mvc.perform(get("/api/database/export")).andReturn().getResponse().getContentAsByteArray()).isEqualTo(before);
+        for (String invalid : new String[]{"{\"formatVersion\":2,\"entries\":[],\"operations\":[],\"plans\":{\"jakub\":{\"allocationVersion\":999},\"zosia\":{\"allocationVersion\":2,\"bonds\":50,\"stocks\":50,\"gold\":50,\"developed\":35,\"emerging\":15}}}", "{", "{\"formatVersion\":99}", "{\"formatVersion\":2,\"entries\":[],\"operations\":[],\"plans\":{\"household\":{\"allocationVersion\":3,\"bonds\":99,\"gold\":0,\"developed\":0,\"emerging\":0}}}"}) {
             var file = new MockMultipartFile("file", "bad.json", "application/json", invalid.getBytes());
             mvc.perform(multipart("/api/database/preview").file(file)).andExpect(status().isBadRequest());
             mvc.perform(multipart("/api/database/import").file(file)).andExpect(status().isBadRequest());

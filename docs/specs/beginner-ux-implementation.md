@@ -47,7 +47,7 @@ Każdy scenariusz ma wskazany kod i test na kontrolowanych danych. E31/E32 są c
 
 ## Walidacja i rzeczywiste ograniczenia
 
-- Lokalnie: 91 testów backendu (w tym architektura, HTTP preview/import i migracja H2), 78 jednostkowych frontendu, 100 testów komponentów/dostępności i 44 scenariusze Playwright desktop/mobile. Ostatnie zmiany komunikatu niepotwierdzonego usunięcia i granicy bezpiecznych kwot mają dodatkowe testy skupione; pełny przebieg aktualnego commita wymaga zielonego CI.
+- Lokalnie: 91 testów backendu (w tym architektura, HTTP preview/import i migracja H2), 79 jednostkowych frontendu, 100 testów komponentów/dostępności i 44 scenariusze Playwright desktop/mobile. Ostatnie zmiany komunikatu niepotwierdzonego usunięcia i granicy bezpiecznych kwot mają dodatkowe testy skupione; pełny przebieg aktualnego commita wymaga zielonego CI.
 - `mvn package` z Java 21: sukces. Użyto lokalnego Mavena `/workspace/tools/apache-maven-3.9.11/bin/mvn` z ustawieniami proxy i repozytorium środowiska; standardowy `mvn` nie był w PATH. Kolejne przepakowanie wyłącznie UI pomijało wykonane już testy backendu; pełne CI pozostaje wymagane dla aktualnego commita.
 - Lokalny Playwright używa systemowego `/usr/bin/chromium`; CI używa wersji przypiętej przez repozytorium. Oba projekty (desktop/mobile) korzystają wyłącznie z tymczasowego H2 stworzonego przez start-test-server.js. Test insecure HTTP nadal nie włącza secure context.
 - Obejrzano zrzuty 320/1440 px i sprawdzono UI w Playwright. Naprawiono rzeczywiste rozszerzanie siatki przez tabelę planu i nagłówek przy większym tekście. Test kontroluje także innerWidth, żeby mobilne rozszerzanie viewportu nie maskowało błędu.
@@ -55,3 +55,5 @@ Każdy scenariusz ma wskazany kod i test na kontrolowanych danych. E31/E32 są c
 - Ostrzeżenie beforeunload zależy od polityki przeglądarki i nie może zagwarantować zachowania szkicu po zamknięciu procesu. Szkice są wyłącznie sesyjne.
 - Udziały przechowują do 50 znaczących miejsc po przecinku; przekroczenie jest błędem, nigdy cichym zaokrągleniem. Migracja starych wag DOUBLE i ich efektywnych iloczynów mieści się w tym zakresie.
 - KOD-02: poprzedni efekt odczytu planu zależał tylko od scope/useCases i nie obserwował importu. Regresja E29 ładuje stary plan przed importem i wymaga nowego po nim; naprawa dodaje jawne odświeżenie planu. Nie wykonywano importu do produkcji.
+
+Regresja E29 (`backupPreview.test.js`) najpierw odtworzyła pominięcie uszkodzonego, niewybranego planu podczas przygotowania kopii. Podgląd teraz waliduje cały plik źródłowy przed wyborem; dopiero poprawna kopia może zostać przekształcona do jednego planu. Serwerowy preview dopuszcza brak planu wspólnego wyłącznie do odczytu, nadal walidując wszystkie plany; import takiego pliku bez jawnego wyboru pozostaje odrzucony.

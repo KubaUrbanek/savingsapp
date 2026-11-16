@@ -10,13 +10,14 @@ import tools.jackson.databind.ObjectMapper;
 
 /** JSON boundary shared by backups and one-time legacy migration. */
 public final class InvestmentBackupJsonCodec implements pl.oszczednosci.app.application.port.out.BackupInspectionPort {
-    public InvestmentBackup inspect(byte[] bytes) { return parse(bytes, true); }
+    public InvestmentBackup inspect(byte[] bytes) { return parse(bytes, true, true); }
     private static final TypeReference<List<InvestmentEntryJsonRecord>> LEGACY_ENTRIES = new TypeReference<>() {};
     private final ObjectMapper json;
     private final InvestmentEntryJsonMapper entryMapper = new InvestmentEntryJsonMapper();
     private final InvestmentOperationJsonMapper operationMapper = new InvestmentOperationJsonMapper();
     public InvestmentBackupJsonCodec(ObjectMapper json) { this.json = json; }
-    public InvestmentBackup parse(byte[] bytes, boolean imported) {
+    public InvestmentBackup parse(byte[] bytes, boolean imported) { return parse(bytes, imported, false); }
+    private InvestmentBackup parse(byte[] bytes, boolean imported, boolean preview) {
         try {
             JsonNode root = json.readTree(bytes);
             if (root == null) throw new IllegalArgumentException("Backup document is empty");
@@ -34,10 +35,10 @@ public final class InvestmentBackupJsonCodec implements pl.oszczednosci.app.appl
             var parsed=backup(document.entries(), document.operations());
             if(document.formatVersion()==2 && document.plans()==null) throw new IllegalArgumentException("Backup must contain plans");
             var plans=document.plans()==null ? java.util.Map.<String,pl.oszczednosci.app.domain.model.PortfolioPlan>of() : document.plans().entrySet().stream().collect(java.util.stream.Collectors.toMap(java.util.Map.Entry::getKey,e->e.getValue().toDomain()));
-            if (!plans.isEmpty() && !plans.containsKey("household"))
+            if (!preview && !plans.isEmpty() && !plans.containsKey("household"))
                 throw new IllegalArgumentException("Wybierz wspólny plan w podglądzie kopii.");
             return new InvestmentBackup(InvestmentBackup.CURRENT_FORMAT_VERSION,parsed.entries(),parsed.operations(),
-                    plans.containsKey("household") ? java.util.Map.of("household", plans.get("household")) : java.util.Map.of());
+                    preview ? plans : plans.containsKey("household") ? java.util.Map.of("household", plans.get("household")) : java.util.Map.of());
         } catch (RuntimeException exception) {
             if (imported) throw new MalformedImportException("Invalid investment backup document.", exception);
             throw new PersistenceException("Malformed investment document", exception);
