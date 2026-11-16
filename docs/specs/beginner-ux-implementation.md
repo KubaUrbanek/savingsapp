@@ -47,7 +47,7 @@ Każdy scenariusz ma wskazany kod i test na kontrolowanych danych. E31/E32 są c
 
 ## Walidacja i rzeczywiste ograniczenia
 
-- Lokalnie: 92 testy backendu (w tym architektura, HTTP preview/import i migracja H2), 80 jednostkowych frontendu, 100 testów komponentów/dostępności i 44 scenariusze Playwright desktop/mobile. Ostatnie zmiany komunikatu niepotwierdzonego usunięcia i granicy bezpiecznych kwot mają dodatkowe testy skupione; pełny przebieg aktualnego commita wymaga zielonego CI.
+- Lokalnie: 92 testy backendu (w tym architektura, HTTP preview/import i migracja H2), 81 jednostkowych frontendu, 101 testów komponentów/dostępności i 44 scenariusze Playwright desktop/mobile. Ostatnie zmiany komunikatu niepotwierdzonego usunięcia i granicy bezpiecznych kwot mają dodatkowe testy skupione; pełny przebieg aktualnego commita wymaga zielonego CI.
 - `mvn package` z Java 21: sukces. Użyto lokalnego Mavena `/workspace/tools/apache-maven-3.9.11/bin/mvn` z ustawieniami proxy i repozytorium środowiska; standardowy `mvn` nie był w PATH. Kolejne przepakowanie wyłącznie UI pomijało wykonane już testy backendu; pełne CI pozostaje wymagane dla aktualnego commita.
 - Lokalny Playwright używa systemowego `/usr/bin/chromium`; CI używa wersji przypiętej przez repozytorium. Oba projekty (desktop/mobile) korzystają wyłącznie z tymczasowego H2 stworzonego przez start-test-server.js. Test insecure HTTP nadal nie włącza secure context.
 - Obejrzano zrzuty 320/1440 px i sprawdzono UI w Playwright. Naprawiono rzeczywiste rozszerzanie siatki przez tabelę planu i nagłówek przy większym tekście. Test kontroluje także innerWidth, żeby mobilne rozszerzanie viewportu nie maskowało błędu.
@@ -59,3 +59,5 @@ Każdy scenariusz ma wskazany kod i test na kontrolowanych danych. E31/E32 są c
 Regresja E29 (`backupPreview.test.js`) najpierw odtworzyła pominięcie uszkodzonego, niewybranego planu podczas przygotowania kopii. Podgląd teraz waliduje cały plik źródłowy przed wyborem; dopiero poprawna kopia może zostać przekształcona do jednego planu. Serwerowy preview dopuszcza brak planu wspólnego wyłącznie do odczytu, nadal walidując wszystkie plany; import takiego pliku bez jawnego wyboru pozostaje odrzucony.
 
 Regresja precyzji E29 odtworzyła zaokrąglenie bardzo dużych kwot przez JSON.parse/stringify przy wyborze starszego planu. Przygotowanie kanonicznego pliku przeniesiono do PreviewBackupService i kodeka BigDecimal; przeglądarka otrzymuje nieprzezroczyste bajty Base64. Test HTTP sprawdza podgląd bez zapisu, wybór planu i atomowy import dokładnej kwoty `12345678901234567890.12`, a test adaptera sprawdza zachowanie bajtów.
+
+E31: obramowania kontrolek mają osobny token kontrastu co najmniej 3:1 na białym i jasnym tle (stylesheetContrast). Błąd nieustawionej osoby w Razem ustawia fokus na właściwym selektorze; regresja AppRouter sprawdza powiązany polski komunikat.

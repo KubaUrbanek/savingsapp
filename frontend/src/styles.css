@@ -25,6 +25,7 @@
   --color-focus: #008ca3;
   --color-shadow-subtle: rgb(23 35 28 / 4%);
   --color-control-text: #314136;
+  --color-control-border: #647b6c;
   --color-code-background: #101915;
   --color-progress-track: #e8efe9;
   --color-disabled-text: #59675e;
@@ -2276,3 +2277,5 @@ body {
 .workspaceHeading, .workspaceControls .userSwitcher { flex-wrap: wrap; }
 .savingsTabs .button { overflow-wrap: anywhere; }
 .workspaceHeading h1 { overflow-wrap: anywhere; white-space: normal; }
+
+:is(.formPanel, .allocationInputs, .overviewHistoryControls, .purchasePlanPanel, .field) :is(input:not([type=checkbox]), select, textarea) { border-color: var(--color-control-border); }

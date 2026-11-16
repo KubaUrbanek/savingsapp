@@ -659,3 +659,25 @@ describe('Savings workspace', () => {
     expect(screen.getByText('Zapisujesz dla:')).toHaveTextContent('Jakub');
   });
 });
+
+it('E22 E31 focuses the explicit household owner when its required value is missing', async () => {
+  render(
+    <AppRouter
+      dependencies={dependencies({
+        recordPortfolioChange: {
+          execute: async () => {
+            throw new PortfolioChangeValidationFailure('owner', 'Wybierz osobę.', 'OWNER_REQUIRED');
+          }
+        }
+      })}
+    />
+  );
+  fireEvent.click(screen.getByRole('button', { name: 'Razem' }));
+  await openForm('10');
+  const owner = screen.getByLabelText('Zapisujesz dla');
+  expect(owner).toHaveValue('');
+  fireEvent.click(screen.getByRole('button', { name: 'Zapisz wpłatę' }));
+  await waitFor(() => expect(owner).toHaveFocus());
+  expect(owner).toHaveAttribute('aria-invalid', 'true');
+  expect(owner).toHaveAccessibleDescription('Wybierz osobę.');
+});

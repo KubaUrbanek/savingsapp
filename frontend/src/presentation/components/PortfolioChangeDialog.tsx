@@ -213,7 +213,14 @@ export function PortfolioChangeDialog(props: Props) {
             label="Zapisujesz dla"
             error={errors.owner}
             control={
-              <select value={owner} onChange={(e) => onOwnerChange(e.target.value)} disabled={saving}>
+              <select
+                ref={(element) => {
+                  fields.current.owner = element;
+                }}
+                value={owner}
+                onChange={(e) => onOwnerChange(e.target.value)}
+                disabled={saving}
+              >
                 <option value="">Wybierz osobę</option>
                 {owners.map((o) => (
                   <option key={o} value={o}>
