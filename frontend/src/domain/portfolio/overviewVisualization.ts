@@ -20,7 +20,7 @@ export type OverviewHistoryPoint = {
   incomplete?: boolean;
 };
 
-const assetClassOrder = ['BONDS', 'STOCKS', 'GOLD', 'CASH', 'UNCLASSIFIED'];
+const assetClassOrder = ['BONDS', 'STOCKS', 'GOLD', 'BITCOIN', 'CASH', 'UNCLASSIFIED'];
 
 export function groupKey(entry: Classification, grouping: OverviewGrouping): string {
   return grouping === 'accounts' ? entry.type : globalAssetClass(entry);

@@ -62,3 +62,20 @@ test('older preferences gain zero Bitcoin targets without losing weights', async
   assert.equal(repository.getStockAllocation().BITCOIN, 0);
   assert.equal(JSON.parse(storage.get(PREFERENCE_STORAGE_KEY)).version, 3);
 });
+
+test('Bitcoin is available in overview asset-class filters and distributions', async () => {
+  const { availableGroups, buildOverviewDistribution } =
+    await import('../../src/domain/portfolio/overviewVisualization.js');
+  const entries = [
+    {
+      owner: 'jakub',
+      type: 'GIELDA',
+      subcategory: 'BITCOIN',
+      valuePln: 500,
+      date: '2020-01-01',
+      createdAt: '2020-01-01T10:00:00Z'
+    }
+  ];
+  assert.deepEqual(availableGroups(entries, 'assetClasses'), ['BITCOIN']);
+  assert.deepEqual(buildOverviewDistribution(entries, 'assetClasses'), [{ key: 'BITCOIN', value: 500, share: 100 }]);
+});
