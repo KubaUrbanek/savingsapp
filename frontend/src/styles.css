@@ -2378,3 +2378,6 @@ body {
 .purchasePlanPanel .allocationVisualIntro { margin-block: 6px; }
 .purchasePlanPanel section[aria-label="Rebalans obecnego portfela"] > h3 { margin-block: 12px; }
 .purchasePlanPanel .planCash { margin-block: 8px; }
+.purchasePlanPanel .allocationVisual { padding: 12px; }
+.purchasePlanPanel section[aria-label="Rebalans obecnego portfela"] > p { margin-block: 8px; }
+.purchasePlanPanel .rebalanceSelectionOptions small { font-size: 14px; line-height: 20px; }
