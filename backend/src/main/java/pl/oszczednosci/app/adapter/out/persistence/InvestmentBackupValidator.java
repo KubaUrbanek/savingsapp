@@ -23,7 +23,7 @@ public final class InvestmentBackupValidator {
         for(var group:groups.entrySet()) {
             var primary=group.getValue().stream().filter(o->o.getId().equals(group.getKey())).findFirst().orElseThrow(()->new IllegalArgumentException("Missing primary portfolio event"));
             boolean trade=primary.getOperationType()==pl.oszczednosci.app.domain.model.InvestmentOperationType.BUY || primary.getOperationType()==pl.oszczednosci.app.domain.model.InvestmentOperationType.SELL;
-            if(group.getValue().size()!=(trade?2:1)) throw new IllegalArgumentException("Invalid number of event legs");
+            if(group.getValue().size()!=1 && !(trade && group.getValue().size()==2)) throw new IllegalArgumentException("Invalid number of event legs");
             for(var operation:group.getValue()) {
                 var entry=backup.entries().stream().filter(e->e.getId().equals(operation.getId())).findFirst().orElseThrow(()->new IllegalArgumentException("Missing linked event valuation"));
                 if(!entry.owner().equals(operation.owner()) || !entry.category().equals(operation.category()) || !entry.date().equals(operation.getDate())) throw new IllegalArgumentException("Event and valuation must describe the same asset and date");

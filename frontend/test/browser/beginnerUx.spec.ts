@@ -152,7 +152,7 @@ test('E07 E14 network errors are distinct from missing data and retry locally', 
   await page.getByRole('button', { name: 'Odśwież wyniki', exact: true }).click();
   await expect(page.locator('.savingsHeadline')).not.toContainText('Nie udało się');
 });
-test('E20 first purchase keeps its draft while adding the source account', async ({ page }) => {
+test('E20 first purchase succeeds without a source account', async ({ page }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Dodaj wpis', exact: true }).click();
   await page.getByLabel('Co chcesz zrobić?').selectOption('BUY');
@@ -160,14 +160,9 @@ test('E20 first purchase keeps its draft while adding the source account', async
   await page.getByLabel('Rodzaj inwestycji', { exact: true }).selectOption('ZLOTO');
   await page.getByLabel('Kwota — zł', { exact: true }).fill('25,50');
   await page.getByLabel('Data zmiany').fill('2020-02-01');
-  await expect(page.getByRole('dialog')).toContainText('Brak zapisanego salda');
-  await page.getByRole('button', { name: 'Dodaj stan konta źródłowego', exact: true }).click();
-  await page.getByLabel('Ile masz teraz — zł').fill('100');
-  await page.getByRole('button', { name: 'Zapisz oszczędności', exact: true }).click();
-  await expect(page.getByLabel('Kwota — zł', { exact: true })).toHaveValue('25,50');
   await page.getByRole('button', { name: 'Zapisz zakup', exact: true }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.locator('.summaryTotal')).toContainText('100,00');
+  await expect(page.locator('.summaryTotal')).toContainText('25,50');
 });
 test('E22 E24 validation and dirty dialog preserve the input and focus', async ({ page, request }) => {
   await seed(request);

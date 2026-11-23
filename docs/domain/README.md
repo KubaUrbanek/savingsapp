@@ -1,6 +1,28 @@
 # Savings and investment domain
 
-This is the product-level description of the implemented backend. See [`backend/ARCHITECTURE.md`](../../backend/ARCHITECTURE.md) for contributor rules.
+This document describes the portfolio domain. See [`backend/ARCHITECTURE.md`](../../backend/ARCHITECTURE.md) for contributor rules.
+
+## Zakup i sprzedaż aktywów
+
+**Status** · Zatwierdzona 23 listopada 2026, wdrożona
+
+### Cel
+
+Użytkownik może zapisać zakup lub sprzedaż aktywa bez wskazywania konta gotówkowego.
+
+### Reguły
+
+- Zakup (`BUY`) zwiększa wartość aktywa o kwotę transakcji i może być jego pierwszym wpisem. Zapis jest niezależny od istnienia konta gotówkowego i jego salda. Pozostają podstawowe wymagania dotyczące danych, w tym dodatnia kwota.
+- Sprzedaż (`SELL`) zmniejsza wartość aktywa o kwotę transakcji. Wpływy opuszczają śledzony portfel i są widoczne w historii. Kwota sprzedaży może wynosić najwyżej tyle, ile wartość aktywa w dniu operacji.
+- Formularz nowych transakcji nie zawiera wyboru konta, a API przyjmuje zapis bez `cashType`. Zakup i sprzedaż to odpowiednio dopływ i odpływ kapitału. Wartość portfela i jego kapitał netto zmieniają się o tę samą kwotę, więc sam zapis nie tworzy zysku ani straty.
+- Korekta lub cofnięcie nowej transakcji przelicza późniejsze wartości aktywa z uwzględnieniem ręcznych wycen. Wcześniejsze transakcje z kontem zachowują obie strony, także przy korekcie i cofnięciu.
+
+### Kryteria akceptacji
+
+1. Gdy użytkownik nie ma zapisanego konta gotówkowego, może kupić nowe aktywo za 500 zł. Wartość aktywa wynosi 500 zł, aplikacja pokazuje jeden wpis zakupu w historii i nie tworzy konta.
+2. Gdy konto ma 100 zł, zakup za 500 zł jest możliwy, a późniejsza sprzedaż za 200 zł pozostawia aktywo o wartości 300 zł. Konto ma nadal 100 zł, a same transakcje nie zmieniają wyniku inwestycyjnego.
+3. Próba sprzedaży za 301 zł z aktywa wartego 300 zł zostaje odrzucona bez zapisu. Sprzedaż za 300 zł jest możliwa i sprowadza wartość do zera.
+4. Cofnięcie sprzedaży za 200 zł przywraca wartość aktywa z 300 zł do 500 zł, jeśli od sprzedaży nie zapisano kolejnej wyceny. Cofnięcie wcześniejszej sprzedaży powiązanej z kontem odwraca obie strony historycznej transakcji.
 
 ## Vocabulary, categories, and owners
 
@@ -60,7 +82,7 @@ Export includes `formatVersion`, **all entries**, and **all operations** includi
 
 ## Wpłaty, koszt i wynik
 
-`INITIAL` określa stan i znany koszt posiadanej inwestycji na datę rozpoczęcia śledzenia. Brak kosztu nie oznacza kosztu zero. Stan początkowy nie jest zyskiem miesiąca ani nową wpłatą. Wpłata/wypłata to przepływ zewnętrzny, a zakup/sprzedaż z konta to dwie strony przesunięcia wewnętrznego. Obie strony zapisują się i cofają razem. Późniejsze salda wynikające ze zdarzeń odtwarzamy chronologicznie; ręczne wyceny pozostają punktami odniesienia.
+`INITIAL` określa stan i znany koszt posiadanej inwestycji na datę rozpoczęcia śledzenia. Brak kosztu nie oznacza kosztu zero. Stan początkowy nie jest zyskiem miesiąca ani nową wpłatą. Wpłata/wypłata to przepływ zewnętrzny, a nowe zakupy i sprzedaże są przepływami zewnętrznymi. Starsze transfery z kontem zapisują się i cofają razem. Późniejsze salda wynikające ze zdarzeń odtwarzamy chronologicznie; ręczne wyceny pozostają punktami odniesienia.
 
 Wynik pojedynczej inwestycji uwzględnia koszt zakupów i wpływy ze sprzedaży. W całym portfelu transfery się znoszą. Nieznany koszt lub brak wyceny nie pozwala obliczyć wyniku; brak wyceny otwarcia nie pozwala obliczyć wyniku miesiąca. Opłaty zawarte w rzeczywistym saldzie nie są odliczane ponownie.
 
@@ -69,7 +91,7 @@ Plan: cztery równorzędne udziały — obligacje, złoto, akcje rynków rozwini
 
 ## Correcting a tracked change
 
-PUT `/api/portfolio-changes/{id}` corrects an event using the same request identifier as its path. A correction cannot move it to another owner or asset. Purchase/sale corrections change both transfer legs atomically and replay dependent generated balances. Explicit valuations remain historical anchors. An invalid correction or an overdraw leaves the stored document unchanged. Legacy independent operations retain fees, taxes and notes and do not generate a linked valuation. POST and DELETE use the same atomic event boundary; plans use GET/PUT `/api/portfolio-plans?scope=...`.
+PUT `/api/portfolio-changes/{id}` corrects an event using the same request identifier as its path. A correction cannot move it to another owner or asset. Purchase/sale corrections change the asset atomically, including both legs for legacy transfers and replay dependent generated balances. Explicit valuations remain historical anchors. An invalid correction or an overdraw leaves the stored document unchanged. Legacy independent operations retain fees, taxes and notes and do not generate a linked valuation. POST and DELETE use the same atomic event boundary; plans use GET/PUT `/api/portfolio-plans?scope=...`.
 
 The UI presents one chronological event row per tracked change, regardless of how many linked balances it updates. Household performance uses the full owner scope and excludes entirely empty owners from known-profit aggregation. A held asset with unknown contributions still makes profit unknown.
 

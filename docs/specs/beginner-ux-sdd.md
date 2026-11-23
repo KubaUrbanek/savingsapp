@@ -7,6 +7,8 @@
 
 **Zaakceptowane uzupełnienie z 16 listopada 2026:** [jeden hierarchiczny Przegląd inwestycji](overview-investment-hierarchy-sdd.md) zastępuje zasady dwóch grupowań z §5.2 i doprecyzowuje wykresy po PR #102. W razie rozbieżności obowiązuje uzupełnienie. Jego implementacja jest osobnym zadaniem.
 
+**Uzupełnienie zatwierdzone 23 listopada 2026** · Zakup i sprzedaż są przepływami zewnętrznymi bez automatycznej zmiany kont gotówkowych. Reguły i kryteria akceptacji opisuje [specyfikacja domeny](../domain/README.md#zakup-i-sprzedaż-aktywów). Wcześniejsze transfery zachowują obie strony.
+
 ## 1. Cel i granice
 
 Aplikacja ma pozwalać początkującej osobie szybko odpowiedzieć na trzy pytania: **ile mam, co się zmieniło i jak rozdzielić kolejne pieniądze, żeby zbliżyć inwestycje do mojego planu**. Typowa czynność nie powinna wymagać znajomości wewnętrznego modelu danych ani czytania długiej instrukcji.
@@ -154,9 +156,9 @@ Globalny przycisk zmieniamy na **Dodaj wpis**. Po otwarciu użytkownik wybiera z
 |---|---|---|
 | Dodaj posiadane oszczędności | „Zaczynasz śledzić konto lub inwestycję, które już masz” | Konto/produkt, rodzaj inwestycji, wartość, data, opcjonalnie wpłaty |
 | Zapisz wpłatę | „Nowe pieniądze trafiają do oszczędności” | Miejsce wpłaty, kwota, data |
-| Zapisz zakup | „Pieniądze z konta przeznaczasz na inwestycję” | Inwestycja, konto źródłowe, kwota, data |
+| Zapisz zakup | „Zapisujesz kwotę przeznaczoną na inwestycję” | Inwestycja, kwota, data |
 | Aktualizuj wartość | „Przepisujesz aktualne saldo lub wartość; nie dopisujesz wpłaty” | Inwestycja, nowa wartość, data |
-| Wypłata / sprzedaż | Mniej częste działania, dostępne pod „Więcej działań” | Wypłata poza oszczędności albo sprzedaż z powrotem na wskazane konto |
+| Wypłata / sprzedaż | Mniej częste działania, dostępne pod „Więcej działań” | Wypłata poza oszczędności albo sprzedaż z wpływami opuszczającymi śledzony portfel |
 
 To jeden krótki formularz ze zmieniającymi się polami, a nie obowiązkowy kreator kilku ekranów. Wejście z „Aktualizuj wartość”, „Uzupełnij wpłaty” lub pustego portfela pomija wybór zamiaru i otwiera właściwy wariant. Tytuł i przycisk zapisu są konkretne: „Aktualizuj wartość PPK” / „Zapisz wartość”, nie zawsze „Dodaj zmianę”.
 
@@ -168,7 +170,7 @@ Przy dodawaniu posiadanych aktywów podstawą jest obecna wartość i data. Pyta
 
 „Uzupełnij wpłaty” pokazuje nazwę inwestycji, właściciela, zachowywaną wartość i właściwą datę oraz jedno potrzebne pole. Nie udaje dodawania nowej inwestycji ani nie daje niepotrzebnych edytowalnych selektorów. Przed zapisem wyjaśnia, jaki okres obejmuje podawana suma; nie zmienia samowolnie historycznej wyceny ani nie podwaja kapitału.
 
-Pierwszy nowy zakup ma być możliwy bez ręcznego tworzenia fikcyjnego stanu początkowego. Jeżeli źródłowe konto nie jest jeszcze ewidencjonowane, wyjaśniamy potrzebny stan konta i dajemy bezpośrednie przejście do jego dodania z zachowaniem szkicu zakupu. Nie zgadujemy salda. Warstwa domenowa musi zachować atomowość obu stron transferu.
+Pierwszy zakup jest możliwy bez stanu początkowego i bez konta źródłowego. Zakup zwiększa wartość aktywa i kapitał netto o wpisaną kwotę.
 
 ### 8.3 Walidacja, kontekst i zamknięcie
 
@@ -176,8 +178,8 @@ Pierwszy nowy zakup ma być możliwy bez ręcznego tworzenia fikcyjnego stanu po
 - Kwoty z maksymalnie dwoma miejscami po przecinku. Przecinek/kropka i wklejona kwota z odstępami są interpretowane jednoznacznie; użytkownik widzi znormalizowaną wartość. Nie przyjmujemy NaN, nieskończoności ani wartości poza bezpiecznym zakresem modelu.
 - Zasady zera zależą od działania: potwierdzona wycena 0 jest możliwa; wpłata, zakup, sprzedaż i wypłata wymagają kwoty dodatniej.
 - Datę dzisiejszą i maksymalną liczymy w strefie Europe/Warsaw, także po północy i przy zmianie czasu. Obie warstwy uzgadniają tę samą datę biznesową.
-- Przy zakupie pokazujemy saldo źródła i rezultat transferu. Niewystarczające **znane, właściwe dla daty działania** saldo daje jasny komunikat przed wysłaniem; błąd serwera nadal jest wiążący. Brak wyceny źródła to brak danych, a nie potwierdzone 0. Nie blokujemy poprawnej historycznej transakcji na podstawie wyłącznie dzisiejszego salda.
-- Podgląd sprzedaży pokazuje, skąd ubywa inwestycja i na które konto wracają pieniądze. Sprzedaż i wypłata poza portfel nie są zamienne.
+- Zakup można zapisać niezależnie od salda i istnienia konta gotówkowego. Podgląd pokazuje wzrost wartości inwestycji o kwotę zakupu.
+- Sprzedaż zmniejsza wartość aktywa, a wpływy opuszczają śledzony portfel. Kwota sprzedaży jest ograniczona wartością aktywa w dniu operacji.
 - Błąd zapisu pozostawia wpisane dane. Podwójne kliknięcie nie tworzy dwóch operacji. Stan „Zapisywanie…” jest widoczny i blokuje drugi zapis.
 - Pusty formularz zamyka się bez pytania. Zmieniony formularz przy zamknięciu proponuje „Wróć do edycji / Odrzuć zmiany”. Nigdy nie zapisuje automatycznie. Na telefonie stopka działań pozostaje osiągalna przy otwartej klawiaturze, a fokusowane pole nie jest zasłonięte.
 
@@ -263,7 +265,7 @@ Każdy scenariusz zapisu, usunięcia i importu wykonuje się na izolowanych dany
 | E17 | Dowolne źródło budżetu: gotówka nie doliczana drugi raz; pozostałe aktywa nie wpływają na wynik ani mianownik; brak jakichkolwiek ostrzeżeń i sekcji o wyłączeniach. |
 | E18 | Pusty portfel: utworzenie planu i symulacja bez sztucznych wpisów; nie mylić szablonu z zapisanym planem. |
 | E19 | Dodanie stanu początkowego, wpłaty, zakupu, wypłaty, sprzedaży i wyceny: właściwe pola, właściciel i konkretne tytuły; brak niejawnego domyślnego rachunku. Po wypłacie suma wpłat brutto nie maleje, wypłaty rosną, a kapitał netto i wynik zachowują poprawne znaczenie. |
-| E20 | Pierwszy zakup nowej kategorii: poprawna ścieżka bez fikcyjnego wkładu; brak salda źródła wyjaśniony i możliwy do uzupełnienia. |
+| E20 | Pierwszy zakup nowej kategorii jest możliwy bez konta źródłowego i bez fikcyjnego wkładu początkowego. |
 | E21 | Saldo niewystarczające, nieznane lub historyczne: rozróżnione komunikaty; poprawna walidacja domenowa, brak częściowego transferu. |
 | E22 | Puste/niepoprawne kwoty i daty: polskie komunikaty przy polach, zachowany fokus i dane; podwójny zapis nie duplikuje operacji. |
 | E23 | 16.11.2026 00:30 Europe/Warsaw: formularz i maksymalna data pokazują 16 listopada; analogiczne testy granicy czasu letniego. |

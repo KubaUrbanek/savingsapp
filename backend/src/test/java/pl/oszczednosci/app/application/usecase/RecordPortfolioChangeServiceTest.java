@@ -21,6 +21,25 @@ class RecordPortfolioChangeServiceTest {
  @BeforeEach void setup(){store=new JsonInvestmentStore(new JsonMapper(),temp.resolve("data.json"));var tick=new AtomicInteger();service=new RecordPortfolioChangeService(store,()->Instant.parse("2026-10-10T12:00:00Z").plusNanos(tick.getAndIncrement()), UUID::randomUUID);}
  private RecordPortfolioChangeCommand c(String kind,InvestmentType type,String date,String amount,String value){return new RecordPortfolioChangeCommand(UUID.randomUUID(),kind,OwnerId.of("jakub"),type,type==InvestmentType.GIELDA?InvestmentSubcategory.RYNKI_ROZWINIETE:null,LocalDate.parse(date),amount==null?null:new BigDecimal(amount),value==null?null:new BigDecimal(value),InvestmentType.KONTO_BANKOWE);}
  private BigDecimal value(InvestmentType type,String date){return PortfolioChangeCalculator.valueAt(store.snapshot().entries(),OwnerId.of("jakub"),AssetCategory.of(type,type==InvestmentType.GIELDA?InvestmentSubcategory.RYNKI_ROZWINIETE:null),LocalDate.parse(date)).amount();}
+ @Test void independentTradesNeedNoCashAndSupportRetryCorrectionUndoAndBackup() {
+  var purchase=c("BUY",InvestmentType.GIELDA,"2026-09-01","500",null);
+  purchase=new RecordPortfolioChangeCommand(purchase.requestId(),purchase.kind(),purchase.owner(),purchase.type(),purchase.subcategory(),purchase.date(),purchase.amountPln(),null,null);
+  service.record(purchase); service.record(purchase);
+  assertThat(store.snapshot().operations()).hasSize(1);
+  assertThat(value(InvestmentType.GIELDA,"2026-10-10")).isEqualByComparingTo("500");
+  var sale=new RecordPortfolioChangeCommand(UUID.randomUUID(),"SELL",purchase.owner(),purchase.type(),purchase.subcategory(),LocalDate.parse("2026-09-02"),new BigDecimal("200"),null,null);
+  service.record(sale);
+  assertThat(value(InvestmentType.GIELDA,"2026-10-10")).isEqualByComparingTo("300");
+  assertThat(store.snapshot().entries()).noneMatch(e->e.getType()==InvestmentType.KONTO_BANKOWE);
+  byte[] backup=store.exportBackup();
+  var excessive=new RecordPortfolioChangeCommand(UUID.randomUUID(),"SELL",purchase.owner(),purchase.type(),purchase.subcategory(),LocalDate.parse("2026-09-03"),new BigDecimal("301"),null,null);
+  assertThatThrownBy(()->service.record(excessive)).isInstanceOf(IllegalArgumentException.class);
+  assertThat(store.exportBackup()).isEqualTo(backup);
+  service.update(sale.requestId(),correction(sale,"300",null));
+  assertThat(value(InvestmentType.GIELDA,"2026-10-10")).isEqualByComparingTo("200");
+  service.delete(sale.requestId());
+  assertThat(value(InvestmentType.GIELDA,"2026-10-10")).isEqualByComparingTo("500");
+ }
  @Test void repeatedRequestAndConcurrentRetryDoNotDuplicateCashFlow() throws Exception {
   var request=c("DEPOSIT",InvestmentType.KONTO_BANKOWE,"2026-10-10","1000",null);
   try(var threads=Executors.newFixedThreadPool(2)){var a=threads.submit(()->service.record(request));var b=threads.submit(()->service.record(request));assertThat(a.get()).isEqualTo(b.get());}
