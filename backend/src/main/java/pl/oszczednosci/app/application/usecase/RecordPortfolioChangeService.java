@@ -119,10 +119,12 @@ public final class RecordPortfolioChangeService implements RecordPortfolioChange
             var amount = kind == InvestmentOperationType.INITIAL ? new Money(c.amountPln()) : Money.positive(c.amountPln());
             operations.add(InvestmentOperation.create(new InvestmentOperationId(c.requestId()), kind, category, c.owner(), amount,
                     Money.zero(), Money.zero(), c.date(), null, created).withGroup(c.requestId()));
-            if ((kind == InvestmentOperationType.BUY || kind == InvestmentOperationType.SELL) && c.cashType() != null) {
-                if (c.cashType() != InvestmentType.KONTO_BANKOWE && c.cashType() != InvestmentType.KONTO_OSZCZEDNOSCIOWE)
+            var cashType = otherId != null && original != null
+                    ? operation(original, otherId).orElseThrow().getType() : c.cashType();
+            if ((kind == InvestmentOperationType.BUY || kind == InvestmentOperationType.SELL) && cashType != null) {
+                if (cashType != InvestmentType.KONTO_BANKOWE && cashType != InvestmentType.KONTO_OSZCZEDNOSCIOWE)
                     throw new IllegalArgumentException("Wybierz konto finansujące zakup lub przyjmujące sprzedaż.");
-                var cash = AssetCategory.of(c.cashType(), null);
+                var cash = AssetCategory.of(cashType, null);
                 if (cash.equals(category)) throw new IllegalArgumentException("Źródło i cel muszą być różne.");
                 var opposite = kind == InvestmentOperationType.BUY ? InvestmentOperationType.SELL : InvestmentOperationType.BUY;
                 UUID secondary = otherId == null ? ids.nextId() : otherId;
