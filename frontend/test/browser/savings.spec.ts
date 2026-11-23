@@ -126,7 +126,7 @@ test('overview filters and chart context survive tabs and owner changes', async 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
 });
 
-test('purchase moves existing cash, creates no profit and can be undone as one event', async ({ page, request }) => {
+test('purchase adds external capital, creates no profit and can be undone', async ({ page, request }) => {
   await initial(request, 'KONTO_BANKOWE', 1000);
   await initial(request, 'GIELDA', 1000, 'RYNKI_ROZWINIETE');
   await page.goto('/');
@@ -136,13 +136,12 @@ test('purchase moves existing cash, creates no profit and can be undone as one e
   await page.locator('#portfolio-change-type').selectOption('GIELDA');
   await page.locator('#portfolio-change-subcategory').selectOption('RYNKI_ROZWINIETE');
   await page.locator('#portfolio-change-operation-type').selectOption('BUY');
-  await page.getByLabel('Płacę z konta').selectOption('KONTO_BANKOWE');
   await page.locator('#portfolio-change-date').fill('2020-02-01');
   await page.locator('#portfolio-change-amount').fill('100');
   await page.getByRole('button', { name: /^Zapisz (wpłatę|zakup|sprzedaż|wypłatę|wartość|oszczędności)$/ }).click();
   await expect(page.locator('.formFeedback')).toContainText('Podsumowanie jest aktualne');
   const result = await (await request.get('/api/portfolio-performance?owner=jakub')).json();
-  expect(result.currentValuePln).toBe(2000);
+  expect(result.currentValuePln).toBe(2100);
   expect(result.nominalResultPln).toBe(0);
   expect(result.depositsTotalPln).toBe(2000);
   await page.getByRole('tab', { name: 'Historia', exact: true }).click();
@@ -154,7 +153,7 @@ test('purchase moves existing cash, creates no profit and can be undone as one e
   await page.getByRole('button', { name: 'Zapisz poprawkę' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
   const balances = await (await request.get('/api/investments?owner=jakub')).json();
-  expect(balances.filter((e: { type: string }) => e.type === 'KONTO_BANKOWE').at(0).valuePln).toBe(750);
+  expect(balances.filter((e: { type: string }) => e.type === 'KONTO_BANKOWE').at(0).valuePln).toBe(1000);
   expect(balances.filter((e: { type: string }) => e.type === 'GIELDA').at(0).valuePln).toBe(1250);
   page.once('dialog', (dialog) => dialog.accept());
   await page

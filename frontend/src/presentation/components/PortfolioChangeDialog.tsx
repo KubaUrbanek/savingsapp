@@ -41,8 +41,6 @@ interface Props {
   error: string;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
   onClose: () => void;
-  onAddSource?: () => void;
-  onReturnToPurchase?: (() => void) | undefined;
 }
 const actions = {
   INITIAL: 'Dodaj posiadane oszczędności',
@@ -56,9 +54,9 @@ const help = {
   INITIAL:
     'Wpisz saldo konta lub wartość inwestycji na dzień, od którego zaczynasz ją śledzić w aplikacji. Jeśli znasz sumę dotychczasowych wpłat, podaj ją poniżej.',
   DEPOSIT: 'Dodajesz nowe pieniądze do oszczędności. Wpłata zwiększa Twój wkład, a nie zysk.',
-  BUY: 'Kupujesz inwestycję za pieniądze z wybranego konta. Sam zakup nie tworzy zysku.',
+  BUY: 'Zakup zwiększa wartość inwestycji i jej kapitał o wpisaną kwotę.',
   WITHDRAWAL: 'Wycofujesz pieniądze z oszczędności, na przykład na wydatek.',
-  SELL: 'Pieniądze ze sprzedaży wrócą na wybrane konto i pozostaną w oszczędnościach.',
+  SELL: 'Sprzedaż zmniejsza wartość inwestycji. Pieniądze opuszczają śledzony portfel.',
   VALUATION:
     'Podaj saldo konta lub wartość inwestycji na wybrany dzień, już z zyskiem lub stratą. Suma Twoich wpłat pozostaje bez zmian.'
 };
@@ -78,9 +76,7 @@ export function PortfolioChangeDialog(props: Props) {
     errors,
     error,
     onSubmit,
-    onClose,
-    onAddSource,
-    onReturnToPurchase
+    onClose
   } = props;
   const dialog = React.useRef<HTMLDialogElement>(null);
   const errorRef = React.useRef<HTMLDivElement>(null);
@@ -104,11 +100,9 @@ export function PortfolioChangeDialog(props: Props) {
   }, [errors]);
   const [initialForm] = React.useState(() => JSON.stringify({ form, owner }));
   const [discarding, setDiscarding] = React.useState(false);
-  const [returningToPurchase, setReturningToPurchase] = React.useState(false);
 
   const dirty = initialForm !== JSON.stringify({ form, owner });
   const close = () => {
-    setReturningToPurchase(false);
     if (dirty) setDiscarding(true);
     else onClose();
   };
@@ -131,7 +125,6 @@ export function PortfolioChangeDialog(props: Props) {
   const current = Number(
     owned.find((e) => e.type === form.type && (e.subcategory || '') === form.subcategory)?.valuePln || 0
   );
-  const cash = Number(owned.find((e) => e.type === form.cashType)?.valuePln || 0);
   const amount = moneyInput(form.amountPln) ?? 0;
   const set = (key: keyof ChangeForm, value: string | boolean) => setForm((f) => ({ ...f, [key]: value }));
   return (
@@ -196,19 +189,6 @@ export function PortfolioChangeDialog(props: Props) {
             </select>
           }
         />
-        {onReturnToPurchase && (
-          <Button
-            type="button"
-            onClick={() => {
-              if (dirty) {
-                setReturningToPurchase(true);
-                setDiscarding(true);
-              } else onReturnToPurchase?.();
-            }}
-          >
-            Wróć do szkicu zakupu
-          </Button>
-        )}
         {owners.length > 1 && !editing && !completingBasis ? (
           <Field
             label="Zapisujesz dla"
@@ -368,7 +348,7 @@ export function PortfolioChangeDialog(props: Props) {
             )}
           </>
         )}
-        {trade && !legacy && (
+        {trade && editing && form.cashType && !legacy && (
           <Field
             label={form.action === 'BUY' ? 'Płacę z konta' : 'Pieniądze wrócą na konto'}
             control={
@@ -397,34 +377,12 @@ export function PortfolioChangeDialog(props: Props) {
             />
           }
         />
-        {trade && !editing && (
-          <div className="changePreview">
-            <p>
-              Na wybranym koncie:{' '}
-              <strong>
-                {owned.some((e) => e.type === form.cashType)
-                  ? formatMoney(cash)
-                  : 'Brak zapisanego salda dla wybranej daty'}
-              </strong>
-            </p>
-            {amount > 0 && Number.isFinite(amount) && (
-              <p>
-                {form.action === 'BUY'
-                  ? `Konto −${formatMoney(amount)} → inwestycja +${formatMoney(amount)}`
-                  : `Inwestycja −${formatMoney(amount)} → konto +${formatMoney(amount)}`}
-              </p>
-            )}
-          </div>
-        )}
-        {trade && form.action === 'BUY' && !editing && !owned.some((e) => e.type === form.cashType) && (
+        {trade && !editing && amount > 0 && Number.isFinite(amount) && (
           <p>
-            Najpierw dodaj znany stan konta źródłowego.{' '}
-            <Button type="button" onClick={onAddSource}>
-              Dodaj stan konta źródłowego
-            </Button>
+            Wartość inwestycji {form.action === 'BUY' ? '+' : '−'}
+            {formatMoney(amount)}.
           </p>
         )}
-
         {!trade && !explicit && !editing && <p>Wartość inwestycji przed zmianą: {formatMoney(current)}.</p>}
         {editing && (
           <p>
@@ -472,7 +430,7 @@ export function PortfolioChangeDialog(props: Props) {
         <div role="alert">
           <p>Masz niezapisane zmiany.</p>
           <Button onClick={() => setDiscarding(false)}>Wróć do edycji</Button>
-          <Button onClick={returningToPurchase ? onReturnToPurchase : onClose}>Odrzuć zmiany</Button>
+          <Button onClick={onClose}>Odrzuć zmiany</Button>
         </div>
       )}
     </dialog>

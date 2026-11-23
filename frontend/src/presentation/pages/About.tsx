@@ -12,8 +12,8 @@ export function About() {
           znam”.
         </li>
         <li>
-          <strong>Zapisuj wpłaty i zakupy.</strong> Wpłata to nowe pieniądze w oszczędnościach. Zakup przenosi pieniądze
-          z konta na inwestycję.
+          <strong>Zapisuj wpłaty i zakupy.</strong> Wpłata to nowe pieniądze w oszczędnościach. Zakup zwiększa wartość
+          inwestycji. Pieniądze ze sprzedaży opuszczają śledzony portfel.
         </li>
         <li>
           <strong>Aktualizuj wartość.</strong> Zapisz bieżące saldo konta lub wycenę inwestycji. Saldo konta bankowego

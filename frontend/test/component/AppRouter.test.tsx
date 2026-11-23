@@ -216,7 +216,7 @@ describe('Savings workspace', () => {
       'Zapisz sprzedaż'
     ]);
     fireEvent.change(screen.getByLabelText('Co chcesz zrobić?'), { target: { value: 'BUY' } });
-    expect(screen.getByLabelText('Płacę z konta')).toBeVisible();
+    expect(screen.queryByLabelText('Płacę z konta')).not.toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Co chcesz zrobić?'), { target: { value: 'VALUATION' } });
     expect(screen.queryByLabelText('Płacę z konta')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Ile masz teraz — zł')).toBeVisible();
@@ -249,7 +249,7 @@ describe('Savings workspace', () => {
     fireEvent.change(action, { target: { value: 'BUY' } });
     fireEvent.change(type, { target: { value: 'IKE' } });
     expect(action).toHaveValue('BUY');
-    expect(screen.getByLabelText('Płacę z konta')).toBeVisible();
+    expect(screen.queryByLabelText('Płacę z konta')).not.toBeInTheDocument();
   });
   it('does not hide a default owner in household', async () => {
     render(<AppRouter dependencies={dependencies()} />);

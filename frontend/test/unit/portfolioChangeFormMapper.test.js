@@ -38,8 +38,7 @@ for (const [action, operationType] of operationCases) {
       asset: { type: 'GIELDA', owner: 'JAN', subcategory: 'ETF', date: '2026-09-01' },
       amountPln: 25.5,
       previousValue: 100,
-      cashType: undefined,
-      cashAvailable: null
+      cashType: undefined
     });
   });
 }

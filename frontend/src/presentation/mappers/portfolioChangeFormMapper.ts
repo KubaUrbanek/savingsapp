@@ -58,11 +58,6 @@ export function mapPortfolioChangeForm(form, owner, currentEntries) {
     ? factory(asset, form.currentValuePln)
     : {
         ...factory(asset, form.amountPln, previousValue),
-        cashType: form.cashType,
-        cashAvailable:
-          [...currentEntries]
-            .filter((e) => e.owner === owner && e.type === form.cashType && e.date <= form.date)
-            .sort((a, b) => b.date.localeCompare(a.date) || (b.createdAt || '').localeCompare(a.createdAt || ''))[0]
-            ?.valuePln ?? null
+        cashType: form.cashType || undefined
       };
 }

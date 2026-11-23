@@ -47,7 +47,7 @@ const blankForm = (kind = '') => ({
   amountPln: '',
   currentValuePln: '',
   costKnown: false,
-  cashType: 'KONTO_BANKOWE',
+  cashType: '',
   date: today()
 });
 
@@ -98,9 +98,6 @@ export function Home({ dependencies }) {
   const [deleteUnconfirmed, setDeleteUnconfirmed] = React.useState(false);
   const tabsRef = React.useRef({});
   const retryCommand = React.useRef(null);
-  const suspendedPurchase = React.useRef(null);
-  const [addingSource, setAddingSource] = React.useState(false);
-  const [dialogRevision, setDialogRevision] = React.useState(0);
   const savingRef = React.useRef(false);
   const exportingRef = React.useRef(false);
   const importingRef = React.useRef(false);
@@ -267,7 +264,7 @@ export function Home({ dependencies }) {
       amountPln: row.amountPln != null ? String(row.amountPln) : '',
       costKnown: row.kind === 'INITIAL',
       currentValuePln: row.valuePln != null ? String(row.valuePln) : '',
-      cashType: row.cashType || 'KONTO_BANKOWE'
+      cashType: row.cashType || ''
     });
     setErrors({});
     setFormError('');
@@ -298,8 +295,6 @@ export function Home({ dependencies }) {
   }
   function closeForm() {
     if (!saving) {
-      suspendedPurchase.current = null;
-      setAddingSource(false);
       setFormOpen(false);
       setEditing(null);
       retryCommand.current = null;
@@ -333,13 +328,7 @@ export function Home({ dependencies }) {
       .recordPortfolioChange(command)
       .then(() => {
         retryCommand.current = null;
-        if (suspendedPurchase.current) {
-          setForm(suspendedPurchase.current);
-          suspendedPurchase.current = null;
-          setAddingSource(false);
-          setDialogRevision((v) => v + 1);
-          setFormOpen(true);
-        } else setFormOpen(false);
+        setFormOpen(false);
         setEditing(null);
         setStatus(editing ? 'Poprawiono zmianę.' : 'Zapisano zmianę.');
       })
@@ -908,23 +897,6 @@ export function Home({ dependencies }) {
       </section>
       {formOpen && (
         <PortfolioChangeDialog
-          key={dialogRevision}
-          onReturnToPurchase={
-            addingSource
-              ? () => {
-                  setForm(suspendedPurchase.current);
-                  suspendedPurchase.current = null;
-                  setAddingSource(false);
-                  setDialogRevision((v) => v + 1);
-                }
-              : undefined
-          }
-          onAddSource={() => {
-            suspendedPurchase.current = form;
-            setAddingSource(true);
-            setForm({ ...blankForm('INITIAL'), type: form.cashType, date: form.date });
-            setDialogRevision((v) => v + 1);
-          }}
           form={form}
           setForm={setForm}
           owner={formOwner}

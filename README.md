@@ -12,7 +12,7 @@ Aplikacja do kontroli oszczędności: ile wpłaciłem, ile mam, ile zarobiłem i
 
 ### Znaczenie liczb
 
-„Wpłaty łącznie” oznacza wpłaty zewnętrzne i zadeklarowany wkład początkowy. Kapitał w szczegółach obejmuje także zakupy i wpływy ze sprzedaży danej inwestycji. Dwie strony wewnętrznego transferu znoszą się w całym portfelu. Zakup nie tworzy zysku i nie tworzy dodatkowych pieniędzy.
+„Wpłaty łącznie” oznacza wpłaty zewnętrzne i zadeklarowany wkład początkowy. Kapitał w szczegółach obejmuje także zakupy i wpływy ze sprzedaży danej inwestycji. Dwie strony wewnętrznego transferu znoszą się w całym portfelu. Nowy zakup zwiększa wartość portfela i kapitał netto o tę samą kwotę, bez zmiany wyniku.
 
 Wynik to aktualna wartość inwestycji pomniejszona o kapitał po wypłatach i sprzedażach. Saldo konta bankowego wlicza się do wartości oszczędności. Jego zmiany widać na wykresie wartości, a jego udział w zysku lub stracie wynosi 0 zł. Stopy zwrotu liczymy dla pozostałych aktywów, w tym konta oszczędnościowego.
 
@@ -92,7 +92,7 @@ Przykład nowej wpłaty (UUID `requestId` identyfikuje zamiar, ponowienie używa
 }
 ```
 
-`kind`: `INITIAL`, `DEPOSIT`, `WITHDRAWAL`, `BUY`, `SELL`, `VALUATION`. `INITIAL` wymaga `valuePln` i kosztu `amountPln` (może wynosić zero); `VALUATION` wymaga `valuePln`. `BUY`/`SELL` wymagają `cashType` (`KONTO_BANKOWE` lub `KONTO_OSZCZEDNOSCIOWE`). Nowe zmiany nie przyjmują dat przyszłych. Serwer wylicza saldo na datę operacji; nie ufa saldu z przeglądarki. Dla transferu kwota obu stron jest taka sama.
+`kind`: `INITIAL`, `DEPOSIT`, `WITHDRAWAL`, `BUY`, `SELL`, `VALUATION`. `INITIAL` wymaga `valuePln` i kosztu `amountPln` (może wynosić zero); `VALUATION` wymaga `valuePln`. `BUY`/`SELL` zapisuje się bez `cashType`. Pole pozostaje obsługiwane dla starszych transferów z kontem. Nowe zmiany nie przyjmują dat przyszłych. Serwer wylicza saldo na datę operacji; nie ufa saldu z przeglądarki. Dla transferu kwota obu stron jest taka sama.
 
 Odpowiedź: `id`, `nextValue`, `kind`, `atomic: true`. Powtórzenie tego samego zamiaru nie dopisuje operacji. Zmiana treści pod użytym identyfikatorem jest odrzucana. Przeglądarka zachowuje identyfikator niepewnej próby również po odświeżeniu tej samej karty; nowy, celowy zapis po sukcesie otrzymuje nowy identyfikator.
 

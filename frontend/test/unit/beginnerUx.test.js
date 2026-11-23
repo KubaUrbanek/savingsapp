@@ -99,7 +99,7 @@ test('E27 initial deletion and history use both named amounts, including a known
   assert.match(historyValues({ kind: 'VALUATION', valuePln: 0 }), /^Nowa wartość: 0,00/);
 });
 
-test('E21 source availability uses only the balance known at the action date', async () => {
+test('E21 purchase succeeds regardless of recorded cash', async () => {
   const { mapPortfolioChangeForm } = await import('../../src/presentation/mappers/portfolioChangeFormMapper.js');
   const { RecordPortfolioChange } = await import('../../src/application/portfolio/RecordPortfolioChange.js');
   const source = [
@@ -115,11 +115,10 @@ test('E21 source availability uses only the balance known at the action date', a
     amountPln: '150'
   };
   const mapped = mapPortfolioChangeForm(form, 'jakub', source);
-  assert.equal(mapped.cashAvailable, 100);
+  assert.equal(mapped.cashAvailable, undefined);
   let writes = 0;
   const useCase = new RecordPortfolioChange({ recordPortfolioChange: async () => writes++ });
-  await assert.rejects(() => useCase.execute(mapped), /wystarczających środków/);
-  assert.equal(writes, 0);
-  await assert.rejects(() => useCase.execute(mapPortfolioChangeForm(form, 'jakub', [])), /Dodaj stan konta/);
-  assert.equal(writes, 0);
+  await useCase.execute(mapped);
+  await useCase.execute(mapPortfolioChangeForm(form, 'jakub', []));
+  assert.equal(writes, 2);
 });
