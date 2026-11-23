@@ -96,9 +96,9 @@ test('HTTP saves deposits, withdrawals, trades, valuations, corrections and dele
   const scenarios = [
     { kind: 'DEPOSIT', type: 'KONTO_BANKOWE', amount: '100', total: 1100 },
     { kind: 'WITHDRAWAL', type: 'KONTO_BANKOWE', amount: '50', total: 1050 },
-    { kind: 'BUY', type: 'GIELDA', amount: '200', total: 1050 },
-    { kind: 'SELL', type: 'GIELDA', amount: '50', total: 1050 },
-    { kind: 'VALUATION', type: 'GIELDA', amount: '180', total: 1080 }
+    { kind: 'BUY', type: 'GIELDA', amount: '200', total: 1250 },
+    { kind: 'SELL', type: 'GIELDA', amount: '50', total: 1200 },
+    { kind: 'VALUATION', type: 'GIELDA', amount: '180', total: 1230 }
   ];
   for (const [index, scenario] of scenarios.entries()) {
     await page.getByRole('button', { name: 'Dodaj wpis', exact: true }).click();
@@ -126,11 +126,11 @@ test('HTTP saves deposits, withdrawals, trades, valuations, corrections and dele
   await page.getByLabel('Ile masz teraz — zł').fill('200');
   await page.getByRole('button', { name: 'Zapisz poprawkę' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  expect((await (await request.get('/api/portfolio-performance?owner=jakub')).json()).currentValuePln).toBe(1100);
+  expect((await (await request.get('/api/portfolio-performance?owner=jakub')).json()).currentValuePln).toBe(1250);
   page.once('dialog', (dialog) => dialog.accept());
   await valuation.getByRole('button', { name: /^Usuń wpis:/ }).click();
   await expect(valuation).toHaveCount(0);
-  expect((await (await request.get('/api/portfolio-performance?owner=jakub')).json()).currentValuePln).toBe(1050);
+  expect((await (await request.get('/api/portfolio-performance?owner=jakub')).json()).currentValuePln).toBe(1200);
 });
 
 test('HTTP retry after a lost response and reload creates exactly one deposit', async ({ page, request }) => {
