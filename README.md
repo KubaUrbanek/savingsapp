@@ -14,7 +14,9 @@ Aplikacja do kontroli oszczędności: ile wpłaciłem, ile mam, ile zarobiłem i
 
 „Wpłaty łącznie” oznacza wpłaty zewnętrzne i zadeklarowany wkład początkowy. Kapitał w szczegółach obejmuje także zakupy i wpływy ze sprzedaży danej inwestycji. Dwie strony wewnętrznego transferu znoszą się w całym portfelu. Nowy zakup zwiększa wartość portfela i kapitał netto o tę samą kwotę, bez zmiany wyniku.
 
-Wynik = aktualna wartość − kapitał po wypłatach / sprzedażach. Wartość jest rzeczywistym saldem po kosztach, więc opłaty i podatki ujawnione w historii nie są odejmowane z wyniku drugi raz. Przy brakującym koszcie lub wycenie wynik pozostaje nieznany. Wynik miesiąca pozostaje nieznany również przy brakującej wycenie otwarcia lub wpisaniu posiadanych oszczędności w tym miesiącu. Wykres przedstawia zmianę wartości, obejmującą wpłaty i wypłaty; nie jest wykresem stopy zysku.
+Wynik to aktualna wartość inwestycji pomniejszona o kapitał po wypłatach i sprzedażach. Saldo konta bankowego wlicza się do wartości oszczędności. Jego zmiany widać na wykresie wartości, a jego udział w zysku lub stracie wynosi 0 zł. Stopy zwrotu liczymy dla pozostałych aktywów, w tym konta oszczędnościowego.
+
+Wartość inwestycji uwzględnia już opłaty i podatki. Do obliczenia wyniku potrzebne są dane o koszcie i wycenie inwestycji. Wynik miesiąca pozostaje nieznany również przy brakującej wycenie otwarcia lub wpisaniu posiadanej inwestycji w tym miesiącu. Wykres wartości obejmuje też wpłaty, wypłaty i przesunięcia środków.
 
 Stan początkowy można wykorzystać do uzupełnienia nieznanego kosztu istniejącej inwestycji. Jest to nowy punkt odniesienia na wskazaną datę: jego wkład zastępuje wcześniejsze przepływy tej inwestycji w obliczeniach. Nie zmienia historycznych wycen. Dla jednej inwestycji można zapisać jeden taki stan; „Edytuj” w historii poprawia go atomowo. Uzupełnienie brakujących wpłat koryguje wybraną wycenę, zachowując jej wartość i datę.
 
@@ -71,7 +73,7 @@ Pipeline może automatycznie wdrażać po zielonym CI na `main` przez Tailscale 
 | POST       | `/api/portfolio-changes`                                                                                  | Atomowy zapis operacji i wyceny, obu stron transferu lub stanu początkowego |
 | PUT        | `/api/portfolio-changes/{id}` | Atomowa korekta całego zdarzenia z zachowaniem identyfikatora |
 | DELETE     | `/api/portfolio-changes/{id}`                                                                             | Atomowe cofnięcie całego zdarzenia                                          |
-| GET        | `/api/portfolio-performance?owner=jakub`                                                                  | Wynik; opcjonalne `type`, `subcategory`, `date`                             |
+| GET        | `/api/portfolio-performance?owner=jakub`                                                                  | Wynik. Opcjonalne parametry `type`, `subcategory`, `valuationDate`.           |
 | GET/PUT | `/api/portfolio-plans` | Jeden wspólny plan; `allocationVersion: 3`; GET bez planu: 204. Parametr `scope` zachowano dla zgodności adresów, nie wybiera osobnego planu. |
 | GET        | `/api/database/export`                                                                                    | Kopia całych danych i planów                                                |
 | POST       | `/api/database/import`                                                                                    | Zastąpienie danych kopią (`multipart`, pole `file`)                         |

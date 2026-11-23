@@ -48,7 +48,15 @@ Entry and operation lists require `owner`; optional `type` and/or `subcategory` 
 
 Performance uses an optional valuation date (Europe/Warsaw today by default), the latest snapshot on or before it for each asset, and operations through that date. It returns current value, net contributed capital, nominal result and simple return, fees, taxes, result after costs, XIRR and status, and current-month result and return. Queries may cover an owner's portfolio or filter by type and/or subcategory.
 
-Known initial costs, deposits and purchases add to contributed capital; withdrawals and sales subtract. Transfers cancel within the whole portfolio. XIRR uses investment-level purchase/sale flows and external portfolio flows after excluding grouped internal transfers, with current value as the final flow. Status is `CALCULATED`, `ZERO_CASH_FLOWS`, `SAME_DAY_FLOWS`, `NO_SIGN_CHANGE`, `MULTIPLE_ROOTS`, or `CONVERGENCE_FAILURE`.
+Known initial costs, deposits and purchases add to contributed capital. Withdrawals and sales subtract. Transfers cancel when both legs are in the calculation scope. XIRR uses flows within the performance scope, with the current value of those assets as the final flow. Status is `CALCULATED`, `INCOMPLETE_HISTORY`, `ZERO_CASH_FLOWS`, `SAME_DAY_FLOWS`, `NO_SIGN_CHANGE`, `MULTIPLE_ROOTS`, or `CONVERGENCE_FAILURE`.
+
+### Bank account balance
+
+`KONTO_BANKOWE` is a cash balance. Its recorded balance contributes to current portfolio value and to value history. Recorded deposits, withdrawals and initial contributions still feed cash-flow totals. A balance correction updates the valuation without generating a deposit or withdrawal.
+
+Nominal result, result after costs, monthly result, simple and monthly returns, and XIRR use the other assets and their operations. A purchase paid from the bank account enters this calculation on the purchased asset side. Sale proceeds returned to the bank account leave on the sold asset side. `KONTO_OSZCZEDNOSCIOWE` participates in performance and can show interest earnings.
+
+For a scope containing only a recorded bank balance, the amount results are zero and return percentages are unavailable (`xirrStatus: ZERO_CASH_FLOWS`). An unrecorded bank contribution can leave contributed capital unknown while returns on other assets remain calculable. This rule applies to existing data and imported backups on read.
 
 ## HTTP API
 
@@ -84,7 +92,7 @@ Export includes `formatVersion`, **all entries**, and **all operations** includi
 
 `INITIAL` określa stan i znany koszt posiadanej inwestycji na datę rozpoczęcia śledzenia. Brak kosztu nie oznacza kosztu zero. Stan początkowy nie jest zyskiem miesiąca ani nową wpłatą. Wpłata/wypłata to przepływ zewnętrzny, a nowe zakupy i sprzedaże są przepływami zewnętrznymi. Starsze transfery z kontem zapisują się i cofają razem. Późniejsze salda wynikające ze zdarzeń odtwarzamy chronologicznie; ręczne wyceny pozostają punktami odniesienia.
 
-Wynik pojedynczej inwestycji uwzględnia koszt zakupów i wpływy ze sprzedaży. W całym portfelu transfery się znoszą. Nieznany koszt lub brak wyceny nie pozwala obliczyć wyniku; brak wyceny otwarcia nie pozwala obliczyć wyniku miesiąca. Opłaty zawarte w rzeczywistym saldzie nie są odliczane ponownie.
+Wynik pojedynczej inwestycji uwzględnia koszt zakupów i wpływy ze sprzedaży. Przesunięcia między aktywami objętymi obliczeniem wyniku znoszą się. Do obliczenia wyniku inwestycji potrzebne są dane o jej koszcie i wycenie, a do wyniku miesiąca także punkt odniesienia na jego początku. Opłaty zawarte w rzeczywistym saldzie nie są odliczane ponownie.
 
 Plan: cztery równorzędne udziały — obligacje, złoto, akcje rynków rozwiniętych i wschodzących. Jeden wspólny plan i szkic; budżet i posiadane aktywa zależą od wybranej osoby. Algorytm water filling wyrównuje niedoważenia przez zakupy, bez sprzedaży. Suma zakupów równa budżetowi co do grosza. Inne aktywa nie wpływają na kalkulator i nie tworzą w nim sekcji ani komunikatów. Przegląd nadal obejmuje cały portfel.
 
@@ -93,7 +101,7 @@ Plan: cztery równorzędne udziały — obligacje, złoto, akcje rynków rozwini
 
 PUT `/api/portfolio-changes/{id}` corrects an event using the same request identifier as its path. A correction cannot move it to another owner or asset. Purchase/sale corrections change the asset atomically, including both legs for legacy transfers and replay dependent generated balances. Explicit valuations remain historical anchors. An invalid correction or an overdraw leaves the stored document unchanged. Legacy independent operations retain fees, taxes and notes and do not generate a linked valuation. POST and DELETE use the same atomic event boundary; plans use GET/PUT `/api/portfolio-plans?scope=...`.
 
-The UI presents one chronological event row per tracked change, regardless of how many linked balances it updates. Household performance uses the full owner scope and excludes entirely empty owners from known-profit aggregation. A held asset with unknown contributions still makes profit unknown.
+The UI presents one chronological event row per tracked change, regardless of how many linked balances it updates. Household performance uses the full owner scope and excludes entirely empty owners from known-profit aggregation. A held investment with unknown contributions still makes profit unknown.
 
 ### Wersja planu alokacji
 

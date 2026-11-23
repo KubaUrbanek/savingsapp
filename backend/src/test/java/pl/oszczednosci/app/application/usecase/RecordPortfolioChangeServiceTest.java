@@ -99,8 +99,8 @@ class RecordPortfolioChangeServiceTest {
   assertThat(store.exportBackup()).isEqualTo(before);
  }
  @Test void initialCostCanCompleteAnExistingUnknownValuation() {
-  service.record(c("VALUATION",InvestmentType.KONTO_BANKOWE,"2026-09-01",null,"500"));
-  service.record(c("INITIAL",InvestmentType.KONTO_BANKOWE,"2026-09-02","400","500"));
+  service.record(c("VALUATION",InvestmentType.KONTO_OSZCZEDNOSCIOWE,"2026-09-01",null,"500"));
+  service.record(c("INITIAL",InvestmentType.KONTO_OSZCZEDNOSCIOWE,"2026-09-02","400","500"));
   var history=new PortfolioHistory(store.snapshot().entries().stream().map(e->new ValuationSnapshot(AssetKey.from(e.category()),new ValuationDate(e.date()),e.value())).toList(),store.snapshot().operations());
   var result=new pl.oszczednosci.app.domain.service.PortfolioPerformanceCalculator(new pl.oszczednosci.app.domain.service.NumericalRateOfReturnCalculator()).calculate(history,new ValuationDate(LocalDate.parse("2026-10-10")));
   assertThat(result.nominalResult().amount()).isEqualByComparingTo("100");

@@ -120,9 +120,10 @@ describe('Savings workspace', () => {
     expect(screen.getByLabelText('Co chcesz zrobić?')).toHaveValue('INITIAL');
     expect(screen.getByLabelText('Ile masz teraz — zł')).toBeVisible();
     expect(screen.queryByLabelText('Wpłaty łącznie — zł')).not.toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Konto lub produkt'), { target: { value: 'KONTO_BANKOWE' } });
     fireEvent.click(screen.getByLabelText('Znam sumę wpłat (odznaczone: Nie znam)'));
     expect(screen.getByLabelText('Wpłaty łącznie — zł')).toHaveAccessibleDescription(
-      'Suma Twoich wpłat do wybranego dnia, bez zysków i strat, np. 10 000 zł. Służy do obliczenia wyniku inwestycji.'
+      'Suma wpłat na konto do wybranego dnia, np. 10 000 zł.'
     );
     fireEvent.click(screen.getByLabelText('Znam sumę wpłat (odznaczone: Nie znam)'));
     expect(screen.queryByLabelText('Wpłaty łącznie — zł')).not.toBeInTheDocument();
@@ -306,9 +307,7 @@ describe('Savings workspace', () => {
     await waitFor(() => expect(input).toHaveFocus());
     expect(input).toHaveAttribute('aria-invalid', 'true');
     expect(input).toHaveAccessibleDescription(
-      kind === 'VALUATION'
-        ? 'Wartość widoczna na rachunku, np. 11 000 zł po wzroście inwestycji. Niepoprawna kwota.'
-        : 'Niepoprawna kwota.'
+      kind === 'VALUATION' ? 'Saldo widoczne na koncie, np. 11 000 zł. Niepoprawna kwota.' : 'Niepoprawna kwota.'
     );
   });
   it('focuses sanitized general errors and keeps retry drafts', async () => {
@@ -652,7 +651,7 @@ describe('Savings workspace', () => {
     expect(screen.getByLabelText('Co chcesz zrobić?')).toHaveValue('VALUATION');
     expect(screen.getByLabelText('Ile masz teraz — zł')).toHaveValue('100');
     expect(screen.getByLabelText('Ile masz teraz — zł')).toHaveAccessibleDescription(
-      'Wartość widoczna na rachunku, np. 11 000 zł po wzroście inwestycji.'
+      'Saldo widoczne na koncie, np. 11 000 zł.'
     );
     expect(screen.queryByLabelText('Wpłaty łącznie — zł')).not.toBeInTheDocument();
     expect(screen.getByText(/Suma Twoich wpłat pozostaje bez zmian/)).toBeVisible();
