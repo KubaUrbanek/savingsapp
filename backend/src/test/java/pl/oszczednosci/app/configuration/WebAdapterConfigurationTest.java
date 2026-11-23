@@ -155,7 +155,7 @@ class WebAdapterConfigurationTest {
         mvc.perform(post("/api/portfolio-changes").contentType(MediaType.APPLICATION_JSON).content(change)).andExpect(status().isOk());
         mvc.perform(get("/api/investment-operations").queryParam("owner","jakub")).andExpect(jsonPath("$.length()").value(1));
         mvc.perform(get("/api/portfolio-performance").queryParam("owner","jakub"))
-            .andExpect(jsonPath("$.nominalResultPln").value(100)).andExpect(jsonPath("$.depositsTotalPln").value(1000));
+            .andExpect(jsonPath("$.nominalResultPln").value(0)).andExpect(jsonPath("$.depositsTotalPln").value(1000));
         mvc.perform(put("/api/portfolio-plans").queryParam("scope","jakub").contentType(MediaType.APPLICATION_JSON)
             .content("{\"allocationVersion\":4,\"bitcoin\":0,\"bonds\":60,\"gold\":20,\"developed\":16,\"emerging\":4}"))
             .andExpect(status().isOk());
@@ -176,10 +176,12 @@ class WebAdapterConfigurationTest {
     }
 
     @Test
-    void snapshotWithoutBasisReturnsNullProfitAndNewChangesRejectFutureDates() throws Exception {
+    void bankSnapshotWithoutBasisHasNoProfitAndNewChangesRejectFutureDates() throws Exception {
         mvc.perform(post("/api/investments").contentType(MediaType.APPLICATION_JSON).content(ENTRY)).andExpect(status().isCreated());
         mvc.perform(get("/api/portfolio-performance").queryParam("owner","jakub"))
-            .andExpect(jsonPath("$.nominalResultPln").doesNotExist()).andExpect(jsonPath("$.xirrStatus").value("INCOMPLETE_HISTORY"));
+            .andExpect(jsonPath("$.contributedCapitalPln").doesNotExist())
+            .andExpect(jsonPath("$.nominalResultPln").value(0))
+            .andExpect(jsonPath("$.xirrStatus").value("ZERO_CASH_FLOWS"));
         mvc.perform(post("/api/portfolio-changes").contentType(MediaType.APPLICATION_JSON).content("""
             {"requestId":"30c36cab-a704-4a38-b5ac-e39711ab5bb9","kind":"DEPOSIT","owner":"jakub","type":"KONTO_BANKOWE","date":"2999-01-01","amountPln":100}
             """)).andExpect(status().isBadRequest());
@@ -197,7 +199,9 @@ class WebAdapterConfigurationTest {
             .andExpect(status().isOk()).andExpect(jsonPath("$.id").value(id)).andExpect(jsonPath("$.nextValue").value(1100));
         mvc.perform(put("/api/portfolio-changes/{id}",id).contentType(MediaType.APPLICATION_JSON).content(corrected)).andExpect(status().isOk());
         mvc.perform(get("/api/investment-operations").queryParam("owner","jakub")).andExpect(jsonPath("$.length()").value(1));
-        mvc.perform(get("/api/portfolio-performance").queryParam("owner","jakub")).andExpect(jsonPath("$.nominalResultPln").value(200));
+        mvc.perform(get("/api/portfolio-performance").queryParam("owner","jakub"))
+            .andExpect(jsonPath("$.nominalResultPln").value(0))
+            .andExpect(jsonPath("$.depositsTotalPln").value(900));
         mvc.perform(put("/api/portfolio-changes/{id}","30c36cab-a704-4a38-b5ac-e39711ab5bb9").contentType(MediaType.APPLICATION_JSON).content(corrected)).andExpect(status().isBadRequest());
     }
 }

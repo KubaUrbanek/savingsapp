@@ -13,30 +13,55 @@ public final class PortfolioPerformanceCalculator {
   Money current=valueAt(snapshots,cutoff.value());
   Money deposits=sum(operations,InvestmentOperationType.DEPOSIT).add(sum(operations,InvestmentOperationType.INITIAL));
   Money withdrawals=sum(operations,InvestmentOperationType.WITHDRAWAL);
-  Money capital=deposits.add(sum(operations,InvestmentOperationType.BUY)).subtract(withdrawals).subtract(sum(operations,InvestmentOperationType.SELL));
+  Money capital=deposits.subtract(withdrawals).add(netPurchases(operations));
   Money fees=sumFees(operations), taxes=sumTaxes(operations);
-  boolean known=complete(snapshots,operations);
-  Money nominal=known ? current.subtract(capital) : null;
-  List<CashFlow> flows=new ArrayList<>();
-  operations.forEach(o->{
-   boolean incoming=o.getOperationType()==InvestmentOperationType.DEPOSIT || o.getOperationType()==InvestmentOperationType.INITIAL || o.getOperationType()==InvestmentOperationType.BUY;
-   flows.add(new CashFlow(o.getDate(),incoming ? o.amount().negate() : o.amount()));
-  });
-  if(!current.isZero()) flows.add(new CashFlow(cutoff.value(),current));
+  boolean capitalKnown=complete(snapshots,operations);
+
+  // The bank account holds cash. Transfers still enter and leave the investment scope.
+  var investmentSnapshots = snapshots.stream()
+    .filter(snapshot -> snapshot.asset().type() != InvestmentType.KONTO_BANKOWE).toList();
+  var investmentOperations = operations.stream()
+    .filter(operation -> operation.getType() != InvestmentType.KONTO_BANKOWE).toList();
+  boolean bankBalanceOnly = !snapshots.isEmpty() && investmentSnapshots.isEmpty() && investmentOperations.isEmpty();
+  boolean resultKnown = bankBalanceOnly || complete(investmentSnapshots, investmentOperations);
+  Money investedValue = valueAt(investmentSnapshots, cutoff.value());
+  Money investedCapital = sum(investmentOperations, InvestmentOperationType.INITIAL)
+    .add(sum(investmentOperations, InvestmentOperationType.DEPOSIT))
+    .subtract(sum(investmentOperations, InvestmentOperationType.WITHDRAWAL))
+    .add(netPurchases(investmentOperations));
+  Money nominal = resultKnown ? investedValue.subtract(investedCapital) : null;
+
   LocalDate monthStart=cutoff.value().withDayOfMonth(1);
-  Money opening=valueAt(snapshots,monthStart.minusDays(1));
-  var monthly=operations.stream().filter(o->!o.getDate().isBefore(monthStart)).toList();
+  Money opening=valueAt(investmentSnapshots,monthStart.minusDays(1));
+  var monthly=investmentOperations.stream().filter(o->!o.getDate().isBefore(monthStart)).toList();
   Money monthlyIn=sum(monthly,InvestmentOperationType.DEPOSIT).add(sum(monthly,InvestmentOperationType.BUY));
   Money monthlyOut=sum(monthly,InvestmentOperationType.WITHDRAWAL).add(sum(monthly,InvestmentOperationType.SELL));
   // Existing savings entered mid-month are not a known beginning-of-month balance.
-  boolean monthKnown=known && monthly.stream().noneMatch(o->o.getOperationType()==InvestmentOperationType.INITIAL)
-    && snapshots.stream().map(ValuationSnapshot::asset).distinct().allMatch(asset ->
-      snapshots.stream().anyMatch(s->s.asset().equals(asset) && s.date().value().isBefore(monthStart)) ||
-      operations.stream().filter(o->AssetKey.from(o.category()).equals(asset)).map(InvestmentOperation::getDate).min(LocalDate::compareTo).map(d->!d.isBefore(monthStart)).orElse(false));
-  Money monthlyResult=monthKnown ? current.subtract(opening).subtract(monthlyIn).add(monthlyOut) : null;
-  return new PortfolioPerformance(current,known ? capital : null,nominal,known ? nominal.percentageOf(capital) : null,fees,taxes,
-    nominal, known ? rates.calculate(flows) : RateOfReturnResult.failure(RateOfReturnResult.Status.INCOMPLETE_HISTORY),
-    monthlyResult,monthKnown ? monthlyResult.percentageOf(opening.add(monthlyIn)) : null,deposits,withdrawals);
+  boolean monthKnown=resultKnown && monthly.stream().noneMatch(o->o.getOperationType()==InvestmentOperationType.INITIAL)
+    && investmentSnapshots.stream().map(ValuationSnapshot::asset).distinct().allMatch(asset ->
+      investmentSnapshots.stream().anyMatch(s->s.asset().equals(asset) && s.date().value().isBefore(monthStart)) ||
+      investmentOperations.stream().filter(o->AssetKey.from(o.category()).equals(asset)).map(InvestmentOperation::getDate).min(LocalDate::compareTo).map(d->!d.isBefore(monthStart)).orElse(false));
+  Money monthlyResult=monthKnown ? investedValue.subtract(opening).subtract(monthlyIn).add(monthlyOut) : null;
+  return new PortfolioPerformance(current, capitalKnown ? capital : null, nominal,
+    resultKnown ? nominal.percentageOf(investedCapital) : null, fees, taxes, nominal,
+    resultKnown ? investmentReturn(investmentOperations, investedValue, cutoff.value())
+      : RateOfReturnResult.failure(RateOfReturnResult.Status.INCOMPLETE_HISTORY),
+    monthlyResult, monthKnown ? monthlyResult.percentageOf(opening.add(monthlyIn)) : null, deposits, withdrawals);
+ }
+ private RateOfReturnResult investmentReturn(List<InvestmentOperation> operations, Money value, LocalDate date) {
+  List<CashFlow> flows = new ArrayList<>();
+  for (var operation : operations) {
+   Money amount = switch (operation.getOperationType()) {
+    case INITIAL, DEPOSIT, BUY -> operation.amount().negate();
+    case WITHDRAWAL, SELL -> operation.amount();
+   };
+   flows.add(new CashFlow(operation.getDate(), amount));
+  }
+  if (!value.isZero()) flows.add(new CashFlow(date, value));
+  return rates.calculate(flows);
+ }
+ private Money netPurchases(List<InvestmentOperation> operations) {
+  return sum(operations, InvestmentOperationType.BUY).subtract(sum(operations, InvestmentOperationType.SELL));
  }
  private boolean complete(List<ValuationSnapshot> snapshots,List<InvestmentOperation> operations) {
   if(snapshots.isEmpty()) return false;

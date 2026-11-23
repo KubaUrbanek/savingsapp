@@ -58,10 +58,12 @@ Kolejność: nagłówek i osoba → podsumowanie → krótki zakres i filtr → 
 Podsumowanie:
 
 - **Wartość oszczędności** — główna liczba. Podpis: „Według ostatnich zapisanych wartości”; daty aktualizacji są czytelne.
-- **Wpłaty łącznie** — zachowujemy znaczenie obecnej sumy wpłat (`depositsTotalPln`), razem ze znanym wkładem początkowym, przed odjęciem wypłat. W szczegółach osobno „Wypłaty łącznie” i „Kapitał po wypłatach” (`contributedCapitalPln`). Nie zastępujemy sumy wpłat kapitałem netto przez samą zmianę etykiety. Wynik pozostaje liczony według istniejących reguł domeny, a nie przez sugerowane użytkownikowi proste odjęcie wpłat brutto od wartości.
+- **Wpłaty łącznie** — zapisane wpłaty i znany wkład początkowy przed odjęciem wypłat (`depositsTotalPln`). W szczegółach osobno „Wypłaty łącznie” i „Kapitał po wypłatach” (`contributedCapitalPln`).
 - **Wynik** — neutralna etykieta dla każdej osoby i Razem; dodatnia/ujemna kwota z odpowiednim znakiem, nie sam kolor.
 
-Gdy wpłaty są niekompletne: „Niepełne dane o wpłatach” przy kwocie; zamiast pozornego wyniku „Uzupełnij wpłaty”. Wyświetlamy konkretne brakujące pozycje z właścicielem, np. „Zosia — konto oszczędnościowe”. Kliknięcie otwiera właściwe uzupełnienie danych lub prowadzi bezpośrednio do tej pozycji w portfelu osoby. Nie trzeba szukać jej ręcznie.
+Konto bankowe wlicza się do wartości oszczędności, a jego saldo i zmiany są widoczne w historii wartości. Jego udział w wyniku łącznym i miesięcznym wynosi 0 zł, również po ręcznej korekcie salda. Przykład odbioru: saldo konta Zosi spada z 1000 do 800 zł. Historia wartości pokazuje spadek o 200 zł, a wynik w zakresie tego konta wynosi 0 zł. Odsetki na koncie oszczędnościowym wchodzą do wyniku zgodnie z regułami domeny.
+
+Gdy wpłaty są niekompletne, przy kwocie pokazujemy „Niepełne dane o wpłatach”. Brak danych o wpłatach na konto bankowe pozwala nadal pokazać wynik pozostałych inwestycji. „Uzupełnij wpłaty” przy wyniku pojawia się, gdy brakuje wkładu potrzebnego do obliczenia wyniku. Wyświetlamy konkretne brakujące pozycje z właścicielem, np. „Zosia — konto oszczędnościowe”. Kliknięcie otwiera uzupełnienie danych lub prowadzi do tej pozycji w portfelu osoby.
 
 Błąd odczytu wyników daje „Nie udało się wczytać wyniku” i ponowienie, a nie informację o nieznanych wpłatach. Obecne wartości można nadal pokazać, jeśli ich odczyt się udał.
 
@@ -85,6 +87,8 @@ Pusty wybór: jeden spójny komunikat „Nie wybrano inwestycji” i „Pokaż c
 ### 5.3 Lista inwestycji
 
 Na komputerze zwarta tabela, na telefonie karty. Widoczne: nazwa, konto/właściciel tam, gdzie potrzebny, obecna wartość, wynik lub nazwany brak danych, data ostatniej wartości. Jedna główna czynność: **Aktualizuj wartość**. „Szczegóły” ujawniają wpłaty i „Historia tej inwestycji”.
+
+Wiersz i karta konta bankowego pokazują saldo i datę wyceny. Zapisane wpłaty są dostępne w szczegółach.
 
 Nie używamy dwuznacznego „Edytuj / usuń” jako nazwy przejścia do historii. W Razem nadal agregujemy odpowiadające sobie inwestycje; nie zapisujemy zbiorczej wyceny bez wskazania osoby. Szczegóły mogą prowadzić do składowych osób. Nie powielamy wpisów obu osób w głównej liście wspólnej.
 

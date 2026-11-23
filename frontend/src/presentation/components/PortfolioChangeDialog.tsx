@@ -122,6 +122,7 @@ export function PortfolioChangeDialog(props: Props) {
   }, [dirty]);
   const availableActions = Object.entries(actions);
   const explicit = form.action === 'INITIAL' || form.action === 'VALUATION';
+  const bankAccount = form.type === 'KONTO_BANKOWE';
   const trade = form.action === 'BUY' || form.action === 'SELL';
   const subcategories = form.type ? subcategoriesFor(form.type) : [];
   const owned = entries
@@ -289,11 +290,19 @@ export function PortfolioChangeDialog(props: Props) {
           />
         )}
         <p className="formHint">
-          {help[form.action as keyof typeof help] || 'Wybierz działanie, a potem konto lub produkt.'}
+          {bankAccount && form.action === 'VALUATION'
+            ? 'Podaj saldo konta na wybrany dzień. Suma Twoich wpłat pozostaje bez zmian.'
+            : help[form.action as keyof typeof help] || 'Wybierz działanie, a potem konto lub produkt.'}
         </p>
         <Field
           label={explicit ? 'Ile masz teraz — zł' : 'Kwota — zł'}
-          hint={explicit ? 'Wartość widoczna na rachunku, np. 11 000 zł po wzroście inwestycji.' : undefined}
+          hint={
+            explicit
+              ? bankAccount
+                ? 'Saldo widoczne na koncie, np. 11 000 zł.'
+                : 'Wartość widoczna na rachunku, np. 11 000 zł po wzroście inwestycji.'
+              : undefined
+          }
           error={explicit ? errors.currentValuePln : errors.amountPln}
           control={
             <input
@@ -328,7 +337,11 @@ export function PortfolioChangeDialog(props: Props) {
             {form.costKnown ? (
               <Field
                 label="Wpłaty łącznie — zł"
-                hint="Suma Twoich wpłat do wybranego dnia, bez zysków i strat, np. 10 000 zł. Służy do obliczenia wyniku inwestycji."
+                hint={
+                  bankAccount
+                    ? 'Suma wpłat na konto do wybranego dnia, np. 10 000 zł.'
+                    : 'Suma Twoich wpłat do wybranego dnia, bez zysków i strat, np. 10 000 zł. Służy do obliczenia wyniku inwestycji.'
+                }
                 error={errors.amountPln}
                 control={
                   <input
@@ -347,7 +360,11 @@ export function PortfolioChangeDialog(props: Props) {
                 }
               />
             ) : (
-              <p>Nie pamiętasz wpłat? Zapisz samą wartość. Wynik pokażemy po uzupełnieniu tej informacji.</p>
+              <p>
+                {bankAccount
+                  ? 'Nie pamiętasz wpłat? Możesz zapisać samo saldo.'
+                  : 'Nie pamiętasz wpłat? Zapisz samą wartość. Wynik pokażemy po uzupełnieniu tej informacji.'}
+              </p>
             )}
           </>
         )}
