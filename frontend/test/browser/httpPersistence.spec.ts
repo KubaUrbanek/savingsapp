@@ -63,7 +63,7 @@ test('HTTP origins can save an initial value and retain it after reload', async 
   await page.reload();
   await expect(page.locator('.savingsHeadline .summaryTotal')).toContainText('700,00');
   const result = await (await request.get('/api/portfolio-performance?owner=jakub')).json();
-  expect(result.nominalResultPln).toBe(100);
+  expect(result).toMatchObject({ nominalResultPln: 0, contributedCapitalPln: 600 });
 });
 
 test('HTTP saves deposits, withdrawals, trades, valuations, corrections and deletion', async ({ page, request }) => {
@@ -195,7 +195,10 @@ test('HTTP can complete unknown contributions and save allocation weights', asyn
   await expect(page.getByLabel('Data zmiany')).toBeDisabled();
   await page.getByRole('button', { name: 'Zapisz poprawkę' }).click();
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  expect((await (await request.get('/api/portfolio-performance?owner=jakub')).json()).nominalResultPln).toBe(100);
+  expect(await (await request.get('/api/portfolio-performance?owner=jakub')).json()).toMatchObject({
+    nominalResultPln: 0,
+    contributedCapitalPln: 600
+  });
   await page.getByRole('tab', { name: 'Plan portfela', exact: true }).click();
   await expect(page.getByLabel('Kwota na zakupy — zł')).toBeVisible();
   if (await page.getByRole('button', { name: 'Zapisz propozycję planu' }).count()) {

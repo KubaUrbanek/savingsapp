@@ -16,8 +16,9 @@ export function About() {
           z konta na inwestycję.
         </li>
         <li>
-          <strong>Aktualizuj wartość.</strong> Nowe saldo nie jest nową wpłatą. Przykład: po wzroście z 1000 do 1100 zł
-          aktualizujesz wartość do 1100 zł.
+          <strong>Aktualizuj wartość.</strong> Zapisz bieżące saldo konta lub wycenę inwestycji. Saldo konta bankowego
+          wlicza się do wartości oszczędności. Wynik pokazuje zyski i straty z inwestycji, w tym odsetki z konta
+          oszczędnościowego.
         </li>
         <li>
           <strong>Zaplanuj zakupy.</strong> Wspólny plan ma te same proporcje dla wszystkich. Wybór osoby zmienia

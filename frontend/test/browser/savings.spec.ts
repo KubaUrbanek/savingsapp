@@ -30,6 +30,56 @@ test.beforeEach(async ({ request }) => {
   expect(response.ok()).toBeTruthy();
 });
 
+test('Zosia sees bank balance history without an investment loss', async ({ page, request }) => {
+  for (const [date, valuePln, kind] of [
+    ['2026-09-30', 1000, 'INITIAL'],
+    ['2026-10-10', 800, 'VALUATION']
+  ] as const) {
+    const response = await request.post('/api/portfolio-changes', {
+      data: {
+        requestId: randomUUID(),
+        kind,
+        owner: 'zosia',
+        type: 'KONTO_BANKOWE',
+        date,
+        valuePln,
+        ...(kind === 'INITIAL' ? { amountPln: valuePln } : {})
+      }
+    });
+    expect(response.ok()).toBeTruthy();
+  }
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Zosia', exact: true }).click();
+  await expect(page.locator('.savingsHeadline .summaryTotal')).toContainText('800,00');
+  const result = page.locator('.savingsHeadline .metric').last();
+  await expect(result.locator('.metricValue')).toHaveText(/^0,00\s*zł$/);
+  await expect(page.locator('.holdingAmount').getByText('Wynik:', { exact: false })).toHaveCount(0);
+  const charts = page.locator('.chartsDisclosure');
+  if ((await charts.getAttribute('open')) === null) await charts.locator(':scope > summary').click();
+  await page.getByLabel('Zakres czasu').selectOption('all');
+  await page.getByText('Pokaż dane wykresu', { exact: true }).click();
+  const history = page.getByRole('table', { name: 'Historia wartości zaznaczonych inwestycji' });
+  await expect(history.getByRole('row', { name: /2026-09-30/ })).toContainText('1000,00');
+  await expect(history.getByRole('row', { name: /2026-10-10/ })).toContainText('800,00');
+
+  const performance = await request.get(
+    '/api/portfolio-performance?owner=zosia&type=KONTO_BANKOWE&valuationDate=2026-10-10'
+  );
+  expect(performance.ok()).toBeTruthy();
+  expect(await performance.json()).toMatchObject({
+    currentValuePln: 800,
+    contributedCapitalPln: 1000,
+    depositsTotalPln: 1000,
+    nominalResultPln: 0,
+    monthlyResultPln: 0,
+    returnRatePercent: null,
+    monthlyReturnRatePercent: null,
+    xirrPercent: null
+  });
+  await page.getByRole('button', { name: 'Razem', exact: true }).click();
+  await expect(result.locator('.metricValue')).toHaveText(/^0,00\s*zł$/);
+});
+
 test('overview filters and chart context survive tabs and owner changes', async ({ page, request }) => {
   await initial(request, 'GIELDA', 200, 'ZLOTO');
   await initial(request, 'GIELDA', 1000, 'RYNKI_ROZWINIETE');
@@ -245,7 +295,7 @@ test('first use records existing value without inventing contributions and can c
 }) => {
   await page.goto('/');
   await page.getByRole('button', { name: 'Dodaj aktualny stan konta lub inwestycji', exact: true }).click();
-  await page.getByLabel('Konto lub produkt').selectOption('KONTO_BANKOWE');
+  await page.getByLabel('Konto lub produkt').selectOption('KONTO_OSZCZEDNOSCIOWE');
   await expect(page.getByLabel('Co chcesz zrobić?')).toHaveValue('INITIAL');
   await page.getByLabel('Ile masz teraz — zł').fill('700');
   await page.getByLabel('Znam sumę wpłat (odznaczone: Nie znam)').uncheck();

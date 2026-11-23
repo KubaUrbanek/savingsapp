@@ -42,7 +42,7 @@ function HoldingDetails({ asset, loading, onCompleteBasis, onManage, household =
             <dd>{asset.date}</dd>
           </div>
         </dl>
-        {!loading && asset.performance?.nominalResultPln == null && onCompleteBasis && (
+        {!loading && asset.performance?.contributedCapitalPln == null && onCompleteBasis && (
           <Button onClick={() => onCompleteBasis(asset)}>Podaj sumę dotychczasowych wpłat</Button>
         )}
         {onManage && <Button onClick={() => onManage(asset)}>Historia tej inwestycji</Button>}
@@ -56,7 +56,7 @@ function HoldingValue({ asset, loading }) {
     <div className="holdingAmount">
       <strong>{formatMoney(asset.valuePln)}</strong>
       <small>Wartość z {asset.date}</small>
-      {!loading && result != null && (
+      {!loading && asset.type !== 'KONTO_BANKOWE' && result != null && (
         <small className={result < 0 ? 'negativeText' : 'positiveText'}>Wynik: {formatSignedMoney(result)}</small>
       )}
     </div>
@@ -104,15 +104,21 @@ export function PortfolioOverview({
   const dates = current.map((e) => e.date).sort(),
     oldest = dates[0],
     newest = dates.at(-1);
-  const known = performance?.nominalResultPln != null;
+  const result = performance?.nominalResultPln;
+  const resultTone = result > 0 ? 'positive' : result < 0 ? 'negative' : 'neutral';
   const metric = (value) => (loading ? 'Wczytywanie…' : value == null ? '—' : formatMoney(value));
-  const missingBasis = !failed && !loading && rows.some((row) => row.performance?.nominalResultPln == null);
+  const holdingsWithoutBasis = holdings.filter((holding) => holding.performance?.contributedCapitalPln == null);
+  const missingBasis = !failed && !loading && holdingsWithoutBasis.length > 0;
   return (
     <>
       <div className="savingsHeadline" aria-busy={loading}>
         <Metric
           label="Wpłaty łącznie"
-          value={metric(!known && performance?.depositsTotalPln === 0 ? null : performance?.depositsTotalPln)}
+          value={metric(
+            performance?.contributedCapitalPln == null && performance?.depositsTotalPln === 0
+              ? null
+              : performance?.depositsTotalPln
+          )}
           detail={missingBasis ? 'Niepełne dane o wpłatach' : 'Wpłaty i znany wkład początkowy'}
         />
         <Metric
@@ -127,11 +133,11 @@ export function PortfolioOverview({
         />
         <Metric
           label="Wynik"
-          value={loading ? 'Wczytywanie…' : known ? formatSignedMoney(performance.nominalResultPln) : '—'}
-          tone={known ? (performance.nominalResultPln >= 0 ? 'positive' : 'negative') : 'neutral'}
+          value={loading ? 'Wczytywanie…' : result == null ? '—' : formatSignedMoney(result)}
+          tone={resultTone}
           detail={
-            known
-              ? 'Wynik od początku, po uwzględnieniu wypłat'
+            result != null
+              ? 'Wynik inwestycji od początku'
               : failed
                 ? 'Nie udało się wczytać wyniku'
                 : 'Uzupełnij wpłaty'
@@ -148,16 +154,14 @@ export function PortfolioOverview({
         <div className="holdingsNotice">
           <p>Niepełne dane o wpłatach. Uzupełnij wpłaty:</p>
           <ul>
-            {holdings
-              .filter((a) => a.performance?.nominalResultPln == null)
-              .map((a) => (
-                <li key={a.id}>
-                  <Button onClick={() => onCompleteBasis?.(a)}>
-                    {displayName(a.owner)} — {TYPE_LABELS[a.type]}
-                    {a.subcategory ? ` · ${SUBCATEGORY_LABELS[a.subcategory]}` : ''}
-                  </Button>
-                </li>
-              ))}
+            {holdingsWithoutBasis.map((a) => (
+              <li key={a.id}>
+                <Button onClick={() => onCompleteBasis?.(a)}>
+                  {displayName(a.owner)} — {TYPE_LABELS[a.type]}
+                  {a.subcategory ? ` · ${SUBCATEGORY_LABELS[a.subcategory]}` : ''}
+                </Button>
+              </li>
+            ))}
           </ul>
         </div>
       )}
